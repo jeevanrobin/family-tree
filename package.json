@@ -1,0 +1,26 @@
+{
+  "name": "family-tree",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "test": "node scripts/test-m3b-security.js && node scripts/test-m3c-sync.js && node scripts/test-m3d-media.js && node scripts/test-m3e-collaboration.js && node scripts/verify-m3e1-production.js && node scripts/test-m4a-search.js && node scripts/test-m4b-timeline.js && node scripts/test-m4c-memories.js && node scripts/test-m4d-archive.js && node scripts/test-m4e-insights.js && node scripts/test-add-member-ux.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.113.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-router-dom": "^7.18.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "oxlint": "^1.79.0",
+    "vite": "^8.2.2"
+  }
+}
