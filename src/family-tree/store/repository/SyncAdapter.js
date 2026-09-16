@@ -39,6 +39,9 @@ export class SyncAdapter extends FamilyRepository {
     if (!snapshot) return;
     const fid = this.familyId;
 
+    // Clear stale family records in IndexedDB to prevent deleted or replaced records from lingering
+    await indexedDBManager.clearFamilyData(fid);
+
     const peopleWithFid = (snapshot.people || []).map((p) => ({ ...p, family_id: fid, familyId: fid }));
     const relsWithFid = (snapshot.relationships || []).map((r) => ({ ...r, family_id: fid, familyId: fid }));
     const storiesWithFid = (snapshot.stories || []).map((s) => ({ ...s, family_id: fid, familyId: fid }));
@@ -54,6 +57,10 @@ export class SyncAdapter extends FamilyRepository {
       indexedDBManager.putBatch(STORES.PHOTOS, photosWithFid),
       indexedDBManager.putBatch(STORES.DOCUMENTS, docsWithFid),
     ]);
+  }
+
+  async clearLocalCache() {
+    await indexedDBManager.clearAllFamilyData(this.familyId);
   }
 
   // ── Granular Entity Mutations (Offline-First Queueing) ─────

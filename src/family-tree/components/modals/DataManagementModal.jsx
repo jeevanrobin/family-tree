@@ -12,9 +12,13 @@ export default function DataManagementModal({
   onImportData,
   onResetData,
   onClearData,
+  onClearLocalCache,
+  onFullReset,
 }) {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [cacheConfirmOpen, setCacheConfirmOpen] = useState(false);
+  const [fullResetConfirmOpen, setFullResetConfirmOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null); // { type: 'success' | 'error', text: '' }
   const fileInputRef = useRef(null);
 
@@ -100,6 +104,48 @@ export default function DataManagementModal({
     }, 1000);
   };
 
+  const handleClearCache = async () => {
+    try {
+      if (onClearLocalCache) {
+        await onClearLocalCache();
+      }
+      setCacheConfirmOpen(false);
+      setStatusMessage({
+        type: 'success',
+        text: 'Local offline cache cleared. Re-syncing cleanly from cloud...',
+      });
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+    } catch (err) {
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Failed to clear local cache.',
+      });
+    }
+  };
+
+  const handleFullFreshReset = async () => {
+    try {
+      if (onFullReset) {
+        await onFullReset();
+      }
+      setFullResetConfirmOpen(false);
+      setStatusMessage({
+        type: 'success',
+        text: 'Full fresh reset completed. All local storage and cache wiped.',
+      });
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+    } catch (err) {
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Failed to perform full reset.',
+      });
+    }
+  };
+
   return (
     <div className="ft-view-modal" role="dialog" aria-label="Data Management & Backup">
       <div className="ft-view-modal__backdrop" onClick={onClose} />
@@ -130,7 +176,7 @@ export default function DataManagementModal({
           </div>
         )}
 
-        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        <div className="ft-modal-form-body" style={{ gap: '18px' }}>
           {/* Export Card */}
           <div className="ft-data-action-card">
             <div>
@@ -203,6 +249,27 @@ export default function DataManagementModal({
             </button>
           </div>
 
+          {/* Clear Local Cache Card */}
+          {onClearLocalCache && (
+            <div className="ft-data-action-card" style={{ borderLeft: '3px solid var(--ft-cyan, #06b6d4)' }}>
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--ft-cyan, #06b6d4)' }}>
+                  Clear Local Cache
+                </div>
+                <p style={{ fontSize: '0.80rem', color: 'var(--ft-text-secondary)', marginTop: '2px' }}>
+                  Wipe local offline cache and queue for this family. Authoritative cloud records remain safe in Supabase.
+                </p>
+              </div>
+              <button
+                className="ft-form-btn"
+                style={{ background: 'rgba(6, 182, 212, 0.15)', color: 'var(--ft-cyan, #06b6d4)', border: '1px solid var(--ft-cyan, #06b6d4)', fontWeight: 600 }}
+                onClick={() => setCacheConfirmOpen(true)}
+              >
+                Clear Cache
+              </button>
+            </div>
+          )}
+
           {/* Reset Card */}
           <div className="ft-data-action-card" style={{ borderLeft: '3px solid var(--ft-coral)' }}>
             <div>
@@ -221,6 +288,27 @@ export default function DataManagementModal({
               Reset Tree
             </button>
           </div>
+
+          {/* Full Fresh Reset (Developer) */}
+          {onFullReset && (
+            <div className="ft-data-action-card" style={{ borderLeft: '3px solid #ef4444' }}>
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#ef4444' }}>
+                  Full Fresh Reset (Developer)
+                </div>
+                <p style={{ fontSize: '0.80rem', color: 'var(--ft-text-secondary)', marginTop: '2px' }}>
+                  Purge all local storage and IndexedDB databases across all families.
+                </p>
+              </div>
+              <button
+                className="ft-form-btn"
+                style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid #ef4444', fontWeight: 600 }}
+                onClick={() => setFullResetConfirmOpen(true)}
+              >
+                Full Reset
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Clear Confirmation Overlay */}
@@ -272,6 +360,60 @@ export default function DataManagementModal({
                 onClick={handleReset}
               >
                 Confirm Reset
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Clear Local Cache Confirmation Overlay */}
+        {cacheConfirmOpen && (
+          <div className="ft-reset-modal-confirm">
+            <div style={{ fontWeight: '800', fontSize: '1.05rem', color: 'var(--ft-cyan, #06b6d4)' }}>
+              Clear Local Cache?
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', margin: '8px 0 16px' }}>
+              This purges only the local offline cache and queue in this browser. Your authoritative family archive on Supabase will not be deleted and will re-sync cleanly.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="ft-form-btn ft-form-btn--secondary"
+                onClick={() => setCacheConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="ft-form-btn"
+                style={{ background: 'var(--ft-cyan, #06b6d4)', color: '#fff', border: 'none', fontWeight: 600 }}
+                onClick={handleClearCache}
+              >
+                Clear Cache
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Full Fresh Reset Confirmation Overlay */}
+        {fullResetConfirmOpen && (
+          <div className="ft-reset-modal-confirm">
+            <div style={{ fontWeight: '800', fontSize: '1.05rem', color: '#ef4444' }}>
+              Full Fresh Reset (Developer)?
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--ft-text-secondary)', margin: '8px 0 16px' }}>
+              This completely resets this browser session, wiping all localStorage keys and IndexedDB databases across all families. Use this for starting completely fresh.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                className="ft-form-btn ft-form-btn--secondary"
+                onClick={() => setFullResetConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="ft-form-btn"
+                style={{ background: '#ef4444', color: '#fff', border: 'none', fontWeight: 600 }}
+                onClick={handleFullFreshReset}
+              >
+                Confirm Full Reset
               </button>
             </div>
           </div>

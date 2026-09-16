@@ -14,18 +14,19 @@ export const authService = {
     if (!isSupabaseConfigured || !supabase) {
       return { user: null, error: new Error('Supabase is not configured.') };
     }
-    const { user, error } = await supabase.auth.signUp({
+    const { data: authData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           ...data,
+          first_name: data?.firstName || data?.first_name || '',
           email,
           created_at: new Date().toISOString()
         }
       }
     });
-    return { user, error };
+    return { user: authData?.user || null, session: authData?.session || null, error };
   },
 
   /**

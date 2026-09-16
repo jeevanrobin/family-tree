@@ -35,9 +35,11 @@ import FamilyMemoriesView from './memories/FamilyMemoriesView.jsx';
 import FamilyArchiveView from './archive/FamilyArchiveView.jsx';
 import FamilyInsightsView from './insights/FamilyInsightsView.jsx';
 import familyStore from '../store/FamilyStore.js';
-import { useFamily } from '../auth/FamilyContext.jsx';
+import { useOptionalFamily } from '../auth/FamilyContext.jsx';
+import { indexedDBManager } from '../store/local/indexedDBManager.js';
+import { FAMILY_ID_KEY } from '../store/repository/index.js';
 
-export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree' }) {
+export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree', activeFamily: activeFamilyProp = null }) {
   const {
     persons,
     generations,
@@ -46,6 +48,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     selectedPerson,
     immediateFamilyMap,
     constellationMap,
+    ancestryLineage,
     relatedIds,
     selectPerson,
     deselectPerson,
@@ -76,6 +79,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   } = useFamilyTree();
 
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [canvasScale, setCanvasScale] = useState(1);
   const [activeGenFilter, setActiveGenFilter] = useState(null);
   const [isTourOpen, setIsTourOpen] = useState(false);
 
@@ -116,14 +120,9 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   const [detailsInitialSection, setDetailsInitialSection] = useState('overview');
 
   // Safe consumption of active family for family-scoped search history
-  let familyContext = null;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    familyContext = useFamily();
-  } catch {
-    familyContext = null;
-  }
-  const activeFamilyId = familyContext?.activeFamily?.id || (isLocalMode ? 'local' : 'default');
+  const familyContext = useOptionalFamily();
+  const activeFamily = activeFamilyProp || familyContext?.activeFamily;
+  const activeFamilyId = activeFamily?.id || (isLocalMode ? 'local' : 'default');
 
   const [showIntro, setShowIntro] = useState(() => {
     return !sessionStorage.getItem('medida_intro_shown');
@@ -150,49 +149,57 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     return initialView || 'tree';
   }, [location.pathname, initialView]);
 
+  // Extract familyId from URL if present (/app/family/:familyId/...)
+  const routeFamilyId = useMemo(() => {
+    const match = location.pathname.match(/\/app\/family\/([^/?#]+)/);
+    return match ? match[1] : null;
+  }, [location.pathname]);
+
+  const basePath = routeFamilyId ? `/app/family/${routeFamilyId}` : '/app';
+
   // Derive activeStoryId directly from URL
   const activeStoryId = useMemo(() => {
-    const match = location.pathname.match(/\/app\/memories\/([^/?#]+)/);
+    const match = location.pathname.match(/\/(?:app\/family\/[^/?#]+\/|app\/)memories\/([^/?#]+)/);
     return match ? match[1] : null;
   }, [location.pathname]);
 
   const handleSwitchView = useCallback(
     (mode, subId = null) => {
-      let targetPath = '/app';
+      let targetPath = basePath;
       if (mode === 'insights') {
-        targetPath = '/app/insights';
+        targetPath = `${basePath}/insights`;
       } else if (mode === 'archive') {
-        targetPath = subId ? `/app/archive/photo/${subId}` : '/app/archive';
+        targetPath = subId ? `${basePath}/archive/photo/${subId}` : `${basePath}/archive`;
       } else if (mode === 'memories') {
-        targetPath = subId ? `/app/memories/${subId}` : '/app/memories';
+        targetPath = subId ? `${basePath}/memories/${subId}` : `${basePath}/memories`;
       } else if (mode === 'timeline') {
-        targetPath = '/app/timeline';
+        targetPath = `${basePath}/timeline`;
       } else {
-        targetPath = '/app';
+        targetPath = basePath;
       }
 
       if (location.pathname !== targetPath) {
         navigate(targetPath);
       }
     },
-    [location.pathname, navigate]
+    [basePath, location.pathname, navigate]
   );
 
   const handleSelectStoryId = useCallback(
     (storyId) => {
-      const targetPath = storyId ? `/app/memories/${storyId}` : '/app/memories';
+      const targetPath = storyId ? `${basePath}/memories/${storyId}` : `${basePath}/memories`;
       if (location.pathname !== targetPath) {
         navigate(targetPath);
       }
     },
-    [location.pathname, navigate]
+    [basePath, location.pathname, navigate]
   );
 
   // Sync archive deep links when route updates (direct URL loading or back/forward)
   useEffect(() => {
     const pathname = location.pathname;
-    const photoMatch = pathname.match(/\/app\/archive\/photo\/([^/?#]+)/);
-    const docMatch = pathname.match(/\/app\/archive\/document\/([^/?#]+)/);
+    const photoMatch = pathname.match(/\/(?:app\/family\/[^/?#]+\/|app\/)archive\/photo\/([^/?#]+)/);
+    const docMatch = pathname.match(/\/(?:app\/family\/[^/?#]+\/|app\/)archive\/document\/([^/?#]+)/);
     if (photoMatch) {
       const ph = familyStore.getPhotoById?.(photoMatch[1]) || (familyStore.photos || []).find((p) => String(p.id) === photoMatch[1]);
       if (ph) {
@@ -253,6 +260,26 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
       canvasRef.current?.reset();
     }, 80);
   }, []);
+
+  const handleClearLocalCache = useCallback(async () => {
+    if (familyContext?.clearLocalCache) {
+      await familyContext.clearLocalCache();
+    } else {
+      await indexedDBManager.clearAllDatabases();
+      localStorage.removeItem('family-tree-data-v2');
+      localStorage.removeItem('family-tree-data-v1');
+      clearAllData();
+    }
+  }, [familyContext, clearAllData]);
+
+  const handleFullReset = useCallback(async () => {
+    localStorage.removeItem('family-tree-data-v2');
+    localStorage.removeItem('family-tree-data-v1');
+    localStorage.removeItem(FAMILY_ID_KEY);
+    await indexedDBManager.clearAllDatabases();
+    familyStore.loadFromData([], [], [], [], [], []);
+    clearAllData();
+  }, [clearAllData]);
 
   // Handle person selection with smooth camera glide & auto-drawer
   const handleSelectPerson = useCallback(
@@ -488,7 +515,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   }, []);
 
   const handleOpenEditModal = useCallback((person) => {
-    setEditingPerson(person);
+    const latestPerson = (person?.id && familyStore.getPersonById(person.id)) || person;
+    setEditingPerson(latestPerson);
     setEditModalOpen(true);
   }, []);
 
@@ -572,9 +600,9 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
       {/* Cinematic Intro Overlay (First Load) */}
       {showIntro && (
         <IntroOverlay
-          title="MEDIDA'S FAMILY"
+          title={activeFamily?.name?.toUpperCase() || (isLocalMode ? 'FAMILY TREE' : 'FAMILY ARCHIVE')}
           tagline="Generations. Stories. Memories."
-          metadata="PRIVATE DIGITAL FAMILY PLATFORM · 4 GENERATIONS"
+          metadata="PRIVATE DIGITAL FAMILY PLATFORM"
           onComplete={handleIntroComplete}
           isReducedMotion={isReducedMotion}
         />
@@ -722,9 +750,11 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
               selectedId={selectedId}
               immediateFamilyMap={immediateFamilyMap}
               constellationMap={constellationMap}
+              ancestryLineage={ancestryLineage}
               relatedIds={relatedIds}
               onSelectPerson={handleSelectPerson}
               onDeselect={handleDeselect}
+              onScaleChange={setCanvasScale}
               isReducedMotion={isReducedMotion}
             />
 
@@ -769,7 +799,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                 onReset={() => canvasRef.current?.reset()}
                 onFocusSelected={() => selectedId && canvasRef.current?.focusOn(selectedId)}
                 hasSelection={Boolean(selectedId)}
-                scale={0.8}
+                scale={canvasScale}
                 isReducedMotion={isReducedMotion}
               />
             </div>
@@ -824,8 +854,9 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
         />
 
         <EditPersonModal
+          key={editingPerson?.id || 'edit-modal'}
           isOpen={editModalOpen}
-          person={editingPerson}
+          person={(editingPerson?.id && familyStore.getPersonById(editingPerson.id)) || editingPerson}
           onClose={() => setEditModalOpen(false)}
           onUpdatePerson={updatePerson}
         />
@@ -844,6 +875,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           onImportData={importData}
           onResetData={resetToSampleData}
           onClearData={clearAllData}
+          onClearLocalCache={handleClearLocalCache}
+          onFullReset={handleFullReset}
         />
 
         {/* Milestone 2B Modals */}

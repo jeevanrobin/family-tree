@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Family Helpers Utility
  */
 
@@ -72,3 +72,64 @@ export function getAvatarGradient(person) {
   }
   return list[Math.abs(hash) % list.length];
 }
+
+/**
+ * Canonical Sibling Display Label — Single Source of Truth
+ * 
+ * Rules:
+ * - If related person's gender === 'female' -> 'Sister'
+ * - If related person's gender === 'male'   -> 'Brother'
+ * - If gender is unknown/unspecified/other  -> 'Sibling'
+ * 
+ * Never guesses or infers gender from name.
+ * 
+ * @param {Object} person - The related person
+ * @returns {'Sister' | 'Brother' | 'Sibling'}
+ */
+export function getSiblingDisplayLabel(person) {
+  if (!person) return 'Sibling';
+  const g = (person.gender || '').toLowerCase().trim();
+  if (g === 'female') return 'Sister';
+  if (g === 'male') return 'Brother';
+  return 'Sibling';
+}
+
+/**
+ * Single source of truth for relationship display labels across the application.
+ * Symmetrical and contextual based on related person's recorded gender.
+ * 
+ * @param {Object} viewer - The person being viewed
+ * @param {Object} relatedPerson - The related person
+ * @param {string} relationshipType - Canonical or legacy relationship type
+ * @returns {string} Human-friendly display label
+ */
+export function getRelationshipDisplayLabel(viewer, relatedPerson, relationshipType) {
+  if (!relatedPerson) return '';
+  const g = (relatedPerson.gender || '').toLowerCase().trim();
+  const rel = (relationshipType || '').toLowerCase().trim();
+
+  if (rel === 'sibling' || rel === 'sister' || rel === 'brother' || rel === 'siblings') {
+    return getSiblingDisplayLabel(relatedPerson);
+  }
+
+  if (rel === 'parent' || rel === 'parent-child' || rel === 'father' || rel === 'mother') {
+    if (g === 'female') return 'Mother';
+    if (g === 'male') return 'Father';
+    return 'Parent';
+  }
+
+  if (rel === 'child' || rel === 'son' || rel === 'daughter') {
+    if (g === 'female') return 'Daughter';
+    if (g === 'male') return 'Son';
+    return 'Child';
+  }
+
+  if (rel === 'spouse' || rel === 'husband' || rel === 'wife') {
+    if (g === 'female') return 'Wife';
+    if (g === 'male') return 'Husband';
+    return 'Spouse';
+  }
+
+  return 'Relative';
+}
+

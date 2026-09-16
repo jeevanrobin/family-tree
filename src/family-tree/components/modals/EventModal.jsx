@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import { getAllPersons } from '../../data/familyDataService.js';
+import FamilyDatePicker from '../ui/FamilyDatePicker.jsx';
+import { LocationCombobox } from '../ui/FamilyCombobox.jsx';
 
 const EVENT_TYPES = [
   'Birth',
@@ -32,6 +34,8 @@ export default function EventModal({
   const [description, setDescription] = useState(event?.description || '');
   const [relatedPersonIds, setRelatedPersonIds] = useState(event?.relatedPersonIds || []);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const familyId = person?.family_id || person?.familyId || null;
 
   const allPeople = getAllPersons();
 
@@ -96,8 +100,9 @@ export default function EventModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="ft-modal-form-body">
-          <div className="ft-form-grid">
+        <form onSubmit={handleSubmit} className="ft-modal-form">
+          <div className="ft-modal-form-body">
+            <div className="ft-form-grid">
             <div className="ft-form-row ft-form-row--2">
               <div className="ft-form-field">
                 <label>Event Category</label>
@@ -112,10 +117,11 @@ export default function EventModal({
 
               <div className="ft-form-field">
                 <label>Date (Optional or Year)</label>
-                <input
-                  type="date"
+                <FamilyDatePicker
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
+                  placeholder="YYYY-MM-DD or Year"
+                  ariaLabel="Event date"
                 />
               </div>
             </div>
@@ -133,11 +139,12 @@ export default function EventModal({
 
             <div className="ft-form-field">
               <label>Location</label>
-              <input
-                type="text"
-                placeholder="e.g. Hyderabad, Telangana"
+              <LocationCombobox
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={setLocation}
+                placeholder="e.g. Muthagudem, Hyderabad"
+                ariaLabel="Event location"
+                activeFamilyId={familyId}
               />
             </div>
 
@@ -176,8 +183,9 @@ export default function EventModal({
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="ft-modal-footer">
+        <div className="ft-modal-footer">
             <button
               type="button"
               className="ft-form-btn ft-form-btn--secondary"

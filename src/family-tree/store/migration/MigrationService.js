@@ -65,7 +65,7 @@ export class MigrationService {
       report(2, 'Creating family record');
       const family = throwIfError(
         await supabase.from('families')
-          .insert({ name: familyName || "Medida's Family", description: '' })
+          .insert({ name: familyName || 'Family Tree', description: '' })
           .select()
           .single(),
         'create family'

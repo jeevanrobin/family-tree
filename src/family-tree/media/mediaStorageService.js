@@ -24,6 +24,9 @@ export const ALLOWED_PHOTO_MIME_TYPES = Object.freeze([
   'image/jpeg',
   'image/png',
   'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/gif',
 ]);
 
 export const ALLOWED_DOCUMENT_MIME_TYPES = Object.freeze([
@@ -33,7 +36,7 @@ export const ALLOWED_DOCUMENT_MIME_TYPES = Object.freeze([
   'image/webp',
 ]);
 
-export const ALLOWED_PHOTO_EXTENSIONS = Object.freeze(['.jpg', '.jpeg', '.png', '.webp']);
+export const ALLOWED_PHOTO_EXTENSIONS = Object.freeze(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif']);
 export const ALLOWED_DOCUMENT_EXTENSIONS = Object.freeze(['.pdf', '.jpg', '.jpeg', '.png', '.webp']);
 
 // In-memory Signed URL Cache
@@ -128,7 +131,20 @@ class MediaStorageService {
       };
     }
 
-    const mime = (file.type || '').toLowerCase();
+    let mime = (file.type || '').toLowerCase();
+    const fileName = file.name || '';
+    const lastDot = fileName.lastIndexOf('.');
+    const ext = lastDot !== -1 ? fileName.slice(lastDot).toLowerCase() : '';
+
+    if (!mime && isPhoto) {
+      if (ext === '.heic') mime = 'image/heic';
+      else if (ext === '.heif') mime = 'image/heif';
+      else if (ext === '.gif') mime = 'image/gif';
+      else if (ext === '.jpg' || ext === '.jpeg') mime = 'image/jpeg';
+      else if (ext === '.png') mime = 'image/png';
+      else if (ext === '.webp') mime = 'image/webp';
+    }
+
     if (!allowedMimes.includes(mime)) {
       return {
         valid: false,
@@ -136,9 +152,6 @@ class MediaStorageService {
       };
     }
 
-    const fileName = file.name || '';
-    const lastDot = fileName.lastIndexOf('.');
-    const ext = lastDot !== -1 ? fileName.slice(lastDot).toLowerCase() : '';
     if (!allowedExts.includes(ext)) {
       return {
         valid: false,

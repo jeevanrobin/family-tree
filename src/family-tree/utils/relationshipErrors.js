@@ -18,7 +18,7 @@ export function humanizeRelationshipError(err) {
   if (msg.includes('more than 2 biological parents') || msg.includes('2 biological parents')) {
     return 'This person already has 2 parents connected.';
   }
-  if (msg.includes('own parent') || msg.includes('themselves') || msg.includes('married to themselves')) {
+  if (msg.includes('own parent') || msg.includes('own sibling') || msg.includes('own child') || msg.includes('themselves') || msg.includes('married to themselves')) {
     return 'A person cannot be connected to themselves.';
   }
   if (msg.includes('date of birth cannot be after date of death')) {

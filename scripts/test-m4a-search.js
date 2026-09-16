@@ -293,13 +293,13 @@ await test('[24] M3B security regression: role permission invariants remain inta
   assert(canDeletePerson(ROLES.VIEWER) === false, 'Viewer cannot delete person');
 });
 
-await test('[25] M3C sync regression: store reactive subscription and deletion verification', () => {
+await test('[25] M3C sync regression: store reactive subscription and deletion verification', async () => {
   let notified = false;
   const unsub = familyStore.subscribe(() => {
     notified = true;
   });
 
-  const testPerson = familyStore.addPerson({
+  const testPerson = await familyStore.addPerson({
     firstName: 'TestSearch',
     lastName: 'Temporary',
     occupation: 'Verification Engineer',
@@ -308,7 +308,7 @@ await test('[25] M3C sync regression: store reactive subscription and deletion v
   assert(notified === true, 'Store mutation triggers reactivity subscriber');
   assert(familyStore.verifyEntityExists('person', testPerson.id) === true, 'Temporary person exists');
 
-  familyStore.deletePerson(testPerson.id);
+  await familyStore.deletePerson(testPerson.id);
   assert(familyStore.verifyEntityExists('person', testPerson.id) === false, 'Person cleanly removed and reflected');
   unsub();
 });

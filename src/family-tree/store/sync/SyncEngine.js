@@ -20,6 +20,7 @@ import {
   filterTombstonedEntities,
 } from './conflictResolver.js';
 import { mediaStorageService } from '../../media/mediaStorageService.js';
+import { IdMapper } from '../repository/IdMapper.js';
 
 const MAX_RETRIES = 5;
 const BASE_RETRY_DELAY_MS = 1000;
@@ -35,9 +36,12 @@ export class SyncEngine {
     if (!familyId) {
       throw new Error('SyncEngine requires a valid familyId.');
     }
-    this.familyId = String(familyId);
-    this.supabaseAdapter = supabaseAdapter;
-    this.options = options;
+     this.familyId = String(familyId);
+     this.supabaseAdapter = supabaseAdapter;
+     this.options = options;
+
+     // Durable ID mapper: local ID <-> cloud UUID
+     this.idMapper = new IdMapper(this.familyId);
 
     this.status = typeof navigator !== 'undefined' && !navigator.onLine ? SYNC_STATUS.OFFLINE : SYNC_STATUS.SYNCED;
     this.listeners = new Set();
@@ -125,38 +129,54 @@ export class SyncEngine {
       indexedDBManager.getAllByFamily(STORES.DOCUMENTS, fid),
     ]);
 
-    const hasCache = (cachedPeople && cachedPeople.length > 0) || (cachedRels && cachedRels.length > 0);
+     const hasCache = (cachedPeople && cachedPeople.length > 0) || (cachedRels && cachedRels.length > 0);
 
-    if (hasCache) {
-      // Background sync with cloud
-      if (this.isOnline() && this.supabaseAdapter) {
-        setTimeout(() => this.sync(), 50);
-      }
-      return {
-        people: cachedPeople,
-        relationships: cachedRels,
-        stories: cachedStories,
-        lifeEvents: cachedEvents,
-        photos: cachedPhotos,
-        documents: cachedDocs,
-      };
-    }
+     // Populate ID mappings from cached data
+     await this.populateIdMappings(cachedPeople || []);
+     await this.populateIdMappings(cachedRels || []);
+     await this.populateIdMappings(cachedStories || []);
+     await this.populateIdMappings(cachedEvents || []);
+     await this.populateIdMappings(cachedPhotos || []);
+     await this.populateIdMappings(cachedDocs || []);
+
+     if (hasCache) {
+       // Background sync with cloud
+       if (this.isOnline() && this.supabaseAdapter) {
+         setTimeout(() => this.sync(), 50);
+       }
+       return {
+         people: cachedPeople,
+         relationships: cachedRels,
+         stories: cachedStories,
+         lifeEvents: cachedEvents,
+         photos: cachedPhotos,
+         documents: cachedDocs,
+       };
+     }
 
     // 2. Empty local cache: fetch from Supabase if available
     if (this.isOnline() && this.supabaseAdapter) {
-      try {
-        this.setStatus(SYNC_STATUS.SYNCING);
-        const remoteData = await this.supabaseAdapter.load();
+       try {
+         this.setStatus(SYNC_STATUS.SYNCING);
+         const remoteData = await this.supabaseAdapter.load();
 
-        // Populate local cache in IndexedDB
-        await Promise.all([
-          indexedDBManager.putBatch(STORES.PEOPLE, remoteData.people || []),
-          indexedDBManager.putBatch(STORES.RELATIONSHIPS, remoteData.relationships || []),
-          indexedDBManager.putBatch(STORES.STORIES, remoteData.stories || []),
-          indexedDBManager.putBatch(STORES.LIFE_EVENTS, remoteData.lifeEvents || []),
-          indexedDBManager.putBatch(STORES.PHOTOS, remoteData.photos || []),
-          indexedDBManager.putBatch(STORES.DOCUMENTS, remoteData.documents || []),
-        ]);
+         // Populate ID mappings from remote data
+         await this.populateIdMappings(remoteData.people || []);
+         await this.populateIdMappings(remoteData.relationships || []);
+         await this.populateIdMappings(remoteData.stories || []);
+         await this.populateIdMappings(remoteData.lifeEvents || []);
+         await this.populateIdMappings(remoteData.photos || []);
+         await this.populateIdMappings(remoteData.documents || []);
+
+         // Populate local cache in IndexedDB
+         await Promise.all([
+           indexedDBManager.putBatch(STORES.PEOPLE, remoteData.people || []),
+           indexedDBManager.putBatch(STORES.RELATIONSHIPS, remoteData.relationships || []),
+           indexedDBManager.putBatch(STORES.STORIES, remoteData.stories || []),
+           indexedDBManager.putBatch(STORES.LIFE_EVENTS, remoteData.lifeEvents || []),
+           indexedDBManager.putBatch(STORES.PHOTOS, remoteData.photos || []),
+           indexedDBManager.putBatch(STORES.DOCUMENTS, remoteData.documents || []),
+         ]);
 
         await indexedDBManager.updateSyncMeta(fid, {
           lastSyncedAt: new Date().toISOString(),
@@ -164,14 +184,29 @@ export class SyncEngine {
         });
 
         this.setStatus(SYNC_STATUS.SYNCED);
-        return remoteData;
+        return remoteData || {
+          people: [],
+          relationships: [],
+          stories: [],
+          lifeEvents: [],
+          photos: [],
+          documents: [],
+        };
       } catch (err) {
         console.warn('SyncEngine: Initial cloud load failed:', err.message);
         this.setStatus(this.isOnline() ? SYNC_STATUS.ERROR : SYNC_STATUS.OFFLINE);
       }
     }
 
-    return null;
+    // Default clean empty state for fresh cloud family without cache
+    return {
+      people: [],
+      relationships: [],
+      stories: [],
+      lifeEvents: [],
+      photos: [],
+      documents: [],
+    };
   }
 
   // ── Mutation Enqueueing ────────────────────────────────────
@@ -315,59 +350,154 @@ export class SyncEngine {
   return this.flushPromise;
 }
 
-  async _executeRemoteOperation(item) {
+   /**
+    * Convert frontend ID to UUID if mapping exists; otherwise return frontend ID
+    * (to be used as local_id column).
+    */
+   async translateId(frontendId) {
+     const uuid = await this.idMapper.getRemoteUuid(frontendId);
+     return uuid !== null ? uuid : frontendId;
+   }
+
+   /**
+    * Populate ID mappings from an array of entities that have id (frontend ID) and uuid fields.
+    */
+   async populateIdMappings(entities) {
+     for (const entity of entities) {
+       if (entity.id !== undefined && entity.uuid !== null && entity.uuid !== undefined) {
+         await this.idMapper.setMapping(entity.id, entity.uuid);
+       }
+     }
+   }
+
+   async _executeRemoteOperation(item) {
     const { entityType, entityId, operation, payload } = item;
     const adapter = this.supabaseAdapter;
     if (!adapter) throw new Error('SupabaseAdapter unavailable');
 
     switch (entityType) {
-      case ENTITY_TYPES.PERSON:
-        if (operation === MUTATION_OP.DELETE) {
-          await adapter.deletePerson(entityId);
-        } else {
-          await adapter.savePerson({ ...payload, _isNew: operation === MUTATION_OP.CREATE });
-        }
-        break;
+       case ENTITY_TYPES.PERSON:
+         if (operation === MUTATION_OP.DELETE) {
+           await adapter.deletePerson(entityId);
+         } else {
+           const savedPerson = await adapter.savePerson({ ...payload, _isNew: operation === MUTATION_OP.CREATE });
+           if (operation === MUTATION_OP.CREATE && savedPerson?.uuid) {
+             // Store mapping from frontend ID to UUID
+             await this.idMapper.setMapping(entityId, savedPerson.uuid);
+           }
+         }
+         break;
 
-      case ENTITY_TYPES.RELATIONSHIP:
-        if (operation === MUTATION_OP.DELETE) {
-          await adapter.deleteRelationship(entityId);
-        } else {
-          await adapter.saveRelationship(payload);
-        }
-        break;
+       case ENTITY_TYPES.RELATIONSHIP:
+         if (operation === MUTATION_OP.DELETE) {
+           await adapter.deleteRelationship(entityId);
+         } else {
+           // Translate ID fields in payload to UUIDs if mapped
+           const translatedPayload = { ...payload };
+           if (translatedPayload.parentId !== undefined) {
+             translatedPayload.parentId = await this.translateId(translatedPayload.parentId);
+           }
+           if (translatedPayload.personId1 !== undefined) {
+             translatedPayload.personId1 = await this.translateId(translatedPayload.personId1);
+           }
+           if (translatedPayload.childId !== undefined) {
+             translatedPayload.childId = await this.translateId(translatedPayload.childId);
+           }
+           if (translatedPayload.personId2 !== undefined) {
+             translatedPayload.personId2 = await this.translateId(translatedPayload.personId2);
+           }
+           if (translatedPayload.personAId !== undefined) {
+             translatedPayload.personAId = await this.translateId(translatedPayload.personAId);
+           }
+           if (translatedPayload.personBId !== undefined) {
+             translatedPayload.personBId = await this.translateId(translatedPayload.personBId);
+           }
+           await adapter.saveRelationship(translatedPayload);
+         }
+         break;
 
-      case ENTITY_TYPES.STORY:
-        if (operation === MUTATION_OP.DELETE) {
-          await adapter.deleteStory(entityId);
-        } else {
-          await adapter.saveStory({ ...payload, _isNew: operation === MUTATION_OP.CREATE });
-        }
-        break;
+       case ENTITY_TYPES.STORY:
+         if (operation === MUTATION_OP.DELETE) {
+           await adapter.deleteStory(entityId);
+         } else {
+           // Translate ID fields in payload to UUIDs if mapped
+           const translatedPayload = { ...payload };
+           if (translatedPayload.personId !== undefined) {
+             translatedPayload.personId = await this.translateId(translatedPayload.personId);
+           }
+           if (Array.isArray(translatedPayload.relatedPersonIds)) {
+             translatedPayload.relatedPersonIds = await Promise.all(
+               translatedPayload.relatedPersonIds.map(id => this.translateId(id))
+             );
+           }
+           const savedStory = await adapter.saveStory({ ...translatedPayload, _isNew: operation === MUTATION_OP.CREATE });
+           if (operation === MUTATION_OP.CREATE && savedStory?.uuid) {
+             // Store mapping from frontend ID to UUID
+             await this.idMapper.setMapping(entityId, savedStory.uuid);
+           }
+         }
+         break;
 
-      case ENTITY_TYPES.LIFE_EVENT:
-        if (operation === MUTATION_OP.DELETE) {
-          await adapter.deleteLifeEvent(entityId);
-        } else {
-          await adapter.saveLifeEvent({ ...payload, _isNew: operation === MUTATION_OP.CREATE });
-        }
-        break;
+       case ENTITY_TYPES.LIFE_EVENT:
+         if (operation === MUTATION_OP.DELETE) {
+           await adapter.deleteLifeEvent(entityId);
+         } else {
+           // Translate ID fields in payload to UUIDs if mapped
+           const translatedPayload = { ...payload };
+           if (translatedPayload.personId !== undefined) {
+             translatedPayload.personId = await this.translateId(translatedPayload.personId);
+           }
+           if (Array.isArray(translatedPayload.relatedPersonIds)) {
+             translatedPayload.relatedPersonIds = await Promise.all(
+               translatedPayload.relatedPersonIds.map(id => this.translateId(id))
+             );
+           }
+           const savedEvent = await adapter.saveLifeEvent({ ...translatedPayload, _isNew: operation === MUTATION_OP.CREATE });
+           if (operation === MUTATION_OP.CREATE && savedEvent?.uuid) {
+             // Store mapping from frontend ID to UUID
+             await this.idMapper.setMapping(entityId, savedEvent.uuid);
+           }
+         }
+         break;
 
-      case ENTITY_TYPES.PHOTO:
-        if (operation === MUTATION_OP.DELETE) {
-          await adapter.deletePhoto(entityId);
-        } else {
-          await adapter.savePhoto({ ...payload, _isNew: operation === MUTATION_OP.CREATE });
-        }
-        break;
+       case ENTITY_TYPES.PHOTO:
+         if (operation === MUTATION_OP.DELETE) {
+           await adapter.deletePhoto(entityId);
+         } else {
+           // Translate ID fields in payload to UUIDs if mapped
+           const translatedPayload = { ...payload };
+           if (translatedPayload.personId !== undefined) {
+             translatedPayload.personId = await this.translateId(translatedPayload.personId);
+           }
+           if (Array.isArray(translatedPayload.relatedPersonIds)) {
+             translatedPayload.relatedPersonIds = await Promise.all(
+               translatedPayload.relatedPersonIds.map(id => this.translateId(id))
+             );
+           }
+           const savedPhoto = await adapter.savePhoto({ ...translatedPayload, _isNew: operation === MUTATION_OP.CREATE });
+           if (operation === MUTATION_OP.CREATE && savedPhoto?.uuid) {
+             // Store mapping from frontend ID to UUID
+             await this.idMapper.setMapping(entityId, savedPhoto.uuid);
+           }
+         }
+         break;
 
-      case ENTITY_TYPES.DOCUMENT:
-        if (operation === MUTATION_OP.DELETE) {
-          await adapter.deleteDocument(entityId);
-        } else {
-          await adapter.saveDocument({ ...payload, _isNew: operation === MUTATION_OP.CREATE });
-        }
-        break;
+       case ENTITY_TYPES.DOCUMENT:
+         if (operation === MUTATION_OP.DELETE) {
+           await adapter.deleteDocument(entityId);
+         } else {
+           // Translate ID fields in payload to UUIDs if mapped
+           const translatedPayload = { ...payload };
+           if (translatedPayload.personId !== undefined) {
+             translatedPayload.personId = await this.translateId(translatedPayload.personId);
+           }
+           const savedDocument = await adapter.saveDocument({ ...translatedPayload, _isNew: operation === MUTATION_OP.CREATE });
+           if (operation === MUTATION_OP.CREATE && savedDocument?.uuid) {
+             // Store mapping from frontend ID to UUID
+             await this.idMapper.setMapping(entityId, savedDocument.uuid);
+           }
+         }
+         break;
 
       default:
         throw new Error(`Unsupported entity type: ${entityType}`);
@@ -388,10 +518,19 @@ export class SyncEngine {
   async pullRemoteChanges() {
     if (!this.isOnline() || !this.supabaseAdapter || this.destroyed) return null;
 
-    try {
-      const fid = this.familyId;
-      const remoteData = await this.supabaseAdapter.load();
-      const tombstones = await indexedDBManager.getTombstones(fid);
+       try {
+         const fid = this.familyId;
+         const remoteData = await this.supabaseAdapter.load();
+
+         // Populate ID mappings from remote data
+         await this.populateIdMappings(remoteData.people || []);
+         await this.populateIdMappings(remoteData.relationships || []);
+         await this.populateIdMappings(remoteData.stories || []);
+         await this.populateIdMappings(remoteData.lifeEvents || []);
+         await this.populateIdMappings(remoteData.photos || []);
+         await this.populateIdMappings(remoteData.documents || []);
+
+         const tombstones = await indexedDBManager.getTombstones(fid);
       const tombstoneSet = new Set(tombstones.map((t) => t.id));
 
       // Filter out deleted items so cloud doesn't resurrect local tombstones

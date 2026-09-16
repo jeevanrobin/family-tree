@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Magnet from './react-bits/Magnet.jsx';
 import ClickSpark from './react-bits/ClickSpark.jsx';
 import SearchOverlay from './SearchOverlay.jsx';
@@ -36,6 +37,7 @@ export default function TreeHeader({
   const [familySelectorOpen, setFamilySelectorOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const selectorRef = useRef(null);
+  const navigate = useNavigate();
 
   // Safe consumption of FamilyContext (available in Cloud mode)
   let familyContext = null;
@@ -89,9 +91,12 @@ export default function TreeHeader({
     onDeselect?.();
     // Authoritatively switch active family
     switchFamily?.(newFamilyId);
+    if (!isLocalMode) {
+      navigate(`/app/family/${newFamilyId}`);
+    }
   };
 
-  const familyDisplayName = activeFamily?.name || "MEDIDA'S FAMILY";
+  const familyDisplayName = activeFamily?.name || (isLocalMode ? 'FAMILY TREE' : 'FAMILY ARCHIVE');
 
   return (
     <header className="ft-header">
@@ -188,6 +193,55 @@ export default function TreeHeader({
                         </button>
                       );
                     })}
+
+                    <div style={{ margin: '4px 0', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeSelector();
+                        navigate('/app');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        width: '100%',
+                        padding: '6px 10px',
+                        textAlign: 'left',
+                        fontSize: '0.78rem',
+                        color: '#9ca3af',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <span>View All Families</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeSelector();
+                        navigate('/app/create-family');
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        width: '100%',
+                        padding: '6px 10px',
+                        textAlign: 'left',
+                        fontSize: '0.78rem',
+                        color: '#f97316',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                      }}
+                    >
+                      <span>+ Create New Family</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -391,7 +445,7 @@ export default function TreeHeader({
       <FamilySettingsModal
         isOpen={settingsModalOpen}
         onClose={() => setSettingsModalOpen(false)}
-        family={activeFamily || { id: 'fam-medida-local', name: "Medida's Family" }}
+        family={activeFamily || { id: 'local', name: (isLocalMode ? 'Family Tree' : 'Family Archive') }}
         currentRole={currentRole || 'owner'}
         currentUser={user || { id: 'local-user', email: 'family.admin@medida.org', display_name: 'Local User' }}
         onMembersUpdated={familyContext?.refreshMemberships}

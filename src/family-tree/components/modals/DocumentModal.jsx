@@ -8,6 +8,7 @@
 import React, { useState, useRef } from 'react';
 import { mediaStorageService } from '../../media/mediaStorageService.js';
 import { useFamily } from '../../auth/FamilyContext.jsx';
+import FamilyDatePicker from '../ui/FamilyDatePicker.jsx';
 
 const DOC_TYPES = [
   'Birth Certificate',
@@ -192,8 +193,9 @@ export default function DocumentModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="ft-modal-form-body">
-          <div className="ft-form-grid">
+        <form onSubmit={handleSubmit} className="ft-modal-form">
+          <div className="ft-modal-form-body">
+            <div className="ft-form-grid">
             <div className="ft-form-row ft-form-row--2">
               <div className="ft-form-field">
                 <label>Document Category</label>
@@ -208,12 +210,13 @@ export default function DocumentModal({
 
               <div className="ft-form-field">
                 <label>Date of Record (Optional or Year)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. August 14, 1947 or 1974"
+                <FamilyDatePicker
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
                   disabled={isUploading}
+                  placeholder="e.g. 1947 or YYYY-MM-DD"
+                  allowPartial={true}
+                  ariaLabel="Document date of record"
                 />
               </div>
             </div>
@@ -289,8 +292,9 @@ export default function DocumentModal({
               )}
             </div>
           </div>
+        </div>
 
-          <div className="ft-modal-footer">
+        <div className="ft-modal-footer">
             <button
               type="button"
               className="ft-form-btn ft-form-btn--secondary"

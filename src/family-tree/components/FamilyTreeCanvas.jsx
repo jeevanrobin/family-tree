@@ -13,9 +13,11 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     selectedId,
     immediateFamilyMap,
     constellationMap,
+    ancestryLineage,
     relatedIds,
     onSelectPerson,
     onDeselect,
+    onScaleChange,
     isReducedMotion = false,
   },
   ref
@@ -27,6 +29,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     containerRef,
     isReducedMotion,
     onDeselect,
+    onScaleChange,
   });
 
   // Expose camera control methods through forwardRef
@@ -44,7 +47,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   );
 
   if (!layout) return null;
-  const { nodes, lines, generationTracks, nodeWidth, nodeHeight } = layout;
+  const { nodes, lines, generationTracks, nodeWidth, nodeHeight, bounds } = layout;
   const { transform, isPanning } = interaction;
 
   return (
@@ -95,8 +98,25 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
           ))}
         </div>
 
-        {/* SVG Relationship Connector Lines */}
-        <svg className="ft-canvas__svg-layer" aria-hidden="true">
+        {/* SVG Relationship Connector Lines — Dynamically sized to cover full calculated tree bounds */}
+        <svg
+          className="ft-canvas__svg-layer"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: bounds?.minX ?? 0,
+            top: bounds?.minY ?? 0,
+            width: bounds?.width ?? '100%',
+            height: bounds?.height ?? '100%',
+            overflow: 'visible',
+            pointerEvents: 'none',
+          }}
+          viewBox={
+            bounds?.width
+              ? `${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`
+              : undefined
+          }
+        >
           <defs>
             <filter id="active-line-glow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="blur" />
@@ -114,17 +134,33 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
             let isLineDimmed = false;
 
             if (selectedId) {
+              const lineageSpouseKeys = ancestryLineage?.lineageSpouseKeys || new Set();
+              const lineageParentChildChildIds = ancestryLineage?.lineageParentChildChildIds || new Set();
+
               if (line.type === 'spouse') {
-                if (line.personId1 === selectedId || line.personId2 === selectedId) {
+                const isSelfSpouse = line.personId1 === selectedId || line.personId2 === selectedId;
+                const spouseKey = [String(line.personId1), String(line.personId2)].sort().join('-');
+                const isLineageSpouse = lineageSpouseKeys.has(spouseKey);
+
+                if (isSelfSpouse || isLineageSpouse) {
                   isLineActive = true;
                 } else {
                   isLineDimmed = true;
                 }
               } else if (line.type === 'parent-child') {
-                if (
-                  line.childId === selectedId ||
-                  (line.parentIds && line.parentIds.includes(selectedId))
-                ) {
+                const isDirectToSelected = line.childId === selectedId;
+                const isAncestralLineage = lineageParentChildChildIds.has(line.childId);
+                const isChildOfSelected =
+                  (line.parentIds && line.parentIds.includes(selectedId)) ||
+                  (line.allParentIds && line.allParentIds.includes(selectedId));
+
+                if (isDirectToSelected || isAncestralLineage || isChildOfSelected) {
+                  isLineActive = true;
+                } else {
+                  isLineDimmed = true;
+                }
+              } else if (line.type === 'sibling') {
+                if (line.personId1 === selectedId || line.personId2 === selectedId) {
                   isLineActive = true;
                 } else {
                   isLineDimmed = true;
@@ -164,6 +200,19 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
               );
             }
 
+            if (line.type === 'sibling') {
+              return (
+                <g key={line.id} className="ft-canvas__sibling-group">
+                  <path
+                    d={line.path}
+                    className={`ft-canvas__line ft-canvas__line--sibling ${
+                      isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
+                    } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''}`}
+                  />
+                </g>
+              );
+            }
+
             return (
               <path
                 key={line.id}
@@ -183,7 +232,10 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
           const constellationTier = selectedId
             ? constellationMap?.get(id)?.tier || 'unrelated'
             : 'default';
-          const relationRole = immediateFamilyMap?.get(id)?.role || null;
+          const relationRole =
+            immediateFamilyMap?.get(id)?.role ||
+            constellationMap?.get(id)?.role ||
+            null;
 
           // Generational entrance delay (Gen I -> Gen II -> Gen III -> Gen IV)
           const genDelay = (node.gen || 0) * 80 + (node.x > 0 ? 30 : 0);

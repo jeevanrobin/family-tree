@@ -342,13 +342,13 @@ await runTest(23, 'role permissions: viewers are read-only; contributors and edi
 });
 
 // ── Test 24: Upload Integration ───────────────────────────────
-await runTest(24, 'upload integration: adding photo and document immediately updates store and notifies', () => {
+await runTest(24, 'upload integration: adding photo and document immediately updates store and notifies', async () => {
   let notified = false;
   const unsub = familyStore.subscribe(() => {
     notified = true;
   });
 
-  const photo = familyStore.addPhoto({
+  const photo = await familyStore.addPhoto({
     personId: 'g-venkat',
     src: 'https://example.com/test-uploaded.jpg',
     title: 'Test New Upload',
@@ -358,7 +358,7 @@ await runTest(24, 'upload integration: adding photo and document immediately upd
   assert.ok(notified, 'Store notified subscriber on photo upload');
   assert.ok(familyStore.getPhotoById(photo.id), 'Photo immediately accessible');
 
-  const doc = familyStore.addDocument({
+  const doc = await familyStore.addDocument({
     personId: 'g-venkat',
     name: 'Test Land Deed',
     type: 'Deed',
@@ -368,18 +368,18 @@ await runTest(24, 'upload integration: adding photo and document immediately upd
   assert.ok(familyStore.getDocumentById(doc.id), 'Document immediately accessible');
 
   // Clean up
-  familyStore.deletePhoto(photo.id);
-  familyStore.deleteDocument(doc.id);
+  await familyStore.deletePhoto(photo.id);
+  await familyStore.deleteDocument(doc.id);
   unsub();
 });
 
 // ── Test 25: Lightbox Integration ─────────────────────────────
-await runTest(25, 'lightbox integration: supports index selection, primary photo, and deletion', () => {
+await runTest(25, 'lightbox integration: supports index selection, primary photo, and deletion', async () => {
   const photos = familyStore.getAllPhotos();
   const targetPhoto = photos[0];
   assert.ok(targetPhoto, 'Target photo exists');
   // Can set primary
-  const updated = familyStore.setPrimaryPhoto(targetPhoto.personId, targetPhoto.id);
+  const updated = await familyStore.setPrimaryPhoto(targetPhoto.personId, targetPhoto.id);
   assert.strictEqual(updated.isPrimary, true, 'Primary photo set correctly');
 });
 

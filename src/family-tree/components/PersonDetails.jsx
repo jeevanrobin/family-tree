@@ -11,6 +11,7 @@ import {
   getChildren,
   getSpouse,
   getSiblings,
+  getSiblingDisplayLabel,
   getGeneration,
   getStoriesForPerson,
   getEventsForPerson,
@@ -356,6 +357,12 @@ export default function PersonDetails({
                   >
                     + Add Parent
                   </button>
+                  <button
+                    className="ft-details__add-rel-btn"
+                    onClick={() => onAddRelative(person.id, 'sibling')}
+                  >
+                    + Add Sibling
+                  </button>
                 </div>
               )}
             </div>
@@ -681,7 +688,7 @@ export default function PersonDetails({
 
             {/* Parents */}
             {parents.length > 0 && (
-              <div className="ft-details__rel-group">
+               <div className="ft-details__rel-group">
                 <span className="ft-details__rel-role">Parents ({parents.length})</span>
                 <div className="ft-details__rel-chips">
                   {parents.map((p) => (
@@ -695,7 +702,10 @@ export default function PersonDetails({
                       ) : (
                         <span className="ft-details__rel-avatar">{getInitials(p)}</span>
                       )}
-                      <span>{p.displayName}</span>
+                      <div className="ft-details__rel-chip-info">
+                        <span className="ft-details__rel-chip-role">{p.gender === 'female' ? 'Mother' : p.gender === 'male' ? 'Father' : 'Parent'}</span>
+                        <span className="ft-details__rel-chip-name">{p.displayName}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -716,7 +726,10 @@ export default function PersonDetails({
                     ) : (
                       <span className="ft-details__rel-avatar">{getInitials(spouse)}</span>
                     )}
-                    <span>{spouse.displayName}</span>
+                    <div className="ft-details__rel-chip-info">
+                      <span className="ft-details__rel-chip-role">{spouse.gender === 'female' ? 'Wife' : spouse.gender === 'male' ? 'Husband' : 'Spouse'}</span>
+                      <span className="ft-details__rel-chip-name">{spouse.displayName}</span>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -738,7 +751,10 @@ export default function PersonDetails({
                       ) : (
                         <span className="ft-details__rel-avatar">{getInitials(c)}</span>
                       )}
-                      <span>{c.displayName}</span>
+                      <div className="ft-details__rel-chip-info">
+                        <span className="ft-details__rel-chip-role">{c.gender === 'female' ? 'Daughter' : c.gender === 'male' ? 'Son' : 'Child'}</span>
+                        <span className="ft-details__rel-chip-name">{c.displayName}</span>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -761,7 +777,10 @@ export default function PersonDetails({
                       ) : (
                         <span className="ft-details__rel-avatar">{getInitials(s)}</span>
                       )}
-                      <span>{s.displayName}</span>
+                      <div className="ft-details__rel-chip-info">
+                        <span className="ft-details__rel-chip-role">{getSiblingDisplayLabel(s)}</span>
+                        <span className="ft-details__rel-chip-name">{s.displayName}</span>
+                      </div>
                     </button>
                   ))}
                 </div>

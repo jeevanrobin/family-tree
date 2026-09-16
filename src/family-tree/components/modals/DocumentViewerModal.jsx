@@ -63,7 +63,7 @@ export default function DocumentViewerModal({
           </button>
         </header>
 
-        <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="ft-modal-form-body" style={{ gap: '16px' }}>
           {/* Document Content / Notes */}
           <div style={{
             padding: '16px 20px',

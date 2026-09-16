@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth.js';
+import FadeContent from '../react-bits/FadeContent.jsx';
+import AuthShell from './AuthShell.jsx';
+import AuthInput from './AuthInput.jsx';
+import useReducedMotion from '../../hooks/useReducedMotion.js';
 
+/**
+ * Reset Password Page
+ * Set a new password after following an email reset link.
+ * Uses the existing useAuth()/Supabase implementation — presentation only.
+ */
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -9,9 +18,11 @@ export default function ResetPasswordPage() {
   const [statusMessage, setStatusMessage] = useState(null); // { type: 'success' | 'error', text: '' }
   const { updateUser } = useAuth();
   const navigate = useNavigate();
+  const isReducedMotion = useReducedMotion();
 
   const handleReset = async (e) => {
     e.preventDefault();
+    if (loading) return; // prevent double-submit
     setStatusMessage(null);
 
     if (password !== confirmPassword) {
@@ -52,80 +63,91 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="ft-auth-container">
-      <div className="ft-auth-card">
-        <div className="ft-auth-header">
-          <h1>Set New Password</h1>
-          <p className="ft-auth-tagline">Medida's Family Archive</p>
-        </div>
+    <AuthShell>
+      <div className="fa-card">
+        <FadeContent duration={500} delay={90} distance={12} isReducedMotion={isReducedMotion}>
+          <h1 className="fa-card__title">Set a new password</h1>
+          <p className="fa-card__sub">Choose a new password for your account.</p>
+        </FadeContent>
 
         {statusMessage && (
-          <div
-            className={`ft-auth-status ft-auth-status--${statusMessage.type}`}
-            role="alert"
-            style={{
-              padding: '12px 16px',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              fontSize: '0.875rem',
-              backgroundColor: statusMessage.type === 'success' ? 'rgba(74, 222, 128, 0.15)' : 'rgba(248, 113, 113, 0.15)',
-              color: statusMessage.type === 'success' ? '#22c55e' : '#ef4444',
-              border: `1px solid ${statusMessage.type === 'success' ? 'rgba(74, 222, 128, 0.3)' : 'rgba(248, 113, 113, 0.3)'}`,
-            }}
-          >
+          <div className={`fa-banner fa-banner--${statusMessage.type}`} role="alert">
+            {statusMessage.type === 'success' ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4M12 16h.01" />
+              </svg>
+            )}
             {statusMessage.text}
           </div>
         )}
 
-        <form onSubmit={handleReset} className="ft-auth-form">
-          <div className="ft-auth-field">
-            <label htmlFor="new-password">New Password</label>
-            <input
-              type="password"
+        <FadeContent duration={500} delay={170} distance={12} isReducedMotion={isReducedMotion}>
+          <form onSubmit={handleReset} className="fa-form" noValidate={false}>
+            <AuthInput
               id="new-password"
+              label="New Password"
+              type="password"
+              passwordToggle
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength="6"
-              autoFocus
               placeholder="At least 6 characters"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              autoFocus
+              disabled={loading}
             />
-          </div>
 
-          <div className="ft-auth-field">
-            <label htmlFor="confirm-new-password">Confirm New Password</label>
-            <input
-              type="password"
+            <AuthInput
               id="confirm-new-password"
+              label="Confirm New Password"
+              type="password"
+              passwordToggle
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength="6"
               placeholder="Repeat your new password"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              disabled={loading}
             />
-          </div>
 
-          <button
-            type="submit"
-            className="ft-auth-button"
-            disabled={loading}
-          >
-            {loading ? 'Updating Password...' : 'Update Password'}
-          </button>
-        </form>
-
-        <div className="ft-auth-footer">
-          <p>
             <button
-              type="button"
-              onClick={() => navigate('/signin')}
-              className="ft-auth-link"
+              type="submit"
+              className="fa-btn fa-btn--primary fa-btn--block"
+              disabled={loading}
             >
-              Back to Sign In
+              {loading ? (
+                <>
+                  <span className="fa-btn__spinner" aria-hidden="true" />
+                  Updating Password…
+                </>
+              ) : (
+                'Update Password'
+              )}
             </button>
-          </p>
-        </div>
+          </form>
+        </FadeContent>
+
+        <FadeContent duration={500} delay={240} distance={10} isReducedMotion={isReducedMotion}>
+          <div className="fa-card__footer">
+            <p>
+              <button
+                type="button"
+                onClick={() => navigate('/signin')}
+                className="fa-link"
+              >
+                Back to Sign In
+              </button>
+            </p>
+          </div>
+        </FadeContent>
       </div>
-    </div>
+    </AuthShell>
   );
 }

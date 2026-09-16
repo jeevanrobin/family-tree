@@ -431,6 +431,13 @@ export const sampleRelationships = [
     startDate: '1942-02-18',
   }),
 
+  // Generation I Siblings (Ramaiah and Lakshmi are siblings)
+  createRelationship({
+    personId1: 'gg-ramaiah',
+    personId2: 'gg-lakshmi',
+    type: 'sibling',
+  }),
+
   // Generation I → Generation II (Ramaiah & Saraswathi → Venkat)
   createRelationship({
     personId1: 'gg-ramaiah',

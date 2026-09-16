@@ -6,9 +6,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 export default function IntroOverlay({
-  title = "MEDIDA'S FAMILY",
+  title = "FAMILY TREE",
   tagline = "Generations. Stories. Memories.",
-  metadata = "PRIVATE DIGITAL FAMILY PLATFORM · 4 GENERATIONS",
+  metadata = "PRIVATE DIGITAL FAMILY PLATFORM",
   onComplete,
   isReducedMotion = false,
 }) {

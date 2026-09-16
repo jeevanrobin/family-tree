@@ -20,6 +20,7 @@ export const STORES = Object.freeze({
   SYNC_META: 'syncMeta',
   TOMBSTONES: 'tombstones',
   PENDING_UPLOADS: 'pendingUploads',
+  ID_MAP: 'idMap',
 });
 
 class IndexedDBManager {
@@ -90,14 +91,22 @@ class IndexedDBManager {
             tombStore.createIndex('familyId', 'familyId', { unique: false });
           }
 
-          // Pending Uploads (Offline Media Queue): keyed by id
-          if (!db.objectStoreNames.contains(STORES.PENDING_UPLOADS)) {
-            const uploadStore = db.createObjectStore(STORES.PENDING_UPLOADS, { keyPath: 'id' });
-            uploadStore.createIndex('familyId', 'familyId', { unique: false });
-            uploadStore.createIndex('status', 'status', { unique: false });
-            uploadStore.createIndex('createdAt', 'createdAt', { unique: false });
-          }
-        };
+           // Pending Uploads (Offline Media Queue): keyed by id
+           if (!db.objectStoreNames.contains(STORES.PENDING_UPLOADS)) {
+             const uploadStore = db.createObjectStore(STORES.PENDING_UPLOADS, { keyPath: 'id' });
+             uploadStore.createIndex('familyId', 'familyId', { unique: false });
+             uploadStore.createIndex('status', 'status', { unique: false });
+             uploadStore.createIndex('createdAt', 'createdAt', { unique: false });
+           }
+
+           // ID Map: keyed by id (composite key: familyId:localId)
+           if (!db.objectStoreNames.contains(STORES.ID_MAP)) {
+             const idMapStore = db.createObjectStore(STORES.ID_MAP, { keyPath: 'id' });
+             idMapStore.createIndex('familyId', 'familyId', { unique: false });
+             idMapStore.createIndex('localId', 'localId', { unique: false });
+             idMapStore.createIndex('remoteUuid', 'remoteUuid', { unique: false });
+           }
+         };
 
         request.onsuccess = (event) => {
           this.db = event.target.result;
@@ -280,6 +289,50 @@ class IndexedDBManager {
         await this.delete(storeName, item.id);
       }
     }
+  }
+
+  async clearAllFamilyData(familyId) {
+    if (!familyId) return;
+    await this.clearFamilyData(familyId);
+
+    const otherStores = [
+      STORES.SYNC_QUEUE,
+      STORES.SYNC_META,
+      STORES.TOMBSTONES,
+      STORES.PENDING_UPLOADS,
+      STORES.ID_MAP,
+    ];
+
+    for (const storeName of otherStores) {
+      const items = await this.getAllByFamily(storeName, familyId);
+      for (const item of items) {
+        const key = item.id || item.familyId;
+        await this.delete(storeName, key);
+      }
+    }
+  }
+
+  async clearAllDatabases() {
+    const db = await this.getDB();
+    if (!db) {
+      this.memoryStores.forEach((store) => store.clear());
+      return;
+    }
+    const storeNames = Object.values(STORES);
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction(storeNames, 'readwrite');
+        storeNames.forEach((name) => {
+          if (db.objectStoreNames.contains(name)) {
+            tx.objectStore(name).clear();
+          }
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   // ── Sync Queue Helpers ──────────────────────────────────────

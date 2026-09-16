@@ -389,13 +389,13 @@ await runTest(28, 'M3B security regression: viewer role is strictly read-only', 
 });
 
 // ── Test 29: M3C sync regression ──────────────────────────────
-await runTest(29, 'M3C sync regression: adding and deleting story triggers store reactivity', () => {
+await runTest(29, 'M3C sync regression: adding and deleting story triggers store reactivity', async () => {
   let notified = false;
   const unsubscribe = familyStore.subscribe(() => {
     notified = true;
   });
 
-  const newStory = familyStore.addStory({
+  const newStory = await familyStore.addStory({
     personId: 'g-venkat',
     title: 'Reactive Test Memory',
     content: 'Testing listener reactivity.',
@@ -405,7 +405,7 @@ await runTest(29, 'M3C sync regression: adding and deleting story triggers store
   assert.ok(familyStore.getStoryById(newStory.id), 'Story was added');
 
   notified = false;
-  familyStore.deleteStory(newStory.id);
+  await familyStore.deleteStory(newStory.id);
   assert.ok(notified, 'Listener notified on deleteStory');
   assert.strictEqual(familyStore.getStoryById(newStory.id), null, 'Story was deleted');
 

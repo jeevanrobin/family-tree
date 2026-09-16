@@ -79,6 +79,25 @@ export function deriveRelationshipItems(relationships = [], peopleMap = new Map(
           raw: rel,
         });
       }
+    } else if (rel.type === 'sibling') {
+      const p1Id = String(rel.personAId || rel.personId1 || '');
+      const p2Id = String(rel.personBId || rel.personId2 || '');
+      const p1 = peopleMap.get(p1Id);
+      const p2 = peopleMap.get(p2Id);
+      if (p1 && p2) {
+        items.push({
+          id: rel.id || `rel-sibling-${p1Id}-${p2Id}`,
+          type: 'relationship',
+          subType: 'sibling',
+          title: `${p1.displayName} & ${p2.displayName}`,
+          subtitle: 'Siblings',
+          personId: p1Id,
+          secondaryPersonId: p2Id,
+          attachedPersonNames: [p1.displayName, p2.displayName],
+          date: '',
+          raw: rel,
+        });
+      }
     }
   });
 

@@ -17,7 +17,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient.js';
 function personToRow(person, familyId) {
   return {
     family_id: familyId,
-    local_id: person.id || null,
+    local_id: person.id,
     first_name: person.firstName || '',
     middle_name: person.middleName || '',
     last_name: person.lastName || '',
@@ -39,7 +39,8 @@ function personToRow(person, familyId) {
 
 function rowToPerson(row) {
   return {
-    id: row.id,
+    id: row.local_id,
+    uuid: row.id,
     firstName: row.first_name || '',
     middleName: row.middle_name || '',
     lastName: row.last_name || '',
@@ -50,7 +51,7 @@ function rowToPerson(row) {
     dateOfDeath: row.date_of_death || null,
     placeOfBirth: row.place_of_birth || '',
     hometown: row.hometown || '',
-    currentLocation: row.current_location || '',
+    currentLocation: row.currentLocation || '',
     occupation: row.occupation || '',
     photo: row.photo_url || '',
     photoUrl: row.photo_url || '',
@@ -86,8 +87,8 @@ function relationshipToRow(rel, familyId) {
 
 function rowToRelationship(row) {
   const base = {
-    id: row.id,
-    type: row.type,
+    id: row.local_id,
+    uuid: row.id,
     personId1: row.person_id_1,
     personId2: row.person_id_2,
     createdAt: row.created_at,
@@ -121,7 +122,8 @@ function storyToRow(story, familyId) {
 
 function rowToStory(row, relatedPersonIds = []) {
   return {
-    id: row.id,
+    id: row.local_id,
+    uuid: row.id,
     personId: row.person_id,
     title: row.title || 'Untitled Memory',
     content: row.content || '',
@@ -149,7 +151,8 @@ function lifeEventToRow(event, familyId) {
 
 function rowToLifeEvent(row, relatedPersonIds = []) {
   return {
-    id: row.id,
+    id: row.local_id,
+    uuid: row.id,
     personId: row.person_id,
     type: row.type || 'Other',
     title: row.title || 'Life Event',
@@ -179,7 +182,8 @@ function photoToRow(photo, familyId) {
 
 function rowToPhoto(row, relatedPersonIds = []) {
   return {
-    id: row.id,
+    id: row.local_id,
+    uuid: row.id,
     personId: row.person_id,
     src: row.src || '',
     storagePath: row.storage_path || '',
@@ -190,6 +194,7 @@ function rowToPhoto(row, relatedPersonIds = []) {
     isPrimary: Boolean(row.is_primary),
     relatedPersonIds,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -212,7 +217,8 @@ function documentToRow(doc, familyId) {
 
 function rowToDocument(row) {
   return {
-    id: row.id,
+    id: row.local_id,
+    uuid: row.id,
     personId: row.person_id,
     name: row.name || 'Archival Document',
     type: row.type || 'Official Record',
@@ -224,6 +230,7 @@ function rowToDocument(row) {
     date: row.date || '',
     description: row.description || '',
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -382,29 +389,29 @@ export class SupabaseAdapter extends FamilyRepository {
       return rowToPerson(data);
     }
 
-    const data = throwIfError(
-      await supabase
-        .from('family_members')
-        .update(row)
-        .eq('id', person.id)
-        .eq('family_id', this.familyId)
-        .select()
-        .single(),
-      'update person'
-    );
+     const data = throwIfError(
+       await supabase
+         .from('family_members')
+         .update(row)
+         .eq('local_id', person.id)
+         .eq('family_id', this.familyId)
+         .select()
+         .single(),
+       'update person'
+     );
     return rowToPerson(data);
   }
 
-  async deletePerson(personId) {
-    await this._validateSessionAndScope();
-    throwIfError(
-      await supabase
-        .from('family_members')
-        .delete()
-        .eq('id', personId)
-        .eq('family_id', this.familyId),
-      'delete person'
-    );
+   async deletePerson(personId) {
+     await this._validateSessionAndScope();
+     throwIfError(
+       await supabase
+         .from('family_members')
+         .delete()
+         .eq('local_id', personId)
+         .eq('family_id', this.familyId),
+       'delete person'
+     );
   }
 
   // ── Relationships ──────────────────────────────────
@@ -434,16 +441,16 @@ export class SupabaseAdapter extends FamilyRepository {
     return rowToRelationship(data);
   }
 
-  async deleteRelationship(relId) {
-    await this._validateSessionAndScope();
-    throwIfError(
-      await supabase
-        .from('relationships')
-        .delete()
-        .eq('id', relId)
-        .eq('family_id', this.familyId),
-      'delete relationship'
-    );
+   async deleteRelationship(relId) {
+     await this._validateSessionAndScope();
+     throwIfError(
+       await supabase
+         .from('relationships')
+         .delete()
+         .eq('local_id', relId)
+         .eq('family_id', this.familyId),
+       'delete relationship'
+     );
   }
 
   // ── Stories ────────────────────────────────────────
@@ -463,19 +470,19 @@ export class SupabaseAdapter extends FamilyRepository {
         await supabase.from('stories').insert(row).select().single(),
         'insert story'
       );
-    } else {
-      savedRow = throwIfError(
-        await supabase
-          .from('stories')
-          .update(row)
-          .eq('id', story.id)
-          .eq('family_id', this.familyId)
-          .select()
-          .single(),
-        'update story'
-      );
-      await supabase.from('story_persons').delete().eq('story_id', story.id);
-    }
+     } else {
+       savedRow = throwIfError(
+         await supabase
+           .from('stories')
+           .update(row)
+           .eq('local_id', story.id)
+           .eq('family_id', this.familyId)
+           .select()
+           .single(),
+         'update story'
+       );
+       await supabase.from('story_persons').delete().eq('story_id', story.id);
+     }
 
     if (story.relatedPersonIds?.length > 0) {
       const junctionRows = story.relatedPersonIds.map((pid) => ({
@@ -491,16 +498,16 @@ export class SupabaseAdapter extends FamilyRepository {
     return rowToStory(savedRow, story.relatedPersonIds || []);
   }
 
-  async deleteStory(storyId) {
-    await this._validateSessionAndScope();
-    throwIfError(
-      await supabase
-        .from('stories')
-        .delete()
-        .eq('id', storyId)
-        .eq('family_id', this.familyId),
-      'delete story'
-    );
+   async deleteStory(storyId) {
+     await this._validateSessionAndScope();
+     throwIfError(
+       await supabase
+         .from('stories')
+         .delete()
+         .eq('local_id', storyId)
+         .eq('family_id', this.familyId),
+       'delete story'
+     );
   }
 
   // ── Life Events ────────────────────────────────────
@@ -520,17 +527,17 @@ export class SupabaseAdapter extends FamilyRepository {
         'insert life_event'
       );
     } else {
-      savedRow = throwIfError(
-        await supabase
-          .from('life_events')
-          .update(row)
-          .eq('id', event.id)
-          .eq('family_id', this.familyId)
-          .select()
-          .single(),
-        'update life_event'
-      );
-      await supabase.from('life_event_persons').delete().eq('life_event_id', event.id);
+       savedRow = throwIfError(
+         await supabase
+           .from('life_events')
+           .update(row)
+           .eq('local_id', event.id)
+           .eq('family_id', this.familyId)
+           .select()
+           .single(),
+         'update life_event'
+       );
+       await supabase.from('life_event_persons').delete().eq('life_event_id', event.id);
     }
 
     if (event.relatedPersonIds?.length > 0) {
@@ -547,16 +554,16 @@ export class SupabaseAdapter extends FamilyRepository {
     return rowToLifeEvent(savedRow, event.relatedPersonIds || []);
   }
 
-  async deleteLifeEvent(eventId) {
-    await this._validateSessionAndScope();
-    throwIfError(
-      await supabase
-        .from('life_events')
-        .delete()
-        .eq('id', eventId)
-        .eq('family_id', this.familyId),
-      'delete life_event'
-    );
+   async deleteLifeEvent(eventId) {
+     await this._validateSessionAndScope();
+     throwIfError(
+       await supabase
+         .from('life_events')
+         .delete()
+         .eq('local_id', eventId)
+         .eq('family_id', this.familyId),
+       'delete life_event'
+     );
   }
 
   // ── Photos ─────────────────────────────────────────
@@ -587,17 +594,17 @@ export class SupabaseAdapter extends FamilyRepository {
         'insert media'
       );
     } else {
-      savedRow = throwIfError(
-        await supabase
-          .from('media')
-          .update(row)
-          .eq('id', photo.id)
-          .eq('family_id', this.familyId)
-          .select()
-          .single(),
-        'update media'
-      );
-      await supabase.from('media_persons').delete().eq('media_id', photo.id);
+       savedRow = throwIfError(
+         await supabase
+           .from('media')
+           .update(row)
+           .eq('local_id', photo.id)
+           .eq('family_id', this.familyId)
+           .select()
+           .single(),
+         'update media'
+       );
+       await supabase.from('media_persons').delete().eq('media_id', photo.id);
     }
 
     if (photo.relatedPersonIds?.length > 0) {
@@ -658,27 +665,27 @@ export class SupabaseAdapter extends FamilyRepository {
 
     const data = throwIfError(
       await supabase
-        .from('documents')
-        .update(row)
-        .eq('id', doc.id)
-        .eq('family_id', this.familyId)
-        .select()
-        .single(),
-      'update document'
-    );
+         .from('documents')
+         .update(row)
+         .eq('local_id', doc.id)
+         .eq('family_id', this.familyId)
+         .select()
+         .single(),
+       'update document'
+     );
     return rowToDocument(data);
   }
 
-  async deleteDocument(docId) {
-    await this._validateSessionAndScope();
-    throwIfError(
-      await supabase
-        .from('documents')
-        .delete()
-        .eq('id', docId)
-        .eq('family_id', this.familyId),
-      'delete document'
-    );
+   async deleteDocument(docId) {
+     await this._validateSessionAndScope();
+     throwIfError(
+       await supabase
+         .from('documents')
+         .delete()
+         .eq('local_id', docId)
+         .eq('family_id', this.familyId),
+       'delete document'
+     );
   }
 
   // ── Bulk Operations ────────────────────────────────

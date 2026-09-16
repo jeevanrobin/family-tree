@@ -277,7 +277,7 @@ export default function FamilyMemoriesView({
   }
 
   return (
-    <div className="ft-memories-container" role="main" aria-label="Medida's Family Memories">
+    <div className="ft-memories-container" role="main" aria-label="Family Memories">
       {/* Top Header Bar */}
       <header className="ft-memories-header">
         <div className="ft-memories-header__left">

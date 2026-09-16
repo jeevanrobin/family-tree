@@ -7,6 +7,8 @@
 import React, { useState, useRef } from 'react';
 import { mediaStorageService } from '../../media/mediaStorageService.js';
 import { useFamily } from '../../auth/FamilyContext.jsx';
+import FamilyDatePicker from '../ui/FamilyDatePicker.jsx';
+import { LocationCombobox } from '../ui/FamilyCombobox.jsx';
 
 export default function PhotoModal({
   isOpen,
@@ -185,8 +187,9 @@ export default function PhotoModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="ft-modal-form-body">
-          <div className="ft-form-grid">
+        <form onSubmit={handleSubmit} className="ft-modal-form">
+          <div className="ft-modal-form-body">
+            <div className="ft-form-grid">
             {/* Image Preview & Upload options */}
             <div className="ft-form-field">
               <label>Choose Photo (JPEG, PNG, WEBP — up to 15MB)</label>
@@ -269,22 +272,24 @@ export default function PhotoModal({
             <div className="ft-form-row ft-form-row--2">
               <div className="ft-form-field">
                 <label>Date / Year</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1985 or Dec 2018"
+                <FamilyDatePicker
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
                   disabled={isUploading}
+                  placeholder="e.g. 1985 or YYYY-MM-DD"
+                  allowPartial={true}
+                  ariaLabel="Photograph date or year"
                 />
               </div>
               <div className="ft-form-field">
                 <label>Location</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Hyderabad, Telangana"
+                <LocationCombobox
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  onChange={setLocation}
+                  placeholder="e.g. Muthagudem, Hyderabad"
+                  ariaLabel="Photograph location"
                   disabled={isUploading}
+                  activeFamilyId={familyId}
                 />
               </div>
             </div>
@@ -314,8 +319,9 @@ export default function PhotoModal({
               </label>
             </div>
           </div>
+        </div>
 
-          <div className="ft-modal-footer">
+        <div className="ft-modal-footer">
             <button
               type="button"
               className="ft-form-btn ft-form-btn--secondary"

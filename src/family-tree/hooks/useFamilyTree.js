@@ -11,6 +11,7 @@ import familyStore from '../store/FamilyStore.js';
 import {
   getImmediateFamilyMap,
   getFamilyConstellationMap,
+  getAncestryLineage,
   getAllGenerations,
   getStoriesForPerson,
   getEventsForPerson,
@@ -64,9 +65,24 @@ export function useFamilyTree() {
     return selectedId ? getFamilyConstellationMap(selectedId) : new Map();
   }, [selectedId, relationships, persons]);
 
+  // Complete ancestral lineage tracing (Grandparents -> Parents -> Selected Child)
+  const ancestryLineage = useMemo(() => {
+    return selectedId
+      ? getAncestryLineage(selectedId)
+      : {
+          ancestorIds: new Set(),
+          lineageSpouseKeys: new Set(),
+          lineageParentChildChildIds: new Set(),
+        };
+  }, [selectedId, relationships, persons]);
+
   const relatedIds = useMemo(() => {
-    return new Set(immediateFamilyMap.keys());
-  }, [immediateFamilyMap]);
+    const ids = new Set(immediateFamilyMap.keys());
+    if (ancestryLineage?.ancestorIds) {
+      ancestryLineage.ancestorIds.forEach((id) => ids.add(id));
+    }
+    return ids;
+  }, [immediateFamilyMap, ancestryLineage]);
 
   // Profile-specific collections for selected person
   const selectedPersonStories = useMemo(() => {
@@ -212,6 +228,7 @@ export function useFamilyTree() {
     selectedPerson,
     immediateFamilyMap,
     constellationMap,
+    ancestryLineage,
     relatedIds,
     selectedPersonStories,
     selectedPersonEvents,

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Tree Interaction Engine — Camera Framing & Canvas Transform Mathematics
  * Intelligently scales and fits the family tree to occupy 72-82% of the usable viewport.
  */
@@ -31,18 +31,18 @@ export function calculateFitToBounds(bounds, containerWidth, containerHeight, pa
   const availableW = Math.max(containerWidth - paddingX * 2, 200);
   const availableH = Math.max(containerHeight - paddingY * 2, 200);
 
-  const scaleX = availableW / bounds.width;
-  const scaleY = availableH / bounds.height;
+  const scaleX = availableW / (bounds.width || 1);
+  const scaleY = availableH / (bounds.height || 1);
   
   // Choose scale so the tree fills the available viewport comfortably
-  const scale = clamp(Math.min(scaleX, scaleY), 0.55, 1.35);
+  const scale = clamp(Math.min(scaleX, scaleY), 0.45, 1.25);
 
   const centerX = (bounds.minX + bounds.maxX) / 2;
   const centerY = (bounds.minY + bounds.maxY) / 2;
 
   return {
     x: containerWidth / 2 - centerX * scale,
-    y: containerHeight / 2 - centerY * scale + 10,
+    y: containerHeight / 2 - centerY * scale,
     scale,
   };
 }

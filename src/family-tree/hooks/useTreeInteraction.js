@@ -20,6 +20,7 @@ export function useTreeInteraction({
   containerRef,
   isReducedMotion = false,
   onDeselect,
+  onScaleChange,
 }) {
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
   const [isPanning, setIsPanning] = useState(false);
@@ -30,13 +31,20 @@ export function useTreeInteraction({
   const hasMoved = useRef(false);
   const lastTouchDist = useRef(null);
   const animFrameId = useRef(null);
+  const transformRef = useRef(transform);
+  transformRef.current = transform;
 
   // Fit on first layout measurement as well as after the intro overlay. This
   // prevents a fresh session from starting at the raw origin with half the
   // family off-screen.
   const hasInitialFit = useRef(false);
 
-  // Smooth camera animation function
+  // Notify parent of scale changes (for ZoomControls percentage badge)
+  useEffect(() => {
+    onScaleChange?.(transform.scale);
+  }, [transform.scale, onScaleChange]);
+
+  // Smooth camera animation function — stable ref prevents re-renders on drag
   const animateCameraTo = useCallback(
     (targetX, targetY, targetScale, duration = 450) => {
       if (isReducedMotion) {
@@ -48,9 +56,9 @@ export function useTreeInteraction({
         cancelAnimationFrame(animFrameId.current);
       }
 
-      const startX = transform.x;
-      const startY = transform.y;
-      const startScale = transform.scale;
+      const startX = transformRef.current.x;
+      const startY = transformRef.current.y;
+      const startScale = transformRef.current.scale;
       const startTime = performance.now();
 
       function step(now) {
@@ -73,7 +81,7 @@ export function useTreeInteraction({
 
       animFrameId.current = requestAnimationFrame(step);
     },
-    [transform, isReducedMotion]
+    [isReducedMotion]
   );
 
   // Fit to screen / reset view
@@ -81,11 +89,15 @@ export function useTreeInteraction({
     (duration = 550) => {
       if (!layout || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
       const target = calculateFitToBounds(layout.bounds, rect.width, rect.height, 40, 45);
       animateCameraTo(target.x, target.y, target.scale, duration);
     },
     [layout, containerRef, animateCameraTo]
   );
+
+  const fitTreeToBoundsRef = useRef(fitTreeToBounds);
+  fitTreeToBoundsRef.current = fitTreeToBounds;
 
   useEffect(() => {
     if (!hasInitialFit.current && layout?.bounds?.width && containerRef.current) {
@@ -93,6 +105,42 @@ export function useTreeInteraction({
       requestAnimationFrame(() => fitTreeToBounds(0));
     }
   }, [layout, containerRef, fitTreeToBounds]);
+
+  // Maintain proper centering ONLY when the actual browser viewport/container changes size
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let resizeTimer;
+    let prevWidth = el.clientWidth;
+    let prevHeight = el.clientHeight;
+
+    const observer = new ResizeObserver((entries) => {
+      // NEVER auto-reset view while the user is actively dragging or panning
+      if (isDragging.current) return;
+
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        // Only trigger if container dimensions actually changed (e.g. window resize, drawer toggle)
+        if (Math.abs(width - prevWidth) > 8 || Math.abs(height - prevHeight) > 8) {
+          prevWidth = width;
+          prevHeight = height;
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            if (!isDragging.current) {
+              fitTreeToBoundsRef.current?.(0);
+            }
+          }, 150);
+        }
+      }
+    });
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      clearTimeout(resizeTimer);
+    };
+  }, [containerRef]);
 
   // Focus on a specific person node
   const focusOnPerson = useCallback(

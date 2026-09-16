@@ -14,6 +14,7 @@ export class LocalAdapter extends FamilyRepository {
 
   loadSync() {
     try {
+      if (typeof localStorage === 'undefined') return null;
       const rawV2 = localStorage.getItem(STORAGE_KEY_V2);
       if (rawV2) {
         const parsed = JSON.parse(rawV2);
@@ -57,6 +58,7 @@ export class LocalAdapter extends FamilyRepository {
 
   async persist(snapshot) {
     try {
+      if (typeof localStorage === 'undefined') return;
       const payload = {
         schemaVersion: SCHEMA_VERSION,
         updatedAt: new Date().toISOString(),

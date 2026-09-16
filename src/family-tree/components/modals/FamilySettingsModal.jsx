@@ -13,6 +13,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { collaborationService } from '../../auth/collaborationService.js';
 import { ROLES, ROLE_LABELS, canManageMembers, canTransferOwnership } from '../../auth/roles.js';
+import { useOptionalFamily } from '../../auth/FamilyContext.jsx';
 
 export default function FamilySettingsModal({
   isOpen,
@@ -49,6 +50,46 @@ export default function FamilySettingsModal({
 
   const isOwner = canManageMembers(currentRole);
   const canTransfer = canTransferOwnership(currentRole);
+
+  const familyCtx = useOptionalFamily();
+  const renameActiveFamily = familyCtx?.renameActiveFamily;
+
+  const [editingFamilyName, setEditingFamilyName] = useState(family?.name || '');
+  const [renaming, setRenaming] = useState(false);
+
+  useEffect(() => {
+    if (family?.name) {
+      setEditingFamilyName(family.name);
+    }
+  }, [family?.name]);
+
+  const handleRenameFamily = async (e) => {
+    e.preventDefault();
+    const cleanName = editingFamilyName.trim();
+    if (!cleanName) {
+      setStatusBanner({ type: 'error', text: 'Family name cannot be empty.' });
+      return;
+    }
+
+    try {
+      setRenaming(true);
+      setStatusBanner(null);
+
+      if (renameActiveFamily) {
+        await renameActiveFamily(cleanName);
+      } else if (family) {
+        family.name = cleanName;
+      }
+
+      setStatusBanner({ type: 'success', text: 'Family name updated successfully.' });
+      onMembersUpdated?.();
+    } catch (err) {
+      console.error('Failed to rename family:', err);
+      setStatusBanner({ type: 'error', text: err.message || 'Failed to rename family.' });
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   // Fetch Members
   const loadMembers = useCallback(async () => {
@@ -188,10 +229,10 @@ export default function FamilySettingsModal({
   return (
     <div className="ft-view-modal ft-view-modal--open" role="dialog" aria-modal="true">
       <div className="ft-view-modal__backdrop" onClick={onClose} />
-      <div className="ft-view-modal__container" style={{ maxWidth: '680px', maxHeight: '88vh', overflowY: 'auto' }}>
+      <div className="ft-view-modal__container" style={{ maxWidth: '680px', maxHeight: 'min(90vh, 90dvh)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* Header */}
-        <header className="ft-view-modal__header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+        <header className="ft-view-modal__header" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px', flex: '0 0 auto' }}>
           <div>
             <span className="ft-view-modal__eyebrow" style={{ color: '#f97316' }}>COLLABORATION &amp; ACCESS</span>
             <h2 className="ft-view-modal__title">{family?.name || 'Family'} Settings</h2>
@@ -205,7 +246,7 @@ export default function FamilySettingsModal({
         </header>
 
         {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: '8px', padding: '12px 28px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', gap: '8px', padding: '12px 28px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => setActiveTab('overview')}
@@ -285,8 +326,10 @@ export default function FamilySettingsModal({
           </div>
         )}
 
-        {/* Tab 1: Overview */}
-        {activeTab === 'overview' && (
+        {/* Scrollable Tab Content Area */}
+        <div className="ft-modal-form-body" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+          {/* Tab 1: Overview */}
+          {activeTab === 'overview' && (
           <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div
               style={{
@@ -300,8 +343,42 @@ export default function FamilySettingsModal({
               }}
             >
               <div>
-                <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Family Name</span>
-                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f3f4f6', marginTop: '4px' }}>{family?.name}</div>
+                <label htmlFor="family-rename-input" style={{ display: 'block', fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  Family Name
+                </label>
+                {isOwner ? (
+                  <form onSubmit={handleRenameFamily} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      id="family-rename-input"
+                      value={editingFamilyName}
+                      onChange={(e) => setEditingFamilyName(e.target.value)}
+                      required
+                      disabled={renaming}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        color: '#f3f4f6',
+                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        width: '100%',
+                        maxWidth: '220px',
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      className="ft-form-btn ft-form-btn--primary"
+                      disabled={renaming || !editingFamilyName.trim() || editingFamilyName.trim() === family?.name}
+                      style={{ padding: '6px 12px', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                    >
+                      {renaming ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </form>
+                ) : (
+                  <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f3f4f6', marginTop: '4px' }}>{family?.name}</div>
+                )}
               </div>
               <div>
                 <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Your Role</span>
@@ -602,6 +679,7 @@ export default function FamilySettingsModal({
             )}
           </div>
         )}
+        </div>
 
         {/* Sub-Modal: Create Invitation */}
         {inviteModalOpen && (

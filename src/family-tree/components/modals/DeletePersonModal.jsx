@@ -36,7 +36,7 @@ export default function DeletePersonModal({
           </button>
         </header>
 
-        <div style={{ padding: '24px 28px' }}>
+        <div className="ft-modal-form-body">
           <p style={{ fontSize: '0.92rem', color: 'var(--ft-text-primary)', lineHeight: '1.5' }}>
             Are you sure you want to delete <strong>{person.displayName}</strong>?
           </p>

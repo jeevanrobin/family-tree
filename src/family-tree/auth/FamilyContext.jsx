@@ -6,7 +6,7 @@ import { LocalAdapter } from '../store/repository/LocalAdapter.js';
 import { createRepository, FAMILY_ID_KEY } from '../store/repository/index.js';
 import { ROLES, canViewFamily } from './roles.js';
 
-const FamilyContext = createContext(null);
+export const FamilyContext = createContext(null);
 
 export function FamilyProvider({ children }) {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -146,10 +146,64 @@ export function FamilyProvider({ children }) {
       setActiveFamily(null);
       setCurrentRole(ROLES.VIEWER);
 
-      // Revert store to local mode and reset memory
+      // Clear in-memory family data so private family state never lingers after logout
+      familyStore.loadFromData([], [], [], [], [], []);
       familyStore.setRepository(new LocalAdapter());
     }
   }, [signOut]);
+
+  /**
+   * Clears local IndexedDB cache for the active family and re-hydrates from Supabase
+   */
+  const clearLocalCache = useCallback(async (targetFamilyId) => {
+    const fid = targetFamilyId || activeFamily?.id;
+    if (!fid) return;
+    await familyStore.clearLocalCache(fid);
+    const adapter = createRepository(fid);
+    familyStore.setRepository(adapter);
+  }, [activeFamily]);
+
+  /**
+   * Renames the active family (Owner only).
+   * Updates database via Supabase and immediately propagates new name to state.
+   */
+  const renameActiveFamily = useCallback(async (newName) => {
+    if (!newName || !newName.trim()) {
+      throw new Error('Family name cannot be empty.');
+    }
+    if (!activeFamily?.id) {
+      throw new Error('No active family selected.');
+    }
+    if (currentRole !== ROLES.OWNER) {
+      throw new Error('Only the family owner can rename the family.');
+    }
+
+    const trimmed = newName.trim();
+
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from('families')
+        .update({ name: trimmed })
+        .eq('id', activeFamily.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+
+    // Update local state immediately
+    const updatedFamily = { ...activeFamily, name: trimmed };
+    setActiveFamily(updatedFamily);
+    setMemberships((prev) =>
+      prev.map((m) =>
+        m.familyId === activeFamily.id
+          ? { ...m, family: { ...m.family, name: trimmed } }
+          : m
+      )
+    );
+
+    return updatedFamily;
+  }, [activeFamily, currentRole]);
 
   const value = {
     user,
@@ -159,8 +213,10 @@ export function FamilyProvider({ children }) {
     syncStatus,
     loading: authLoading || loadingMemberships,
     switchFamily,
+    renameActiveFamily,
     refreshMemberships: loadUserMemberships,
     logout,
+    clearLocalCache,
     canView: canViewFamily(currentRole),
   };
 
@@ -177,4 +233,8 @@ export function useFamily() {
     throw new Error('useFamily must be used within a FamilyProvider');
   }
   return context;
+}
+
+export function useOptionalFamily() {
+  return useContext(FamilyContext);
 }

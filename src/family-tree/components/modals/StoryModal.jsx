@@ -5,6 +5,8 @@
 
 import React, { useState } from 'react';
 import { getAllPersons } from '../../data/familyDataService.js';
+import FamilyDatePicker from '../ui/FamilyDatePicker.jsx';
+import { LocationCombobox } from '../ui/FamilyCombobox.jsx';
 
 export default function StoryModal({
   isOpen,
@@ -20,6 +22,8 @@ export default function StoryModal({
   const [narrator, setNarrator] = useState(story?.narrator || (person?.displayName || ''));
   const [relatedPersonIds, setRelatedPersonIds] = useState(story?.relatedPersonIds || []);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const familyId = person?.family_id || person?.familyId || null;
 
   const allPeople = getAllPersons();
 
@@ -84,8 +88,9 @@ export default function StoryModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="ft-modal-form-body">
-          <div className="ft-form-grid">
+        <form onSubmit={handleSubmit} className="ft-modal-form">
+          <div className="ft-modal-form-body">
+            <div className="ft-form-grid">
             <div className="ft-form-field">
               <label>Story Title</label>
               <input
@@ -99,20 +104,22 @@ export default function StoryModal({
             <div className="ft-form-row ft-form-row--3">
               <div className="ft-form-field">
                 <label>Date / Year</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1978 or Summer 1985"
+                <FamilyDatePicker
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
+                  placeholder="e.g. 1978 or YYYY-MM-DD"
+                  allowPartial={true}
+                  ariaLabel="Story date or year"
                 />
               </div>
               <div className="ft-form-field">
                 <label>Location</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Warangal, Telangana"
+                <LocationCombobox
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  onChange={setLocation}
+                  placeholder="e.g. Muthagudem, Hyderabad"
+                  ariaLabel="Story location"
+                  activeFamilyId={familyId}
                 />
               </div>
               <div className="ft-form-field">
@@ -162,8 +169,9 @@ export default function StoryModal({
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="ft-modal-footer">
+        <div className="ft-modal-footer">
             <button
               type="button"
               className="ft-form-btn ft-form-btn--secondary"

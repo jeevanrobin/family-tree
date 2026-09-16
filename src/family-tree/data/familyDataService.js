@@ -5,6 +5,9 @@
  */
 
 import familyStore from '../store/FamilyStore.js';
+import { getSiblingDisplayLabel, getRelationshipDisplayLabel } from '../utils/familyHelpers.js';
+
+export { getSiblingDisplayLabel, getRelationshipDisplayLabel };
 
 export const GENERATION_CONFIG = [
   {
@@ -71,7 +74,16 @@ export function getAllRelationships() {
 }
 
 export function getParents(personId) {
-  return familyStore.getParents(personId);
+  if (!personId) return [];
+  const directParents = familyStore.getParents(personId);
+  // If only 1 parent is directly linked, check if that parent has a spouse (the other parent)
+  if (directParents.length === 1) {
+    const spouse = familyStore.getSpouse(directParents[0].id);
+    if (spouse && !directParents.some((p) => String(p.id) === String(spouse.id))) {
+      return [...directParents, spouse];
+    }
+  }
+  return directParents;
 }
 
 export function getChildren(personId) {
@@ -139,7 +151,7 @@ export function getImmediateFamilyMap(personId) {
 
   const siblings = getSiblings(personId);
   siblings.forEach((s) => {
-    const role = s.gender === 'female' ? 'Sister' : s.gender === 'male' ? 'Brother' : 'Sibling';
+    const role = getSiblingDisplayLabel(s);
     map.set(s.id, { role, relation: 'sibling' });
   });
 
@@ -185,7 +197,7 @@ export function getFamilyConstellationMap(selectedId) {
   // 3. Siblings
   const siblings = getSiblings(selectedId);
   siblings.forEach((s) => {
-    const role = s.gender === 'female' ? 'Sister' : s.gender === 'male' ? 'Brother' : 'Sibling';
+    const role = getSiblingDisplayLabel(s);
     map.set(s.id, { tier: 'sibling', role });
   });
 
@@ -197,6 +209,13 @@ export function getFamilyConstellationMap(selectedId) {
         const role = gp.gender === 'female' ? 'Grandmother' : gp.gender === 'male' ? 'Grandfather' : 'Grandparent';
         map.set(gp.id, { tier: 'extended', role });
       }
+      const greatGrandparents = getParents(gp.id);
+      greatGrandparents.forEach((ggp) => {
+        if (!map.has(ggp.id)) {
+          const role = ggp.gender === 'female' ? 'Great-Grandmother' : ggp.gender === 'male' ? 'Great-Grandfather' : 'Ancestor';
+          map.set(ggp.id, { tier: 'extended', role });
+        }
+      });
     });
   });
 
@@ -220,6 +239,77 @@ export function getFamilyConstellationMap(selectedId) {
   return map;
 }
 
+/**
+ * Computes complete ancestral lineage from Grandparents & Ancestors down to selectedId.
+ * Returns:
+ * - ancestorIds: Set of all direct ancestor IDs (parents, grandparents, great-grandparents)
+ * - lineageSpouseKeys: Set of canonical couple keys (e.g. 'p1-p2') along the ancestral path
+ * - lineageParentChildChildIds: Set of child IDs along the ancestral lineage path
+ */
+export function getAncestryLineage(selectedId) {
+  if (!selectedId) {
+    return {
+      ancestorIds: new Set(),
+      lineageSpouseKeys: new Set(),
+      lineageParentChildChildIds: new Set(),
+    };
+  }
+
+  const ancestorIds = new Set();
+  const lineageSpouseKeys = new Set();
+  const lineageParentChildChildIds = new Set();
+
+  function addSpouseKey(idA, idB) {
+    if (idA && idB) {
+      lineageSpouseKeys.add([String(idA), String(idB)].sort().join('-'));
+    }
+  }
+
+  // Traverse upward from selectedId
+  const queue = [String(selectedId)];
+  const visited = new Set([String(selectedId)]);
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    const parents = getParents(currentId);
+
+    if (parents && parents.length > 0) {
+      // currentId is a child along the lineage path
+      lineageParentChildChildIds.add(currentId);
+
+      if (parents.length >= 2) {
+        addSpouseKey(parents[0].id, parents[1].id);
+      } else if (parents.length === 1) {
+        const spouse = getSpouse(parents[0].id);
+        if (spouse) {
+          addSpouseKey(parents[0].id, spouse.id);
+          if (!ancestorIds.has(spouse.id)) {
+            ancestorIds.add(spouse.id);
+            if (!visited.has(spouse.id)) {
+              visited.add(spouse.id);
+              queue.push(spouse.id);
+            }
+          }
+        }
+      }
+
+      parents.forEach((p) => {
+        ancestorIds.add(p.id);
+        if (!visited.has(p.id)) {
+          visited.add(p.id);
+          queue.push(p.id);
+        }
+      });
+    }
+  }
+
+  return {
+    ancestorIds,
+    lineageSpouseKeys,
+    lineageParentChildChildIds,
+  };
+}
+
 // ── Dynamic Generation Calculation (Data-Driven from Graph) ─
 
 export function computeGenerations(people = getAllPersons(), relationships = getAllRelationships()) {
@@ -229,6 +319,7 @@ export function computeGenerations(people = getAllPersons(), relationships = get
   const childToParents = new Map();
   const parentToChildren = new Map();
   const spouseGraph = new Map();
+  const siblingGraph = new Map();
 
   relationships.forEach((r) => {
     if (r.type === 'parent-child' || r.type === 'parent') {
@@ -246,6 +337,13 @@ export function computeGenerations(people = getAllPersons(), relationships = get
       if (!spouseGraph.has(b)) spouseGraph.set(b, []);
       spouseGraph.get(a).push(b);
       spouseGraph.get(b).push(a);
+    } else if (r.type === 'sibling') {
+      const a = r.personAId || r.personId1;
+      const b = r.personBId || r.personId2;
+      if (!siblingGraph.has(a)) siblingGraph.set(a, []);
+      if (!siblingGraph.has(b)) siblingGraph.set(b, []);
+      siblingGraph.get(a).push(b);
+      siblingGraph.get(b).push(a);
     }
   });
 
@@ -270,6 +368,15 @@ export function computeGenerations(people = getAllPersons(), relationships = get
     // Propagate to spouses (must be in same generation)
     const spouses = spouseGraph.get(personId) || [];
     spouses.forEach((sId) => {
+      if (genMap.get(sId) !== currentGen) {
+        genMap.set(sId, currentGen);
+        processed.add(sId);
+      }
+    });
+
+    // Propagate to siblings (must be in same generation)
+    const siblings = siblingGraph.get(personId) || [];
+    siblings.forEach((sId) => {
       if (genMap.get(sId) !== currentGen) {
         genMap.set(sId, currentGen);
         processed.add(sId);
