@@ -1,16 +1,79 @@
-# React + Vite
+# Family Tree Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A React-based family tree application with Supabase backend, collaborative features, and offline-first architecture.
 
-Currently, two official plugins are available:
+[![CI](https://github.com/jeevanrobin/family-tree/actions/workflows/ci.yml/badge.svg)](https://github.com/jeevanrobin/family-tree/actions/workflows/ci.yml)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- Multi-generational family tree visualization
+- Real-time collaboration with role-based access control
+- Cloud-authoritative sibling ordering
+- Offline-first with automatic sync
+- Media and document archival
+- Timeline and memories
+- Search and insights
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Development
 
-## Expanding the Oxlint configuration
+### Prerequisites
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- Node.js 20+
+- npm 10+
+
+### Setup
+
+```bash
+# Install dependencies
+npm ci
+
+# Run development server
+npm run dev
+```
+
+### Testing
+
+```bash
+# Vitest tests
+npm run test:vitest
+
+# Legacy tests
+npm test
+
+# Coverage
+npm run test:vitest -- --coverage
+
+# All tests
+npm run test:all
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+## Supabase Setup
+
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Run SQL migrations in order from `supabase/migrations/`
+3. Configure environment variables in `.env.local`:
+
+```
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+## Testing Documentation
+
+See [TESTING.md](TESTING.md) for comprehensive test architecture documentation.
+
+## License
+
+Private project.

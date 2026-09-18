@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node scripts/test-m3b-security.js && node scripts/test-m3c-sync.js && node scripts/test-m3d-media.js && node scripts/test-m3e-collaboration.js && node scripts/verify-m3e1-production.js && node scripts/test-m4a-search.js && node scripts/test-m4b-timeline.js && node scripts/test-m4c-memories.js && node scripts/test-m4d-archive.js && node scripts/test-m4e-insights.js && node scripts/test-add-member-ux.js && node scripts/test-edit-person-prefill.js && node scripts/test-profile-photo-upload.js && node scripts/test-modal-layout.js && node scripts/test-family-date-picker.js && node scripts/test-link-existing-relationship.js && node scripts/test-sibling-display.js && node scripts/test-combobox-suggestions.js && node scripts/test-tree-layout-polish.js && node scripts/test-lineage-and-dual-parent.js && node scripts/test-fresh-start.js && node scripts/test-landing-auth-family.js && node scripts/test-auth-pages.js",
+    "test": "node scripts/test-m3b-security.js && node scripts/test-m3c-sync.js && node scripts/test-m3d-media.js && node scripts/test-m3e-collaboration.js && node scripts/verify-m3e1-production.js && node scripts/test-m4a-search.js && node scripts/test-m4b-timeline.js && node scripts/test-m4c-memories.js && node scripts/test-m4d-archive.js && node scripts/test-m4e-insights.js && node scripts/test-add-member-ux.js && node scripts/test-edit-person-prefill.js && node scripts/test-profile-photo-upload.js && node scripts/test-modal-layout.js && node scripts/test-family-date-picker.js && node scripts/test-link-existing-relationship.js && node scripts/test-sibling-display.js && node scripts/test-combobox-suggestions.js && node scripts/test-tree-layout-polish.js && node scripts/test-lineage-and-dual-parent.js && node scripts/test-fresh-start.js && node scripts/test-landing-auth-family.js && node scripts/test-auth-pages.js && node scripts/test-scalable-tree-architecture.js && node scripts/test-backup-id-integrity.js && node scripts/test-recursive-subtree-layout.js",
+    "test:vitest": "vitest run",
+    "test:all": "npm test && npm run test:vitest",
+    "test:subtree": "node scripts/test-recursive-subtree-layout.js",
+    "test:backup": "node scripts/test-backup-id-integrity.js",
+    "test:scalable": "node scripts/test-scalable-tree-architecture.js",
     "test:landing-auth": "node scripts/test-landing-auth-family.js",
     "test:auth": "node scripts/test-auth-pages.js",
     "test:fresh-start": "node scripts/test-fresh-start.js",
@@ -29,7 +34,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
+    "@vitest/coverage-v8": "^5.0.1",
     "oxlint": "^1.79.0",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^5.0.1"
   }
 }
