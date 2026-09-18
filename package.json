@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
+    "lint": "npx oxlint",
     "test": "node scripts/test-m3b-security.js && node scripts/test-m3c-sync.js && node scripts/test-m3d-media.js && node scripts/test-m3e-collaboration.js && node scripts/verify-m3e1-production.js && node scripts/test-m4a-search.js && node scripts/test-m4b-timeline.js && node scripts/test-m4c-memories.js && node scripts/test-m4d-archive.js && node scripts/test-m4e-insights.js && node scripts/test-add-member-ux.js && node scripts/test-edit-person-prefill.js && node scripts/test-profile-photo-upload.js && node scripts/test-modal-layout.js && node scripts/test-family-date-picker.js && node scripts/test-link-existing-relationship.js && node scripts/test-sibling-display.js && node scripts/test-combobox-suggestions.js && node scripts/test-tree-layout-polish.js && node scripts/test-lineage-and-dual-parent.js && node scripts/test-fresh-start.js && node scripts/test-landing-auth-family.js && node scripts/test-auth-pages.js && node scripts/test-scalable-tree-architecture.js && node scripts/test-backup-id-integrity.js && node scripts/test-recursive-subtree-layout.js",
     "test:vitest": "vitest run",
     "test:all": "npm test && npm run test:vitest",
