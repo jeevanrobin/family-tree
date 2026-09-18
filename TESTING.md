@@ -30,14 +30,14 @@ When secrets are absent, CI passes with those tests skipped.
 ### 1. Legacy Custom Scripts
 - Location: `scripts/test-*.js`
 - Framework: Node.js assertions + custom test harness
-- Total: ~280 tests across M3B-M4E
+- Total: ~320 tests across M3B-M4E
 - Run: `npm test`
 - Status: Preserved until full Vitest parity is demonstrated
 
 ### 2. Vitest Tests
 - Location: `tests/`
 - Framework: Vitest + coverage via v8
-- Total: 312 tests (8 skipped for env)
+- Total: 319 tests (311 passed, 8 skipped)
 - Run: `npm run test:vitest`
 - Coverage: `npm run test:vitest -- --coverage`
 

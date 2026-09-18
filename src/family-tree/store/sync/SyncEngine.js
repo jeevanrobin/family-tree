@@ -15,7 +15,6 @@ import { SYNC_STATUS, createQueueItem, ENTITY_TYPES, MUTATION_OP } from './syncT
 import { indexedDBManager, STORES } from '../local/indexedDBManager.js';
 import {
   mergePersonRecords,
-  mergeEntityRecords,
   validateRelationshipIntegrity,
   filterTombstonedEntities,
 } from './conflictResolver.js';
@@ -187,7 +186,7 @@ export class SyncEngine {
         if (remoteData.siblingOrder && typeof localStorage !== 'undefined') {
           try {
             localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(remoteData.siblingOrder));
-          } catch (e) {}
+          } catch (_e) {}
         }
 
         this.setStatus(SYNC_STATUS.SYNCED);
@@ -257,7 +256,7 @@ export class SyncEngine {
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(currentOrder));
         }
-      } catch (e) {}
+      } catch (_e) {}
     }
 
     // 2. Enqueue in durable sync queue
@@ -640,7 +639,7 @@ export class SyncEngine {
         if (typeof localStorage !== 'undefined') {
           try {
             localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(reconciledOrder));
-          } catch (e) {}
+          } catch (_e) {}
         }
       } else {
         await indexedDBManager.updateSyncMeta(fid, {

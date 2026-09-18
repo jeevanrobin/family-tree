@@ -603,10 +603,6 @@ export class FamilyStore {
     return [...this.photos];
   }
 
-  getAllDocuments() {
-    return [...this.documents];
-  }
-
   // ── Global Search & Discovery (M4A) ─────────────────────────
 
   getSearchIndex() {
@@ -633,10 +629,6 @@ export class FamilyStore {
 
   getPeopleCount() {
     return this.people.size;
-  }
-
-  getAllRelationships() {
-    return [...this.relationships];
   }
 
   getPersonById(id) {

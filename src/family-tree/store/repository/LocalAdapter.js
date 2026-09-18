@@ -111,7 +111,7 @@ export class LocalAdapter extends FamilyRepository {
         const parsed = JSON.parse(stored);
         return parsed.siblingOrder || parsed.family?.siblingOrder || {};
       }
-    } catch (e) {}
+    } catch (_e) {}
     return {};
   }
 
@@ -130,7 +130,7 @@ export class LocalAdapter extends FamilyRepository {
         parsed.siblingOrder = { ...(parsed.siblingOrder || {}), [cohortKey]: orders[cohortKey] };
         localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(parsed));
       }
-    } catch (e) {}
+    } catch (_e) {}
   }
 
   async deleteSiblingOrder(familyId = 'default', cohortKey) {
@@ -151,7 +151,7 @@ export class LocalAdapter extends FamilyRepository {
           localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(parsed));
         }
       }
-    } catch (e) {}
+    } catch (_e) {}
   }
 
   _validateSchema(parsed) {

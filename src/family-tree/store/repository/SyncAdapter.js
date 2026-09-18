@@ -44,7 +44,7 @@ export class SyncAdapter extends FamilyRepository {
         const local = localStorage.getItem(`family-tree-sibling-order-${this.familyId}`);
         if (local) siblingOrder = JSON.parse(local);
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     if (data) {
       data.siblingOrder = siblingOrder;
@@ -84,7 +84,7 @@ export class SyncAdapter extends FamilyRepository {
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(snapshot.siblingOrder));
         }
-      } catch (e) {}
+      } catch (_e) {}
     }
 
     await Promise.all(tasks);
@@ -155,7 +155,7 @@ export class SyncAdapter extends FamilyRepository {
         const local = localStorage.getItem(`family-tree-sibling-order-${fid}`);
         if (local) return JSON.parse(local);
       }
-    } catch (e) {}
+    } catch (_e) {}
     return {};
   }
 
@@ -174,7 +174,7 @@ export class SyncAdapter extends FamilyRepository {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(current));
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     // 2. Queue mutation to syncEngine
     return this.syncEngine.enqueue(ENTITY_TYPES.SIBLING_ORDER, key, MUTATION_OP.UPDATE, {
@@ -196,7 +196,7 @@ export class SyncAdapter extends FamilyRepository {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(current));
       }
-    } catch (e) {}
+    } catch (_e) {}
 
     return this.syncEngine.enqueue(ENTITY_TYPES.SIBLING_ORDER, key, MUTATION_OP.DELETE);
   }
