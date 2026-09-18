@@ -28,40 +28,12 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
 ) {
   const containerRef = useRef(null);
 
-  const interaction = useTreeInteraction({
-    layout,
-    containerRef,
-    isReducedMotion,
-    onDeselect,
-    onScaleChange,
-  });
-
-  // Expose camera control methods through forwardRef
-  useImperativeHandle(
-    ref,
-    () => ({
-      zoomIn: interaction.zoomIn,
-      zoomOut: interaction.zoomOut,
-      reset: interaction.fitTreeToBounds,
-      focusOn: interaction.focusOnPerson,
-      focusGeneration: interaction.focusOnGeneration,
-      fitBranch: interaction.fitBranch,
-      panTo: interaction.panToCoordinate,
-      currentScale: interaction.transform.scale,
-    }),
-    [interaction]
-  );
-
-  if (!layout) return null;
-  const { nodes, allNodes, lines, generationTracks, nodeWidth, nodeHeight, bounds, fullBounds, branchBadges } = layout;
-  const { transform, isPanning } = interaction;
-
-  // Arrange Family drag & drop + reorder state
+  // Arrange Family drag & drop + reorder state - MUST be before conditional return
   const [draggingInfo, setDraggingInfo] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
 
   const handleShiftSibling = useCallback((node, direction) => {
-    if (!node.cohortSiblingIds || !setSiblingOrder) return;
+    if (!node?.cohortSiblingIds || !setSiblingOrder) return;
     const currentList = [...node.cohortSiblingIds];
     const curIdx = currentList.indexOf(node.bloodChildId);
     if (curIdx === -1) return;
@@ -74,7 +46,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   }, [setSiblingOrder]);
 
   const handleDragStart = useCallback((e, node) => {
-    if (!isArrangeMode || !node.canReorder) return;
+    if (!isArrangeMode || !node?.canReorder) return;
     e.dataTransfer.setData('text/plain', node.bloodChildId);
     e.dataTransfer.effectAllowed = 'move';
     setDraggingInfo({
@@ -85,7 +57,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   }, [isArrangeMode]);
 
   const handleDragOver = useCallback((e, node) => {
-    if (!draggingInfo || draggingInfo.cohortKey !== node.cohortKey) return;
+    if (!draggingInfo || draggingInfo.cohortKey !== node?.cohortKey) return;
     if (draggingInfo.bloodChildId === node.bloodChildId) {
       setDropIndicator(null);
       return;
@@ -95,6 +67,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     const rect = e.currentTarget.getBoundingClientRect();
     const isLeft = e.clientX < rect.left + rect.width / 2;
     const side = isLeft ? 'before' : 'after';
+    const nodeWidth = layout?.nodeWidth || 230;
+    const nodeHeight = layout?.nodeHeight || 160;
     const indicatorX = isLeft ? node.x - 12 : node.x + nodeWidth + 12;
     setDropIndicator({
       cohortKey: node.cohortKey,
@@ -104,10 +78,10 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
       y: node.y,
       height: nodeHeight,
     });
-  }, [draggingInfo, nodeWidth, nodeHeight]);
+  }, [draggingInfo, layout?.nodeWidth, layout?.nodeHeight]);
 
   const handleDrop = useCallback((e, node) => {
-    if (!draggingInfo || draggingInfo.cohortKey !== node.cohortKey || !setSiblingOrder) {
+    if (!draggingInfo || draggingInfo.cohortKey !== node?.cohortKey || !setSiblingOrder) {
       setDropIndicator(null);
       setDraggingInfo(null);
       return;
@@ -136,6 +110,33 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     setDropIndicator(null);
     setDraggingInfo(null);
   }, []);
+
+  const interaction = useTreeInteraction({
+    layout,
+    containerRef,
+    isReducedMotion,
+    onDeselect,
+    onScaleChange,
+  });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: interaction.zoomIn,
+      zoomOut: interaction.zoomOut,
+      reset: interaction.fitTreeToBounds,
+      focusOn: interaction.focusOnPerson,
+      focusGeneration: interaction.focusOnGeneration,
+      fitBranch: interaction.fitBranch,
+      panTo: interaction.panToCoordinate,
+      currentScale: interaction.transform.scale,
+    }),
+    [interaction]
+  );
+
+  if (!layout) return null;
+  const { nodes, allNodes, lines, generationTracks, nodeWidth, nodeHeight, bounds, fullBounds, branchBadges } = layout;
+  const { transform, isPanning } = interaction;
 
   return (
     <div

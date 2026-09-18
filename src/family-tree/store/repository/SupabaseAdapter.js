@@ -857,7 +857,7 @@ export class SupabaseAdapter extends FamilyRepository {
       }
 
       // Private bucket: create a signed URL (1 year validity) or fall back to public
-      const { data: signedData, error: signError } = await supabase.storage
+      const { data: signedData } = await supabase.storage
         .from(bucket)
         .createSignedUrl(storagePath, 31536000);
 

@@ -8,14 +8,24 @@ This project uses a **dual-test system** with automated CI/CD:
 
 GitHub Actions workflow runs on every push and pull request to `main`:
 
+- **Runtime:** Node.js 22.x
 - **Install:** `npm ci`
 - **Legacy tests:** `npm test` (267 tests)
-- **Vitest tests:** `npm run test:vitest` (312 passed, 8 skipped)
+- **Vitest tests:** `npm run test:vitest` (235 tests, 8 skipped)
 - **Coverage:** `npm run test:vitest -- --coverage` (artifact uploaded)
 - **Build:** `npm run build`
-- **Lint:** `npm run lint`
+- **Lint:** `npm run lint` (oxlint)
 
-CI will **pass** even when live Supabase tests are skipped (secrets not configured).
+**Quality Gates:** CI fails if any test suite fails or lint reports errors.
+
+**Live Supabase Tests:** 8 tests are skipped by default. They require GitHub secrets to be configured:
+- `TEST_USER_EMAIL`
+- `TEST_USER_PASSWORD`
+- `TEST_FAMILY_ID`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+When secrets are absent, CI passes with those tests skipped.
 
 ### 1. Legacy Custom Scripts
 - Location: `scripts/test-*.js`
