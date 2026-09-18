@@ -1,4 +1,4 @@
-# Supabase Setup — Medida's Family
+# Supabase Setup — Anvaya FamilyTree
 
 ## Prerequisites
 

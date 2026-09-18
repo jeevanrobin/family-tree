@@ -36,14 +36,14 @@ serve(async (req) => {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: `Medida's Family <${SENDER_EMAIL}>`,
+          from: `Anvaya FamilyTree <${SENDER_EMAIL}>`,
           to: [email],
-          subject: `Invitation to collaborate on ${familyName || "Medida's Family Tree"}`,
+          subject: `Invitation to collaborate on ${familyName || "your family tree"}`,
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
               <h2 style="color: #111827; margin-top: 0;">You're Invited!</h2>
               <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">
-                You have been invited to join and collaborate on the family tree archive of <strong>${familyName || "Medida's Family"}</strong> with the role of <strong>${role || "member"}</strong>.
+                 You have been invited to join and collaborate on the family tree archive of <strong>${familyName || "your family tree"}</strong> with the role of <strong>${role || "member"}</strong>.
               </p>
               <div style="margin: 28px 0; text-align: center;">
                 <a href="${inviteUrl}" style="background-color: #f97316; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">

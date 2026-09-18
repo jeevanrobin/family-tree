@@ -13,14 +13,14 @@ import LandingFooter from './LandingFooter.jsx';
 import './landing.css';
 
 /**
- * Public Landing Page — "Medida's Family"
+ * Public Landing Page — "Anvaya FamilyTree"
  *
  * A public marketing surface for the product. It deliberately has NO access to
  * family data: it does not import FamilyStore, FamilyContext or any repository,
  * and renders fully while unauthenticated. All preview visuals use synthetic
  * demo content declared inside the landing components themselves.
  *
- * "Medida's Family" is the PRODUCT brand — every customer names their own family.
+ * "Anvaya FamilyTree" is the PRODUCT brand — every customer names their own family.
  */
 export default function LandingPage() {
   const { user } = useAuth();

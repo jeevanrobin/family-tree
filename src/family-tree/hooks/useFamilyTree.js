@@ -25,6 +25,9 @@ export function useFamilyTree() {
   const [selectedId, setSelectedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [collapsedUnitKeys, setCollapsedUnitKeys] = useState(() => new Set());
+  const [focusMode, setFocusMode] = useState('all'); // 'all' | 'person' | 'family'
+
   // Subscribe to store mutations
   useEffect(() => {
     const unsubscribe = familyStore.subscribe((nextSnapshot) => {
@@ -39,16 +42,22 @@ export function useFamilyTree() {
   const lifeEvents = snapshot.lifeEvents;
   const photos = snapshot.photos;
   const documents = snapshot.documents;
+  const siblingOrder = snapshot.siblingOrder;
 
   // Compute generation groups
   const generations = useMemo(() => {
     return getAllGenerations();
   }, [persons, relationships]);
 
-  // Compute spatial tree coordinates & connection paths automatically
+  // Compute spatial tree coordinates & connection paths automatically with scalable architecture
   const layout = useMemo(() => {
-    return computeTreeLayout(persons, relationships);
-  }, [persons, relationships]);
+    return computeTreeLayout(persons, relationships, {
+      collapsedUnits: collapsedUnitKeys,
+      focusPersonId: selectedId,
+      focusMode,
+      customSiblingOrders: siblingOrder,
+    });
+  }, [persons, relationships, collapsedUnitKeys, selectedId, focusMode, siblingOrder]);
 
   // Selected person entity
   const selectedPerson = useMemo(() => {
@@ -113,6 +122,65 @@ export function useFamilyTree() {
   const deselectPerson = useCallback(() => {
     setSelectedId(null);
   }, []);
+
+  const toggleBranch = useCallback((unitKey) => {
+    if (!unitKey) return;
+    setCollapsedUnitKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(unitKey)) {
+        next.delete(unitKey);
+      } else {
+        next.add(unitKey);
+      }
+      return next;
+    });
+  }, []);
+
+  const expandAll = useCallback(() => {
+    setCollapsedUnitKeys(new Set());
+    setFocusMode('all');
+  }, []);
+
+  const collapseAll = useCallback(() => {
+    const parentUnitKeys = new Set();
+    relationships.forEach((rel) => {
+      if (rel.type === 'parent-child') {
+        const pId = String(rel.personId1 ?? rel.parentId);
+        parentUnitKeys.add(`unit-${pId}`);
+      }
+    });
+    setCollapsedUnitKeys(parentUnitKeys);
+  }, [relationships]);
+
+  const expandAncestorsOf = useCallback(
+    (personId) => {
+      if (!personId) return;
+      const lineage = getAncestryLineage(personId);
+      const ancestorIds = lineage?.ancestorIds ? new Set(lineage.ancestorIds) : new Set();
+      ancestorIds.add(String(personId));
+
+      setCollapsedUnitKeys((prev) => {
+        if (prev.size === 0) return prev;
+        const next = new Set(prev);
+        // If an ancestor was collapsed, expand that unit
+        relationships.forEach((rel) => {
+          if (rel.type === 'parent-child') {
+            const childId = String(rel.personId2 ?? rel.relatedPersonId ?? rel.childId);
+            if (ancestorIds.has(childId)) {
+              const parentId = String(rel.personId1 ?? rel.parentId);
+              for (const key of next) {
+                if (key.includes(parentId)) {
+                  next.delete(key);
+                }
+              }
+            }
+          }
+        });
+        return next;
+      });
+    },
+    [relationships]
+  );
 
   // ── Store Mutation Wrappers ─────────────────────────────────
 
@@ -215,6 +283,14 @@ export function useFamilyTree() {
     setSelectedId(null);
   }, []);
 
+  const setSiblingOrder = useCallback((cohortKey, orderedPersonIds) => {
+    familyStore.setSiblingOrder(cohortKey, orderedPersonIds);
+  }, []);
+
+  const resetSiblingOrder = useCallback((cohortKey) => {
+    familyStore.resetSiblingOrder(cohortKey);
+  }, []);
+
   return {
     persons,
     relationships,
@@ -222,6 +298,7 @@ export function useFamilyTree() {
     lifeEvents,
     photos,
     documents,
+    siblingOrder,
     generations,
     layout,
     selectedId,
@@ -239,12 +316,22 @@ export function useFamilyTree() {
     searchResults,
     selectPerson,
     deselectPerson,
+    // Scalable Tree Architecture
+    collapsedUnitKeys,
+    focusMode,
+    setFocusMode,
+    toggleBranch,
+    expandAll,
+    collapseAll,
+    expandAncestorsOf,
     // Operations
     addPerson,
     updatePerson,
     deletePerson,
     addRelationship,
     removeRelationship,
+    setSiblingOrder,
+    resetSiblingOrder,
     addStory,
     updateStory,
     deleteStory,

@@ -52,6 +52,12 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     relatedIds,
     selectPerson,
     deselectPerson,
+    focusMode,
+    setFocusMode,
+    toggleBranch,
+    expandAll,
+    collapseAll,
+    expandAncestorsOf,
     addPerson,
     updatePerson,
     deletePerson,
@@ -72,6 +78,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     selectedPersonEvents,
     selectedPersonPhotos,
     selectedPersonDocuments,
+    setSiblingOrder,
     resetToSampleData,
     clearAllData,
     exportData,
@@ -82,6 +89,11 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   const [canvasScale, setCanvasScale] = useState(1);
   const [activeGenFilter, setActiveGenFilter] = useState(null);
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const [isArrangeMode, setIsArrangeMode] = useState(false);
+
+  const handleToggleArrangeMode = useCallback(() => {
+    setIsArrangeMode((prev) => !prev);
+  }, []);
 
   // M2A Modal States
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -312,10 +324,13 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   // M4A Search Navigation Handlers
   const handleNavigatePerson = useCallback(
     (personId, section = 'overview') => {
+      if (personId) {
+        expandAncestorsOf(personId);
+      }
       handleSwitchView('tree');
       handleSelectPerson(personId, section);
     },
-    [handleSwitchView, handleSelectPerson]
+    [expandAncestorsOf, handleSwitchView, handleSelectPerson]
   );
 
   const handleNavigatePersonFromTimeline = useCallback(
@@ -740,10 +755,31 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             isLocalMode={isLocalMode}
             activeView={viewMode}
             onNavigateView={handleSwitchView}
+            isArrangeMode={isArrangeMode}
+            onToggleArrangeMode={handleToggleArrangeMode}
           />
 
           {/* Main Interactive Stage — Family Tree as Hero */}
           <main className="ft-main">
+            {isArrangeMode && (
+              <div className="ft-arrange-banner" role="status" aria-live="polite">
+                <div className="ft-arrange-banner__info">
+                  <span className="ft-arrange-banner__dot" />
+                  <span className="ft-arrange-banner__text">
+                    <strong>Arrange Family Mode:</strong> Drag cards or use ◀ / ▶ to reorder siblings within their cohort. Relationships remain unchanged.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="ft-arrange-banner__done-btn"
+                  onClick={handleToggleArrangeMode}
+                  title="Save and exit arrange mode"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+
             <FamilyTreeCanvas
               ref={canvasRef}
               layout={layout}
@@ -755,7 +791,10 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
               onSelectPerson={handleSelectPerson}
               onDeselect={handleDeselect}
               onScaleChange={setCanvasScale}
+              onToggleBranch={toggleBranch}
               isReducedMotion={isReducedMotion}
+              isArrangeMode={isArrangeMode}
+              setSiblingOrder={setSiblingOrder}
             />
 
             {/* Empty Canvas Prompt for New Users */}
@@ -798,6 +837,11 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                 onZoomOut={() => canvasRef.current?.zoomOut()}
                 onReset={() => canvasRef.current?.reset()}
                 onFocusSelected={() => selectedId && canvasRef.current?.focusOn(selectedId)}
+                onFitBranch={() => selectedId && canvasRef.current?.fitBranch(selectedId)}
+                focusMode={focusMode}
+                onSetFocusMode={setFocusMode}
+                onExpandAll={expandAll}
+                onCollapseAll={collapseAll}
                 hasSelection={Boolean(selectedId)}
                 scale={canvasScale}
                 isReducedMotion={isReducedMotion}

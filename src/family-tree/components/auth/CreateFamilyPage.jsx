@@ -48,46 +48,35 @@ export default function CreateFamilyPage() {
       setError(null);
 
       if (isSupabaseConfigured && supabase) {
-        // 1. Create family in Supabase with creator attribution
-        const { data: familyData, error: familyError } = await supabase
-          .from('families')
-          .insert({
-            name: trimmedName,
-            description: familyDescription.trim() || null,
-            created_by: user.id,
-          })
-          .select()
-          .single();
+        // Atomic database-side creation derives identity and ownership from auth.uid().
+        const { data: familyRows, error: familyError } = await supabase.rpc('create_family_with_owner', {
+          family_name: trimmedName,
+          family_description: familyDescription.trim() || null,
+        });
 
         if (familyError) throw familyError;
 
-        // 2. Authoritative M3F Secure Enrollment: user becomes initial OWNER
-        const { error: membershipError } = await supabase
-          .from('family_memberships')
-          .insert({
-            family_id: familyData.id,
-            user_id: user.id,
-            role: 'owner',
-          });
+        const familyData = Array.isArray(familyRows) ? familyRows[0] : familyRows;
+        if (!familyData?.id) {
+          throw new Error('Family creation did not return a family ID.');
+        }
 
-        if (membershipError) throw membershipError;
-
-        // 3. Set local selector
+        // 2. Set local selector
         localStorage.setItem(FAMILY_ID_KEY, familyData.id);
 
-        // 4. Configure FamilyStore with SyncAdapter for this verified family
+        // 3. Configure FamilyStore with SyncAdapter for this verified family
         const adapter = createRepository(familyData.id);
         familyStore.setRepository(adapter);
 
-        // 5. Ensure empty initial in-memory state (0 members, 0 relationships)
+        // 4. Ensure empty initial in-memory state (0 members, 0 relationships)
         familyStore.loadFromData([], [], [], [], [], []);
 
-        // 6. Refresh FamilyContext memberships
+        // 5. Refresh FamilyContext memberships
         if (refreshMemberships) {
           await refreshMemberships();
         }
 
-        // 7. Navigate directly to the new family tree
+        // 6. Navigate directly to the new family tree
         navigate(`/app/family/${familyData.id}`);
       } else {
         // Local mode fallback

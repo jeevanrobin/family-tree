@@ -333,6 +333,7 @@ export class SupabaseAdapter extends FamilyRepository {
       mediaRes,
       mediaPersRes,
       docsRes,
+      siblingOrdersRes,
     ] = await Promise.all([
       supabase.from('family_members').select('*').eq('family_id', fid),
       supabase.from('relationships').select('*').eq('family_id', fid),
@@ -343,6 +344,7 @@ export class SupabaseAdapter extends FamilyRepository {
       supabase.from('media').select('*').eq('family_id', fid),
       supabase.from('media_persons').select('media_id, person_id'),
       supabase.from('documents').select('*').eq('family_id', fid),
+      supabase.from('family_sibling_orders').select('*').eq('family_id', fid),
     ]);
 
     const people = throwIfError(membersRes, 'load family_members').map(rowToPerson);
@@ -368,12 +370,113 @@ export class SupabaseAdapter extends FamilyRepository {
 
     const documents = throwIfError(docsRes, 'load documents').map(rowToDocument);
 
-    return { people, relationships, stories, lifeEvents, photos, documents };
+    const siblingOrder = {};
+    if (siblingOrdersRes && !siblingOrdersRes.error && Array.isArray(siblingOrdersRes.data)) {
+      for (const row of siblingOrdersRes.data) {
+        if (row.cohort_key && Array.isArray(row.ordered_person_ids)) {
+          siblingOrder[row.cohort_key] = row.ordered_person_ids;
+        }
+      }
+    }
+
+    return { people, relationships, stories, lifeEvents, photos, documents, siblingOrder };
   }
 
   async persist() {
     // Cloud adapter mutations are executed via granular methods.
   }
+
+  // ── Sibling Cohort Ordering ────────────────────────
+
+  async getSiblingOrders(familyId = this.familyId) {
+    await this._validateSessionAndScope();
+    const fid = familyId || this.familyId;
+    const { data, error } = await supabase
+      .from('family_sibling_orders')
+      .select('*')
+      .eq('family_id', fid);
+    if (error) {
+      console.warn('SupabaseAdapter: Failed to load sibling orders:', error.message);
+      return {};
+    }
+    const orders = {};
+    for (const row of (data || [])) {
+      if (row.cohort_key && Array.isArray(row.ordered_person_ids)) {
+        orders[row.cohort_key] = row.ordered_person_ids;
+      }
+    }
+    return orders;
+  }
+
+  async saveSiblingOrder(familyId, cohortKey, orderedPersonIds) {
+    await this._validateSessionAndScope();
+    const fid = familyId || this.familyId;
+    const key = String(cohortKey || '').trim();
+    if (!key) throw new Error('saveSiblingOrder: cohortKey is required.');
+    const personIds = Array.isArray(orderedPersonIds) ? orderedPersonIds.map(String) : [];
+
+    // Try validated RPC first
+    try {
+      const { data, error } = await supabase.rpc('save_family_sibling_order', {
+        p_family_id: fid,
+        p_cohort_key: key,
+        p_ordered_person_ids: personIds,
+      });
+      if (!error) return data;
+      if (error.message && (error.message.includes('Forbidden') || error.message.includes('Validation') || error.message.includes('Duplicate') || error.message.includes('Authentication'))) {
+        throw error;
+      }
+    } catch (rpcErr) {
+      if (rpcErr.message && (rpcErr.message.includes('Forbidden') || rpcErr.message.includes('Validation') || rpcErr.message.includes('Duplicate') || rpcErr.message.includes('Authentication'))) {
+        throw rpcErr;
+      }
+      console.warn('SupabaseAdapter: save_family_sibling_order RPC failed, falling back to direct upsert:', rpcErr.message);
+    }
+
+    // Direct table upsert fallback with RLS
+    const { data, error } = await supabase
+      .from('family_sibling_orders')
+      .upsert({
+        family_id: fid,
+        cohort_key: key,
+        ordered_person_ids: personIds,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'family_id,cohort_key' })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to save sibling order: ${error.message}`);
+    }
+    return data;
+  }
+
+  async deleteSiblingOrder(familyId, cohortKey) {
+    await this._validateSessionAndScope();
+    const fid = familyId || this.familyId;
+    const key = String(cohortKey || '').trim();
+    if (!key) return true;
+
+    try {
+      const { error } = await supabase.rpc('delete_family_sibling_order', {
+        p_family_id: fid,
+        p_cohort_key: key,
+      });
+      if (!error) return true;
+    } catch (e) {}
+
+    const { error } = await supabase
+      .from('family_sibling_orders')
+      .delete()
+      .eq('family_id', fid)
+      .eq('cohort_key', key);
+
+    if (error) {
+      throw new Error(`Failed to delete sibling order: ${error.message}`);
+    }
+    return true;
+  }
+
 
   // ── People ─────────────────────────────────────────
 

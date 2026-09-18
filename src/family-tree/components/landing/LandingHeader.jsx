@@ -83,12 +83,12 @@ export default function LandingHeader({
             type="button"
             className="fl-header__brand"
             onClick={onScrollToTop}
-            aria-label="Medida's Family — back to top"
+            aria-label="Anvaya FamilyTree — back to top"
           >
             <span className="fl-header__brand-mark" aria-hidden="true">
               <BrandMark />
             </span>
-            <span className="fl-header__brand-name">Medida&rsquo;s Family</span>
+            <span className="fl-header__brand-name">Anvaya FamilyTree</span>
           </button>
 
           <nav className="fl-header__nav" aria-label="Landing page sections">

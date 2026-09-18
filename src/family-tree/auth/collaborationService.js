@@ -78,7 +78,7 @@ class CollaborationService {
   /**
    * Creates a new family invitation and dispatches invitation notification.
    */
-  async createInvitation({ familyId, email, role, durationDays = 7, familyName = 'Medida Family' }) {
+  async createInvitation({ familyId, email, role, durationDays = 7, familyName = 'Your Family Tree' }) {
     if (!familyId) throw new Error('familyId is required.');
     if (!email || !email.includes('@')) throw new Error('A valid email address is required.');
 
@@ -228,7 +228,7 @@ class CollaborationService {
           valid: true,
           id: found.id,
           family_id: found.family_id,
-          family_name: 'Medida Family',
+          family_name: 'Your Family Tree',
           email: found.email,
           role: found.role,
           expires_at: found.expires_at,

@@ -286,8 +286,10 @@ export default function AddPersonModal({
     setIsSubmitting(true);
 
     try {
+      let newPerson;
+      await familyStore.runInBatch(async () => {
       // 1. Create Person
-      const newPerson = onAddPerson({
+      newPerson = onAddPerson({
         firstName: firstName.trim(),
         middleName: middleName.trim(),
         lastName: lastName.trim(),
@@ -389,6 +391,8 @@ export default function AddPersonModal({
           }
         }
       }
+
+      });
 
       // 4. Show lightweight success state
       setLastAddedMember(newPerson);

@@ -16,6 +16,7 @@ import {
   getFamilyConstellationMap,
   getImmediateFamilyMap,
 } from '../src/family-tree/data/familyDataService.js';
+import { computeGenerations } from '../src/family-tree/data/familyDataService.js';
 import { computeTreeLayout, PORTRAIT_BAND_Y } from '../src/family-tree/engine/treeLayout.js';
 
 let passed = 0;
@@ -127,6 +128,38 @@ runTest('Couple parent-child connector originates at marriage union bar', () => 
   assert.strictEqual(childLine.sourceY, expectedSourceY, 'Stem originates at marriage union line');
   assert(childLine.allParentIds.includes('p-1'), 'Has p-1 in allParentIds');
   assert(childLine.allParentIds.includes('p-2'), 'Has p-2 in allParentIds');
+});
+
+runTest('New children stay in the parent cohort and grandchildren advance one generation', () => {
+  const people = [
+    { id: 'grandparent-a', firstName: 'Grandparent A' },
+    { id: 'grandparent-b', firstName: 'Grandparent B' },
+    { id: 'parent-x', firstName: 'Parent X' },
+    { id: 'child-a', firstName: 'Child A' },
+    { id: 'child-b', firstName: 'Child B' },
+    { id: 'child-c', firstName: 'Child C' },
+    { id: 'grandchild-b', firstName: 'Grandchild B' },
+  ];
+  const relationships = [
+    { type: 'parent-child', parentId: 'grandparent-a', childId: 'parent-x' },
+    { type: 'parent-child', parentId: 'parent-x', childId: 'child-a' },
+    { type: 'parent-child', parentId: 'parent-x', childId: 'child-b' },
+    { type: 'parent-child', parentId: 'parent-x', childId: 'child-c' },
+    { type: 'parent-child', parentId: 'child-b', childId: 'grandchild-b' },
+  ];
+
+  const generations = computeGenerations(people, relationships);
+  assert.strictEqual(generations.get('parent-x'), 1, 'Parent X should be one generation below the root');
+  assert.strictEqual(generations.get('child-a'), 2, 'Child A should be one generation below Parent X');
+  assert.strictEqual(generations.get('child-b'), 2, 'Child B should be one generation below Parent X');
+  assert.strictEqual(generations.get('child-c'), 2, 'New Child C should be one generation below Parent X');
+  assert.strictEqual(generations.get('grandchild-b'), 3, 'Grandchild B should be one generation below Child B');
+
+  const layout = computeTreeLayout(people, relationships);
+  assert.strictEqual(layout.nodes.get('child-c').y, layout.nodes.get('child-a').y, 'New Child C should share the sibling row');
+  assert.strictEqual(layout.nodes.get('child-c').y, layout.nodes.get('child-b').y, 'New Child C should share the sibling cohort');
+  assert(layout.nodes.get('child-c').y > layout.nodes.get('parent-x').y, 'New Child C should not be in the root/parent row');
+  assert(layout.nodes.get('grandchild-b').y > layout.nodes.get('child-b').y, 'Grandchild B should be below Child B');
 });
 
 console.log('==================================================');

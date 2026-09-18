@@ -345,6 +345,23 @@ runTest('immediate tree update: treeLayout recalculates coordinates upon adding 
   assert.ok(layout.lines.length >= 1);
 });
 
+runTest('atomic graph update: new child is published with its parent relationship', () => {
+  const store = new FamilyStore();
+  store.loadFromData([]);
+  const parent = store.addPerson({ firstName: 'Parent' });
+  const snapshots = [];
+  store.subscribe((snapshot) => snapshots.push(snapshot));
+
+  store.runInBatchSync(() => {
+    const child = store.addPerson({ firstName: 'Child' });
+    store.addRelationship({ type: 'parent-child', parentId: parent.id, childId: child.id });
+  });
+
+  assert.strictEqual(snapshots.length, 1, 'Batched child creation should publish one complete snapshot');
+  assert.strictEqual(snapshots[0].people.length, 2, 'Snapshot should contain parent and child');
+  assert.strictEqual(snapshots[0].relationships.length, 1, 'Snapshot should contain the parent-child relationship');
+});
+
 // 18. immediate search availability
 runTest('immediate search availability: newly added member is indexed and discoverable in global search', () => {
   const store = new FamilyStore();

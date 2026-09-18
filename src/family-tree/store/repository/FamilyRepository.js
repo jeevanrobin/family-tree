@@ -28,4 +28,8 @@ export class FamilyRepository {
 
   async importAll(_data) { throw new Error('Not implemented'); }
   async reset(_seedData) { throw new Error('Not implemented'); }
+
+  async getSiblingOrders(_familyId) { throw new Error('Not implemented'); }
+  async saveSiblingOrder(_familyId, _cohortKey, _orderedPersonIds) { throw new Error('Not implemented'); }
+  async deleteSiblingOrder(_familyId, _cohortKey) { throw new Error('Not implemented'); }
 }

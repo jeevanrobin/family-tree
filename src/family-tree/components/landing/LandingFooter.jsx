@@ -28,7 +28,7 @@ export default function LandingFooter({ onNavigate }) {
                 <path d="M9.5 9.5L7.5 14M14.5 9.5L16.5 14M9.5 17h5" />
               </svg>
             </span>
-            <span className="fl-footer__brand-name">Medida&rsquo;s Family</span>
+            <span className="fl-footer__brand-name">Anvaya FamilyTree</span>
           </span>
 
           <nav className="fl-footer__nav" aria-label="Footer">
@@ -51,7 +51,7 @@ export default function LandingFooter({ onNavigate }) {
         </div>
 
         <div className="fl-footer__copy">
-          <span>© {new Date().getFullYear()} Medida&rsquo;s Family — a private place for family history.</span>
+          <span>© {new Date().getFullYear()} Anvaya FamilyTree — a private place for family history.</span>
           <span>Your family&rsquo;s name is always your own.</span>
         </div>
       </div>

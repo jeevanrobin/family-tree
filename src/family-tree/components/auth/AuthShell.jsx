@@ -66,11 +66,11 @@ export default function AuthShell({ children }) {
 
       <div className="fa-shell__inner">
         <header className="fa-topbar">
-          <Link to="/" className="fa-topbar__brand" aria-label="Medida's Family — home">
+          <Link to="/" className="fa-topbar__brand" aria-label="Anvaya FamilyTree — home">
             <span className="fa-topbar__brand-mark" aria-hidden="true">
               <AuthMark />
             </span>
-            <span className="fa-topbar__brand-name">Medida&rsquo;s Family</span>
+            <span className="fa-topbar__brand-name">Anvaya FamilyTree</span>
           </Link>
 
           <button
@@ -102,7 +102,7 @@ export default function AuthShell({ children }) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
-                Back to Medida&rsquo;s Family
+                Back to Anvaya FamilyTree
               </Link>
 
               {children}

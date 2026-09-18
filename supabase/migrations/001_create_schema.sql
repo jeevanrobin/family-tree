@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ── Families ─────────────────────────────────────────────────
 
 CREATE TABLE families (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   name          TEXT NOT NULL,
   description   TEXT DEFAULT '',
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -19,7 +19,7 @@ CREATE TABLE families (
 -- ── Family Members ───────────────────────────────────────────
 
 CREATE TABLE family_members (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id         UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   local_id          TEXT,
   first_name        TEXT NOT NULL DEFAULT '',
@@ -55,7 +55,7 @@ CREATE INDEX idx_family_members_name ON family_members(family_id, last_name, fir
 -- ── Relationships ────────────────────────────────────────────
 
 CREATE TABLE relationships (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id     UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   local_id      TEXT,
   type          TEXT NOT NULL CHECK (type IN ('parent-child', 'spouse')),
@@ -80,7 +80,7 @@ CREATE INDEX idx_relationships_type ON relationships(family_id, type);
 -- ── Stories ──────────────────────────────────────────────────
 
 CREATE TABLE stories (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id     UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   local_id      TEXT,
   person_id     UUID NOT NULL REFERENCES family_members(id) ON DELETE CASCADE,
@@ -109,7 +109,7 @@ CREATE INDEX idx_story_persons_person ON story_persons(person_id);
 -- ── Life Events ──────────────────────────────────────────────
 
 CREATE TABLE life_events (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id     UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   local_id      TEXT,
   person_id     UUID NOT NULL REFERENCES family_members(id) ON DELETE CASCADE,
@@ -138,7 +138,7 @@ CREATE INDEX idx_life_event_persons_person ON life_event_persons(person_id);
 -- ── Media (Photos) ───────────────────────────────────────────
 
 CREATE TABLE media (
-  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id     UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   local_id      TEXT,
   person_id     UUID NOT NULL REFERENCES family_members(id) ON DELETE CASCADE,
@@ -169,7 +169,7 @@ CREATE INDEX idx_media_persons_person ON media_persons(person_id);
 -- ── Documents ────────────────────────────────────────────────
 
 CREATE TABLE documents (
-  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id                UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id         UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   local_id          TEXT,
   person_id         UUID NOT NULL REFERENCES family_members(id) ON DELETE CASCADE,

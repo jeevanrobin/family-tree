@@ -238,7 +238,7 @@ export default function FamilyInsightsView({
           <section className="ft-insights-section" aria-label="Generational Distribution">
             <div className="ft-insights-section__header">
               <div>
-                <h2 className="ft-insights-section__title">Generations of the Medida Family</h2>
+                 <h2 className="ft-insights-section__title">Generations of the family</h2>
                 <p className="ft-insights-section__sub">Family distribution across {overview.totalGenerations} generational tiers</p>
               </div>
             </div>

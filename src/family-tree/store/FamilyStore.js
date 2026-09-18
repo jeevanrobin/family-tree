@@ -23,6 +23,21 @@ import {
 export const SCHEMA_VERSION = '2.0.0';
 
 /**
+ * Safely merge repository mutation results into in-memory entities.
+ * CRITICAL ID INTEGRITY RULE:
+ * The in-memory entity.id is the canonical local ID across the entire local graph lifecycle.
+ * Under NO circumstances should entity.id ever be modified or overwritten by repository results
+ * (such as internal sync queue item IDs or temporary tokens).
+ * Only backend-assigned remote UUIDs (uuid) and non-identity metadata may be updated.
+ */
+function applyRepositoryResult(target, saved) {
+  if (!target || !saved || typeof saved !== 'object') return;
+  if (saved.uuid && !target.uuid) {
+    target.uuid = saved.uuid;
+  }
+}
+
+/**
  * Initial sample seed generator for M2B entities
  */
 function createInitialSampleEntities(peopleArray) {
@@ -195,6 +210,7 @@ export class FamilyStore {
     this.lifeEvents = [];
     this.photos = [];
     this.documents = [];
+    this.siblingOrder = {};
     this.listeners = new Set();
     this.repository = repository || new LocalAdapter();
     this._searchIndex = null;
@@ -259,13 +275,15 @@ export class FamilyStore {
         this.loadFromData(
           data.people, data.relationships,
           sampleEntities.stories, sampleEntities.lifeEvents,
-          sampleEntities.photos, sampleEntities.documents
+          sampleEntities.photos, sampleEntities.documents,
+          data.siblingOrder || {}
         );
       } else {
         this.loadFromData(
           data.people, data.relationships,
           data.stories, data.lifeEvents,
-          data.photos, data.documents
+          data.photos, data.documents,
+          data.siblingOrder || {}
         );
       }
     } else {
@@ -291,7 +309,7 @@ export class FamilyStore {
   /**
    * Loads entities into memory
    */
-  loadFromData(peopleArray = [], relationshipsArray = [], storiesArray = [], eventsArray = [], photosArray = [], docsArray = []) {
+  loadFromData(peopleArray = [], relationshipsArray = [], storiesArray = [], eventsArray = [], photosArray = [], docsArray = [], siblingOrder = {}) {
     this._searchIndex = null;
     this.people.clear();
     peopleArray.forEach((p) => {
@@ -304,6 +322,7 @@ export class FamilyStore {
     this.lifeEvents = eventsArray.map((e) => this.normalizeLifeEvent(e));
     this.photos = photosArray.map((ph) => this.normalizePhoto(ph));
     this.documents = docsArray.map((d) => this.normalizeDocument(d));
+    this.siblingOrder = typeof siblingOrder === 'object' && siblingOrder ? { ...siblingOrder } : {};
   }
 
   // ── Normalizers ────────────────────────────────────────────
@@ -463,6 +482,7 @@ export class FamilyStore {
       lifeEvents: this.lifeEvents,
       photos: this.photos,
       documents: this.documents,
+      siblingOrder: this.siblingOrder,
     };
     this.repository.persist(snapshot).catch((err) => {
       console.error('FamilyStore: Persistence failed:', err);
@@ -470,6 +490,7 @@ export class FamilyStore {
   }
 
   notify() {
+    if (this._isBatching) return;
     this._searchIndex = null;
     this.persist();
     const snapshot = this.getSnapshot();
@@ -480,6 +501,26 @@ export class FamilyStore {
         console.error('FamilyStore: Error in listener:', err);
       }
     });
+  }
+
+  async runInBatch(fn) {
+    this._isBatching = true;
+    try {
+      await fn();
+    } finally {
+      this._isBatching = false;
+      this.notify();
+    }
+  }
+
+  runInBatchSync(fn) {
+    this._isBatching = true;
+    try {
+      return fn();
+    } finally {
+      this._isBatching = false;
+      this.notify();
+    }
   }
 
   subscribe(listener) {
@@ -495,7 +536,52 @@ export class FamilyStore {
       lifeEvents: [...this.lifeEvents],
       photos: [...this.photos],
       documents: [...this.documents],
+      siblingOrder: { ...this.siblingOrder },
     };
+  }
+
+  // ── Sibling Cohort Ordering Operations ─────────────────────
+
+  getSiblingOrder(cohortKey) {
+    if (!cohortKey) return null;
+    return this.siblingOrder[cohortKey] ? [...this.siblingOrder[cohortKey]] : null;
+  }
+
+  getAllSiblingOrders() {
+    return { ...this.siblingOrder };
+  }
+
+  setSiblingOrder(cohortKey, orderedPersonIds) {
+    if (!cohortKey || !Array.isArray(orderedPersonIds)) return;
+    const sanitizedIds = orderedPersonIds.map(String);
+    this.siblingOrder = {
+      ...this.siblingOrder,
+      [cohortKey]: sanitizedIds,
+    };
+    this.notify();
+    const fid = this.repository?.familyId;
+    if (this.repository && typeof this.repository.saveSiblingOrder === 'function') {
+      this.repository.saveSiblingOrder(fid, cohortKey, sanitizedIds).catch((err) => {
+        console.warn('FamilyStore: Failed to save sibling order via repository:', err?.message || err);
+      });
+    }
+  }
+
+  resetSiblingOrder(cohortKey) {
+    if (cohortKey) {
+      const next = { ...this.siblingOrder };
+      delete next[cohortKey];
+      this.siblingOrder = next;
+    } else {
+      this.siblingOrder = {};
+    }
+    this.notify();
+    const fid = this.repository?.familyId;
+    if (this.repository && typeof this.repository.deleteSiblingOrder === 'function') {
+      this.repository.deleteSiblingOrder(fid, cohortKey).catch((err) => {
+        console.warn('FamilyStore: Failed to delete sibling order via repository:', err?.message || err);
+      });
+    }
   }
 
   // ── Entity Collections Getters ─────────────────────────────
@@ -688,7 +774,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.savePerson === 'function') {
       Promise.resolve(this.repository.savePerson(person, { operation: 'create' }))
         .then((savedPerson) => {
-          if (savedPerson) Object.assign(person, savedPerson);
+          if (savedPerson) applyRepositoryResult(person, savedPerson);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.savePerson failed:', err);
@@ -724,7 +810,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.savePerson === 'function') {
       Promise.resolve(this.repository.savePerson(validated, { operation: 'update' }))
         .then((savedPerson) => {
-          if (savedPerson) Object.assign(validated, savedPerson);
+          if (savedPerson) applyRepositoryResult(validated, savedPerson);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.savePerson failed:', err);
@@ -991,7 +1077,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveStory === 'function') {
       Promise.resolve(this.repository.saveStory(norm, { operation: 'create' }))
         .then((savedStory) => {
-          if (savedStory) Object.assign(norm, savedStory);
+          if (savedStory) applyRepositoryResult(norm, savedStory);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.saveStory failed:', err);
@@ -1016,7 +1102,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveStory === 'function') {
       Promise.resolve(this.repository.saveStory(updated, { operation: 'update' }))
         .then((savedStory) => {
-          if (savedStory) Object.assign(updated, savedStory);
+          if (savedStory) applyRepositoryResult(updated, savedStory);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.saveStory failed:', err);
@@ -1072,7 +1158,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveLifeEvent === 'function') {
       Promise.resolve(this.repository.saveLifeEvent(norm, { operation: 'create' }))
         .then((savedEvent) => {
-          if (savedEvent) Object.assign(norm, savedEvent);
+          if (savedEvent) applyRepositoryResult(norm, savedEvent);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.saveLifeEvent failed:', err);
@@ -1097,7 +1183,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveLifeEvent === 'function') {
       Promise.resolve(this.repository.saveLifeEvent(updated, { operation: 'update' }))
         .then((savedEvent) => {
-          if (savedEvent) Object.assign(updated, savedEvent);
+          if (savedEvent) applyRepositoryResult(updated, savedEvent);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.saveLifeEvent failed:', err);
@@ -1160,7 +1246,7 @@ export class FamilyStore {
         if (this.repository && typeof this.repository.savePerson === 'function') {
           Promise.resolve(this.repository.savePerson(person, { operation: 'update' }))
             .then((savedPerson) => {
-              if (savedPerson) Object.assign(person, savedPerson);
+              if (savedPerson) applyRepositoryResult(person, savedPerson);
             })
             .catch(() => {});
         }
@@ -1173,7 +1259,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.savePhoto === 'function') {
       Promise.resolve(this.repository.savePhoto(norm, { operation: 'create' }))
         .then((savedPhoto) => {
-          if (savedPhoto) Object.assign(norm, savedPhoto);
+          if (savedPhoto) applyRepositoryResult(norm, savedPhoto);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.savePhoto failed:', err);
@@ -1204,7 +1290,7 @@ export class FamilyStore {
         if (this.repository && typeof this.repository.savePerson === 'function') {
           Promise.resolve(this.repository.savePerson(person, { operation: 'update' }))
             .then((savedPerson) => {
-              if (savedPerson) Object.assign(person, savedPerson);
+              if (savedPerson) applyRepositoryResult(person, savedPerson);
             })
             .catch(() => {});
         }
@@ -1217,7 +1303,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.savePhoto === 'function') {
       Promise.resolve(this.repository.savePhoto(updated, { operation: 'update' }))
         .then((savedPhoto) => {
-          if (savedPhoto) Object.assign(updated, savedPhoto);
+          if (savedPhoto) applyRepositoryResult(updated, savedPhoto);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.savePhoto failed:', err);
@@ -1248,7 +1334,7 @@ export class FamilyStore {
       if (this.repository && typeof this.repository.savePerson === 'function') {
         Promise.resolve(this.repository.savePerson(person, { operation: 'update' }))
           .then((savedPerson) => {
-            if (savedPerson) Object.assign(person, savedPerson);
+            if (savedPerson) applyRepositoryResult(person, savedPerson);
           })
           .catch(() => {});
       }
@@ -1332,7 +1418,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveDocument === 'function') {
       Promise.resolve(this.repository.saveDocument(norm, { operation: 'create' }))
         .then((savedDoc) => {
-          if (savedDoc) Object.assign(norm, savedDoc);
+          if (savedDoc) applyRepositoryResult(norm, savedDoc);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.saveDocument failed:', err);
@@ -1356,7 +1442,7 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveDocument === 'function') {
       Promise.resolve(this.repository.saveDocument(updated, { operation: 'update' }))
         .then((savedDoc) => {
-          if (savedDoc) Object.assign(updated, savedDoc);
+          if (savedDoc) applyRepositoryResult(updated, savedDoc);
         })
         .catch((err) => {
           console.warn('FamilyStore: repository.saveDocument failed:', err);
@@ -1404,16 +1490,39 @@ export class FamilyStore {
   // ── Export / Import / Reset ────────────────────────────────
 
   exportData() {
+    const people = Array.from(this.people.values());
+    const peopleIds = new Set(this.people.keys());
+    let unresolvedCount = 0;
+
+    this.relationships.forEach((r) => {
+      if (r.type === 'parent-child' || r.type === 'parent') {
+        const pId = r.parentId || r.personId1;
+        const cId = r.childId || r.personId2;
+        if (!peopleIds.has(pId)) unresolvedCount++;
+        if (!peopleIds.has(cId)) unresolvedCount++;
+      } else if (r.type === 'spouse' || r.type === 'sibling') {
+        const aId = r.personAId || r.personId1;
+        const bId = r.personBId || r.personId2;
+        if (!peopleIds.has(aId)) unresolvedCount++;
+        if (!peopleIds.has(bId)) unresolvedCount++;
+      }
+    });
+
+    if (unresolvedCount > 0) {
+      throw new Error(`Backup cannot be exported because ${unresolvedCount} relationship reference(s) are unresolved.`);
+    }
+
     return {
       schemaVersion: SCHEMA_VERSION,
       exportedAt: new Date().toISOString(),
       family: {
-        people: Array.from(this.people.values()),
+        people,
         relationships: this.relationships,
         stories: this.stories,
         lifeEvents: this.lifeEvents,
         photos: this.photos,
         documents: this.documents,
+        siblingOrder: this.siblingOrder,
       },
     };
   }
@@ -1438,6 +1547,7 @@ export class FamilyStore {
     const eventsArray = parsed.family?.lifeEvents || parsed.lifeEvents || [];
     const photosArray = parsed.family?.photos || parsed.photos || [];
     const docsArray = parsed.family?.documents || parsed.documents || [];
+    const siblingOrder = parsed.family?.siblingOrder || parsed.siblingOrder || {};
 
     // Validate people
     const peopleIds = new Set();
@@ -1458,10 +1568,11 @@ export class FamilyStore {
         const pId = r.parentId || r.personId1;
         const cId = r.childId || r.personId2;
         if (!peopleIds.has(pId) || !peopleIds.has(cId)) {
-          throw new Error('Import validation failed: Relationship references non-existent person ID.');
+          const missingId = !peopleIds.has(pId) ? pId : cId;
+          throw new Error(`Import validation failed: Parent-child relationship "${r.id || 'unnamed'}" references non-existent person ID "${missingId}".`);
         }
         if (pId === cId) {
-          throw new Error('Import validation failed: Self-parenting relationship detected.');
+          throw new Error(`Import validation failed: Self-parenting relationship detected in "${r.id || 'unnamed'}".`);
         }
         const currentCount = (parentCountMap.get(cId) || 0) + 1;
         if (currentCount > 2) {
@@ -1472,16 +1583,27 @@ export class FamilyStore {
         const aId = r.personAId || r.personId1;
         const bId = r.personBId || r.personId2;
         if (!peopleIds.has(aId) || !peopleIds.has(bId)) {
-          throw new Error('Import validation failed: Spouse relationship references non-existent person ID.');
+          const missingId = !peopleIds.has(aId) ? aId : bId;
+          throw new Error(`Import validation failed: Spouse relationship "${r.id || 'unnamed'}" references non-existent person ID "${missingId}".`);
         }
         if (aId === bId) {
-          throw new Error('Import validation failed: Self-spouse relationship detected.');
+          throw new Error(`Import validation failed: Self-spouse relationship detected in "${r.id || 'unnamed'}".`);
+        }
+      } else if (r.type === 'sibling') {
+        const aId = r.personAId || r.personId1;
+        const bId = r.personBId || r.personId2;
+        if (!peopleIds.has(aId) || !peopleIds.has(bId)) {
+          const missingId = !peopleIds.has(aId) ? aId : bId;
+          throw new Error(`Import validation failed: Sibling relationship "${r.id || 'unnamed'}" references non-existent person ID "${missingId}".`);
+        }
+        if (aId === bId) {
+          throw new Error(`Import validation failed: Self-sibling relationship detected in "${r.id || 'unnamed'}".`);
         }
       }
     });
 
     // Safely load verified data
-    this.loadFromData(peopleArray, relsArray, storiesArray, eventsArray, photosArray, docsArray);
+    this.loadFromData(peopleArray, relsArray, storiesArray, eventsArray, photosArray, docsArray, siblingOrder);
     this.notify();
     return true;
   }

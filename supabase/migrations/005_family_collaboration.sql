@@ -16,7 +16,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ── 1. Family Invitations Table ─────────────────────────────
 
 CREATE TABLE IF NOT EXISTS family_invitations (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id       UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   email           TEXT NOT NULL,
   role            TEXT NOT NULL CHECK (role IN ('editor', 'contributor', 'viewer')),

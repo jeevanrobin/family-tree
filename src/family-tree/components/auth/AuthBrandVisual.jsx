@@ -36,7 +36,7 @@ export default function AuthBrandVisual({ isReducedMotion = false }) {
   return (
     <aside className="fa-visual" aria-hidden="true">
       <FadeContent duration={550} delay={100} distance={14} isReducedMotion={isReducedMotion}>
-        <span className="fa-visual__eyebrow">Medida&rsquo;s Family</span>
+        <span className="fa-visual__eyebrow">Anvaya FamilyTree</span>
         <h2 className="fa-visual__title">Your family&rsquo;s story, connected.</h2>
         <p className="fa-visual__sub">
           A private place to build your family tree, preserve memories and stories, and keep

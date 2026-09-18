@@ -222,6 +222,7 @@ export default function App() {
         <Routes>
           {/* Public Landing Page at '/' */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/tree" element={<FamilyTreeApp isLocalMode={true} />} />
 
           {/* Authentication Routes */}
           <Route

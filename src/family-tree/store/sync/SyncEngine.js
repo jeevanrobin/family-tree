@@ -181,7 +181,14 @@ export class SyncEngine {
         await indexedDBManager.updateSyncMeta(fid, {
           lastSyncedAt: new Date().toISOString(),
           lastPullAt: new Date().toISOString(),
+          ...(remoteData.siblingOrder ? { siblingOrder: remoteData.siblingOrder } : {}),
         });
+
+        if (remoteData.siblingOrder && typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(remoteData.siblingOrder));
+          } catch (e) {}
+        }
 
         this.setStatus(SYNC_STATUS.SYNCED);
         return remoteData || {
@@ -191,6 +198,7 @@ export class SyncEngine {
           lifeEvents: [],
           photos: [],
           documents: [],
+          siblingOrder: {},
         };
       } catch (err) {
         console.warn('SyncEngine: Initial cloud load failed:', err.message);
@@ -236,6 +244,20 @@ export class SyncEngine {
       } else if (payload) {
         await indexedDBManager.put(targetStore, { ...payload, family_id: fid, familyId: fid });
       }
+    } else if (entityType === ENTITY_TYPES.SIBLING_ORDER) {
+      try {
+        const meta = (await indexedDBManager.get(STORES.SYNC_META, fid)) || { familyId: fid, siblingOrder: {} };
+        const currentOrder = { ...(meta.siblingOrder || {}) };
+        if (operation === MUTATION_OP.DELETE) {
+          delete currentOrder[entityId];
+        } else if (payload?.orderedPersonIds) {
+          currentOrder[entityId] = payload.orderedPersonIds;
+        }
+        await indexedDBManager.put(STORES.SYNC_META, { ...meta, familyId: fid, siblingOrder: currentOrder });
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(currentOrder));
+        }
+      } catch (e) {}
     }
 
     // 2. Enqueue in durable sync queue
@@ -499,6 +521,19 @@ export class SyncEngine {
          }
          break;
 
+        case ENTITY_TYPES.SIBLING_ORDER:
+          if (operation === MUTATION_OP.DELETE) {
+            await adapter.deleteSiblingOrder(this.familyId, entityId);
+          } else {
+            const rawCohortKey = payload?.cohortKey || entityId;
+            const rawOrderedIds = Array.isArray(payload?.orderedPersonIds) ? payload.orderedPersonIds : [];
+            const translatedIds = await Promise.all(
+              rawOrderedIds.map((id) => this.translateId(id))
+            );
+            await adapter.saveSiblingOrder(this.familyId, rawCohortKey, translatedIds);
+          }
+          break;
+
       default:
         throw new Error(`Unsupported entity type: ${entityType}`);
     }
@@ -579,9 +614,39 @@ export class SyncEngine {
         indexedDBManager.putBatch(STORES.DOCUMENTS, cleanRemoteDocs),
       ]);
 
-      await indexedDBManager.updateSyncMeta(fid, {
-        lastPullAt: new Date().toISOString(),
-      });
+      let reconciledOrder = null;
+      if (remoteData.siblingOrder) {
+        const meta = (await indexedDBManager.get(STORES.SYNC_META, fid)) || { familyId: fid };
+        const pendingQueue = await indexedDBManager.getPendingQueue(fid);
+        const pendingSiblingMutations = pendingQueue.filter(
+          (item) => item.entityType === ENTITY_TYPES.SIBLING_ORDER
+        );
+        const pendingCohortKeys = new Set(pendingSiblingMutations.map((m) => m.entityId));
+
+        reconciledOrder = { ...remoteData.siblingOrder };
+        const localOrder = meta.siblingOrder || {};
+        for (const [key, order] of Object.entries(localOrder)) {
+          if (pendingCohortKeys.has(key)) {
+            reconciledOrder[key] = order;
+          }
+        }
+
+        await indexedDBManager.put(STORES.SYNC_META, {
+          ...meta,
+          familyId: fid,
+          siblingOrder: reconciledOrder,
+          lastPullAt: new Date().toISOString(),
+        });
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(reconciledOrder));
+          } catch (e) {}
+        }
+      } else {
+        await indexedDBManager.updateSyncMeta(fid, {
+          lastPullAt: new Date().toISOString(),
+        });
+      }
 
       return {
         people: mergedPeople,
@@ -590,6 +655,7 @@ export class SyncEngine {
         lifeEvents: cleanRemoteEvents,
         photos: cleanRemotePhotos,
         documents: cleanRemoteDocs,
+        siblingOrder: reconciledOrder || {},
       };
     } catch (err) {
       console.warn('SyncEngine: Pull remote changes failed:', err.message);

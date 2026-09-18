@@ -159,7 +159,8 @@ await runTest('Integration / Logic', 'Test 7: Existing user with 2+ families rou
 
 await runTest('Integration / Logic', 'Test 8: User can create a custom family name and becomes Owner', async () => {
   const createFamilySrc = fs.readFileSync(path.join(rootDir, 'src', 'family-tree', 'components', 'auth', 'CreateFamilyPage.jsx'), 'utf-8');
-  assert(createFamilySrc.includes("role: 'owner'"), 'Family creator must be enrolled with role owner');
+  assert(createFamilySrc.includes("supabase.rpc('create_family_with_owner'"), 'Family creator must use the atomic owner-creation RPC');
+  assert(!createFamilySrc.includes(".from('family_memberships')"), 'Family creator must not insert membership directly from the browser');
   assert(createFamilySrc.includes("placeholder=\"Enter your family name\""), 'Must have correct placeholder');
   assert(!createFamilySrc.includes("value=\"Medida's Family\""), 'Must not have hardcoded Medida default');
 });

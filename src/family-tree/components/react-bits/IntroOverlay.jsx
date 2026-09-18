@@ -1,6 +1,6 @@
 /**
  * IntroOverlay Component — Modern Digital Family Platform
- * Minimal opening sequence that introduces Medida's Family platform.
+ * Minimal opening sequence that introduces Anvaya FamilyTree.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -50,7 +50,7 @@ export default function IntroOverlay({
       className={`ft-intro-overlay ft-intro-overlay--${phase}`}
       onClick={dismiss}
       role="banner"
-      aria-label="Medida Family Digital Platform Introduction"
+       aria-label="Anvaya FamilyTree digital platform introduction"
     >
       <div className="ft-intro-overlay__content">
         {/* Modern Geometric Family Emblem */}

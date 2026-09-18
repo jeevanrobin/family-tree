@@ -12,14 +12,14 @@
  * 8.  Forgot-password flow preserved (form switch + resetPassword + generic response)
  * 9.  Create Your Family CTA -> /signup
  * 10. Already have an account CTA -> /signin
- * 11. Back to Medida's Family -> /
+ * 11. Back to Anvaya FamilyTree -> /
  * 12. Password visibility toggle is accessible and never submits the form
  * 13. Auth pages load no family data (no FamilyStore/FamilyContext imports)
  * 14. Theme support via the shared data-theme system (light + dark)
  * 15. Reduced-motion support
  * 16. Responsive breakpoints for tablet/mobile
  * 17. No client-side fake sessions, no password storage, no Supabase bypass
- * 18. Branding: auth pages treat "Medida's Family" as the product, not the user's family
+ * 18. Branding: auth pages treat "Anvaya FamilyTree" as the product, not the user's family
  */
 
 import assert from 'node:assert';
@@ -177,7 +177,7 @@ await runTest('Unit / Navigation', 'Test 9: Cross-page CTAs wired to the right r
   assert(signUpSrc.includes('to="/signin"'), 'Sign Up page links to /signin');
   assert(signUpSrc.includes('Sign In') && signUpSrc.includes('Already have an account?'), 'Sign Up page shows Sign In link');
   assert(shellSrc.includes('to="/"'), 'AuthShell brand links back to /');
-  assert(shellSrc.includes('Back to Medida&rsquo;s Family') || shellSrc.includes("Back to Medida's Family"), 'Back to product link must exist');
+  assert(shellSrc.includes('Back to Anvaya FamilyTree'), 'Back to product link must exist');
 });
 
 // ── 5. INPUTS / ACCESSIBILITY ──
@@ -251,14 +251,14 @@ await runTest('Unit / Responsive', 'Test 15: Responsive breakpoints for tablet a
 
 // ── 8. BRAND RULE ──
 
-await runTest('Compliance / Brand', "Test 16: \"Medida's Family\" is the product, not the user's family", async () => {
+await runTest('Compliance / Brand', 'Test 16: "Anvaya FamilyTree" is the product, not the user\'s family', async () => {
   // Auth pages must not hardcode the product name as a family name or
-  // imply the user belongs to a family called Medida's Family.
+  // imply the user belongs to a family called Anvaya FamilyTree.
   assert(signUpSrc.includes('Create your family space'), 'Sign Up heading must be product-neutral');
   assert(signUpSrc.includes('your family&rsquo;s own name') || read('AuthBrandVisual.jsx').includes('your family&rsquo;s own name'), 'Visual copy must reinforce user-defined family names');
   const allAuth = signInSrc + signUpSrc + resetSrc;
-  assert(!allAuth.includes('"Medida\'s Family"'), 'No hardcoded product name as a family string');
-  assert(!allAuth.includes("'Medida\\'s Family'"), 'No hardcoded product name as a family string');
+  assert(!allAuth.includes('"Anvaya FamilyTree"'), 'No hardcoded product name as a family string');
+  assert(!allAuth.includes("'Anvaya FamilyTree'"), 'No hardcoded product name as a family string');
 });
 
 // ── 9. SHARED DESIGN LANGUAGE WITH LANDING ──

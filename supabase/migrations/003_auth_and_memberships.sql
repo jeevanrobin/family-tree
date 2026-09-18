@@ -20,7 +20,7 @@ ALTER TABLE families ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.us
 -- ── 2. Family Memberships Table ──────────────────────────────
 
 CREATE TABLE IF NOT EXISTS family_memberships (
-  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id              UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
   family_id       UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role            TEXT NOT NULL DEFAULT 'viewer'

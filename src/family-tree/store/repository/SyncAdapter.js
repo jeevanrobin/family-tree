@@ -18,17 +18,37 @@ export class SyncAdapter extends FamilyRepository {
    * @param {string} familyId
    * @param {import('./SupabaseAdapter.js').SupabaseAdapter} [supabaseAdapter]
    */
-  constructor(familyId, supabaseAdapter = null) {
+  constructor(familyIdOrEngine, supabaseAdapter = null) {
     super();
-    this.familyId = String(familyId);
-    this.supabaseAdapter = supabaseAdapter;
-    this.syncEngine = new SyncEngine(familyId, supabaseAdapter);
+    if (familyIdOrEngine && typeof familyIdOrEngine.enqueue === 'function') {
+      this.syncEngine = familyIdOrEngine;
+      this.familyId = String(supabaseAdapter || familyIdOrEngine.familyId || 'default');
+      this.supabaseAdapter = null;
+    } else {
+      this.familyId = String(familyIdOrEngine);
+      this.supabaseAdapter = supabaseAdapter;
+      this.syncEngine = new SyncEngine(familyIdOrEngine, supabaseAdapter);
+    }
   }
 
   // ── Load ───────────────────────────────────────────────────
 
   async load() {
     const data = await this.syncEngine.hydrate();
+    let siblingOrder = {};
+    try {
+      const meta = await indexedDBManager.get(STORES.SYNC_META, this.familyId);
+      if (meta && meta.siblingOrder) {
+        siblingOrder = meta.siblingOrder;
+      } else if (typeof localStorage !== 'undefined') {
+        const local = localStorage.getItem(`family-tree-sibling-order-${this.familyId}`);
+        if (local) siblingOrder = JSON.parse(local);
+      }
+    } catch (e) {}
+
+    if (data) {
+      data.siblingOrder = siblingOrder;
+    }
     return data;
   }
 
@@ -49,14 +69,25 @@ export class SyncAdapter extends FamilyRepository {
     const photosWithFid = (snapshot.photos || []).map((ph) => ({ ...ph, family_id: fid, familyId: fid }));
     const docsWithFid = (snapshot.documents || []).map((d) => ({ ...d, family_id: fid, familyId: fid }));
 
-    await Promise.all([
+    const tasks = [
       indexedDBManager.putBatch(STORES.PEOPLE, peopleWithFid),
       indexedDBManager.putBatch(STORES.RELATIONSHIPS, relsWithFid),
       indexedDBManager.putBatch(STORES.STORIES, storiesWithFid),
       indexedDBManager.putBatch(STORES.LIFE_EVENTS, eventsWithFid),
       indexedDBManager.putBatch(STORES.PHOTOS, photosWithFid),
       indexedDBManager.putBatch(STORES.DOCUMENTS, docsWithFid),
-    ]);
+    ];
+
+    if (snapshot.siblingOrder) {
+      tasks.push(indexedDBManager.put(STORES.SYNC_META, { familyId: fid, siblingOrder: snapshot.siblingOrder }));
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(snapshot.siblingOrder));
+        }
+      } catch (e) {}
+    }
+
+    await Promise.all(tasks);
   }
 
   async clearLocalCache() {
@@ -111,6 +142,63 @@ export class SyncAdapter extends FamilyRepository {
 
   async deleteDocument(docId) {
     return this.syncEngine.enqueue(ENTITY_TYPES.DOCUMENT, docId, MUTATION_OP.DELETE);
+  }
+
+  // ── Sibling Cohort Ordering ────────────────────────────────
+
+  async getSiblingOrders(familyId = this.familyId) {
+    const fid = String(familyId || this.familyId);
+    try {
+      const meta = await indexedDBManager.get(STORES.SYNC_META, fid);
+      if (meta && meta.siblingOrder) return { ...meta.siblingOrder };
+      if (typeof localStorage !== 'undefined') {
+        const local = localStorage.getItem(`family-tree-sibling-order-${fid}`);
+        if (local) return JSON.parse(local);
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  async saveSiblingOrder(familyId, cohortKey, orderedPersonIds) {
+    const fid = String(familyId || this.familyId);
+    const key = String(cohortKey || '').trim();
+    if (!key) return;
+    const personIds = Array.isArray(orderedPersonIds) ? orderedPersonIds.map(String) : [];
+
+    // 1. Immediately update local storage and IndexedDB
+    try {
+      const meta = (await indexedDBManager.get(STORES.SYNC_META, fid)) || { familyId: fid, siblingOrder: {} };
+      const current = { ...(meta.siblingOrder || {}) };
+      current[key] = personIds;
+      await indexedDBManager.put(STORES.SYNC_META, { ...meta, familyId: fid, siblingOrder: current });
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(current));
+      }
+    } catch (e) {}
+
+    // 2. Queue mutation to syncEngine
+    return this.syncEngine.enqueue(ENTITY_TYPES.SIBLING_ORDER, key, MUTATION_OP.UPDATE, {
+      cohortKey: key,
+      orderedPersonIds: personIds,
+    });
+  }
+
+  async deleteSiblingOrder(familyId, cohortKey) {
+    const fid = String(familyId || this.familyId);
+    const key = String(cohortKey || '').trim();
+    if (!key) return;
+
+    try {
+      const meta = (await indexedDBManager.get(STORES.SYNC_META, fid)) || { familyId: fid, siblingOrder: {} };
+      const current = { ...(meta.siblingOrder || {}) };
+      delete current[key];
+      await indexedDBManager.put(STORES.SYNC_META, { ...meta, familyId: fid, siblingOrder: current });
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(`family-tree-sibling-order-${fid}`, JSON.stringify(current));
+      }
+    } catch (e) {}
+
+    return this.syncEngine.enqueue(ENTITY_TYPES.SIBLING_ORDER, key, MUTATION_OP.DELETE);
   }
 
   // ── Sync Engine Access ─────────────────────────────────────

@@ -26,6 +26,7 @@ export class LocalAdapter extends FamilyRepository {
             lifeEvents: parsed.lifeEvents || [],
             photos: parsed.photos || [],
             documents: parsed.documents || [],
+            siblingOrder: parsed.siblingOrder || parsed.family?.siblingOrder || {},
           };
         }
       }
@@ -41,6 +42,7 @@ export class LocalAdapter extends FamilyRepository {
             lifeEvents: [],
             photos: [],
             documents: [],
+            siblingOrder: {},
             _isV1Migration: true,
           };
         }
@@ -68,6 +70,7 @@ export class LocalAdapter extends FamilyRepository {
         lifeEvents: snapshot.lifeEvents,
         photos: snapshot.photos,
         documents: snapshot.documents,
+        siblingOrder: snapshot.siblingOrder || {},
       };
       localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(payload));
     } catch (err) {
@@ -94,6 +97,61 @@ export class LocalAdapter extends FamilyRepository {
 
   async reset(seedData) {
     await this.persist(seedData);
+  }
+
+  async getSiblingOrders(familyId = 'default') {
+    try {
+      if (typeof localStorage === 'undefined') return {};
+      const key = `family-tree-sibling-order-${familyId}`;
+      const local = localStorage.getItem(key);
+      if (local) return JSON.parse(local);
+
+      const stored = localStorage.getItem(STORAGE_KEY_V2);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.siblingOrder || parsed.family?.siblingOrder || {};
+      }
+    } catch (e) {}
+    return {};
+  }
+
+  async saveSiblingOrder(familyId = 'default', cohortKey, orderedPersonIds) {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const key = `family-tree-sibling-order-${familyId}`;
+      const stored = localStorage.getItem(key);
+      const orders = stored ? JSON.parse(stored) : {};
+      orders[cohortKey] = Array.isArray(orderedPersonIds) ? orderedPersonIds.map(String) : [];
+      localStorage.setItem(key, JSON.stringify(orders));
+
+      const rootStored = localStorage.getItem(STORAGE_KEY_V2);
+      if (rootStored) {
+        const parsed = JSON.parse(rootStored);
+        parsed.siblingOrder = { ...(parsed.siblingOrder || {}), [cohortKey]: orders[cohortKey] };
+        localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(parsed));
+      }
+    } catch (e) {}
+  }
+
+  async deleteSiblingOrder(familyId = 'default', cohortKey) {
+    try {
+      if (typeof localStorage === 'undefined') return;
+      const key = `family-tree-sibling-order-${familyId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const orders = JSON.parse(stored);
+        delete orders[cohortKey];
+        localStorage.setItem(key, JSON.stringify(orders));
+      }
+      const rootStored = localStorage.getItem(STORAGE_KEY_V2);
+      if (rootStored) {
+        const parsed = JSON.parse(rootStored);
+        if (parsed.siblingOrder) {
+          delete parsed.siblingOrder[cohortKey];
+          localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(parsed));
+        }
+      }
+    } catch (e) {}
   }
 
   _validateSchema(parsed) {

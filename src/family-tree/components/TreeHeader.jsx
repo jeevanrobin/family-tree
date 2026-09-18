@@ -1,5 +1,5 @@
 /**
- * TreeHeader Component — Medida's Family
+ * TreeHeader Component — Anvaya FamilyTree
  * Minimal header: brand identity, generation filters, family selector (if multiple),
  * and primary controls — Search, Add Member, Theme, Profile & Sign Out.
  */
@@ -13,10 +13,11 @@ import { GENERATION_CONFIG } from '../data/familyDataService.js';
 import { useFamily } from '../auth/FamilyContext.jsx';
 import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
-
 import UserProfileMenu from './UserProfileMenu.jsx';
 
 export default function TreeHeader({
+  totalPersons,
+  totalGenerations,
   onSelectPerson,
   selectedId,
   onDeselect,
@@ -33,6 +34,8 @@ export default function TreeHeader({
   isLocalMode = false,
   activeView = 'tree',
   onNavigateView,
+  isArrangeMode = false,
+  onToggleArrangeMode,
 }) {
   const [familySelectorOpen, setFamilySelectorOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -112,6 +115,7 @@ export default function TreeHeader({
         </div>
 
         <div className="ft-header__titles">
+          <span className="ft-header__product-brand">ANVAYA FAMILYTREE</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h1 className="ft-header__title">{familyDisplayName.toUpperCase()}</h1>
 
@@ -383,6 +387,25 @@ export default function TreeHeader({
             </button>
           )}
         </div>
+
+        {/* Arrange Family Mode Toggle */}
+        {onToggleArrangeMode && activeView === 'tree' && canAdd && (
+          <button
+            type="button"
+            className={`ft-header__arrange-btn ${isArrangeMode ? 'ft-header__arrange-btn--active' : ''}`}
+            onClick={onToggleArrangeMode}
+            title={isArrangeMode ? 'Save and exit Arrange Family mode' : 'Arrange family sibling display order'}
+            aria-pressed={isArrangeMode}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m3 16 4 4 4-4" />
+              <path d="M7 20V4" />
+              <path d="m21 8-4-4-4 4" />
+              <path d="M17 4v16" />
+            </svg>
+            <span>{isArrangeMode ? 'Done' : 'Arrange Family'}</span>
+          </button>
+        )}
 
         {/* Add Member — Hidden for Viewers */}
         {onOpenAddModal && canAdd && (

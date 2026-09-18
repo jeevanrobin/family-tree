@@ -11,6 +11,7 @@ import {
   ZOOM_STEP,
   calculateZoom,
   calculateFitToBounds,
+  calculateFitToBranch,
   calculateFocusOnNode,
 } from '../engine/treeInteraction.js';
 import { easeOutCubic } from '../utils/animationHelpers.js';
@@ -182,6 +183,52 @@ export function useTreeInteraction({
     [layout, containerRef, transform.x, transform.scale, animateCameraTo]
   );
 
+  // Fit a specific branch (person, spouse, children) into view
+  const fitBranch = useCallback(
+    (personId, duration = 480) => {
+      if (!layout || !containerRef.current || !personId) return;
+      const primaryNode = layout.nodes.get(personId);
+      if (!primaryNode) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const branchNodes = [primaryNode];
+
+      // Include spouse
+      layout.lines.forEach((l) => {
+        if (l.type === 'spouse' && (l.personId1 === personId || l.personId2 === personId)) {
+          const spouseId = l.personId1 === personId ? l.personId2 : l.personId1;
+          const sNode = layout.nodes.get(spouseId);
+          if (sNode) branchNodes.push(sNode);
+        }
+      });
+
+      // Include visible children
+      layout.lines.forEach((l) => {
+        if (l.type === 'parent-child' && l.parentIds && l.parentIds.includes(personId)) {
+          const cNode = layout.nodes.get(l.childId);
+          if (cNode) branchNodes.push(cNode);
+        }
+      });
+
+      const target = calculateFitToBranch(branchNodes, rect.width, rect.height, 60, 60);
+      animateCameraTo(target.x, target.y, target.scale, duration);
+    },
+    [layout, containerRef, animateCameraTo]
+  );
+
+  // Pan to an arbitrary world coordinate (used by Minimap)
+  const panToCoordinate = useCallback(
+    (worldX, worldY, duration = 350) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const targetX = rect.width / 2 - worldX * transform.scale;
+      const targetY = rect.height / 2 - worldY * transform.scale;
+      animateCameraTo(targetX, targetY, transform.scale, duration);
+    },
+    [containerRef, transform.scale, animateCameraTo]
+  );
+
   // Zoom In
   const zoomIn = useCallback(() => {
     const container = containerRef.current;
@@ -320,6 +367,8 @@ export function useTreeInteraction({
     fitTreeToBounds,
     focusOnPerson,
     focusOnGeneration,
+    fitBranch,
+    panToCoordinate,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
