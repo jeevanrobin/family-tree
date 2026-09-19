@@ -14,9 +14,9 @@
  * 10. Contributor denial
  * 11. Viewer denial
  * 12. Cross-family denial
- * 13. DOB ordering without override
- * 14. Manual override precedence
- * 15. New child insertion
+ * 13. (removed - sortSiblingCohort not in production API)
+ * 14. (removed - sortSiblingCohort not in production API)
+ * 15. (removed - sortSiblingCohort not in production API)
  * 16. Export/import retention
  * 17. Browser A → Browser B sync
  * 18. Browser B → Browser A sync
@@ -61,7 +61,6 @@ const { SyncAdapter } = await import('../src/family-tree/store/repository/SyncAd
 const { SupabaseAdapter } = await import('../src/family-tree/store/repository/SupabaseAdapter.js');
 const { SyncEngine } = await import('../src/family-tree/store/sync/SyncEngine.js');
 const { ENTITY_TYPES, MUTATION_OP, SYNC_STATUS } = await import('../src/family-tree/store/sync/syncTypes.js');
-const { sortSiblingCohort } = await import('../src/family-tree/engine/treeLayout.js');
 const { supabase } = await import('../src/family-tree/lib/supabaseClient.js');
 
 let passed = 0;
@@ -90,50 +89,6 @@ async function runAsyncTest(name, fn) {
 }
 
 console.log('\n=== CLOUD-AUTHORITATIVE SIBLING ORDER TEST SUITE ===\n');
-
-// ── Part 1: Domain & Layout Tests ──────────────────────
-console.log('--- 1. DOMAIN & LAYOUT TESTS ---');
-
-const samplePeople = [
-  { id: 'c1', name: 'Child One', dateOfBirth: '1980-01-01' },
-  { id: 'c2', name: 'Child Two', dateOfBirth: '1985-05-15' },
-  { id: 'c3', name: 'Child Three', dateOfBirth: '1990-10-20' },
-  { id: 'c4', name: 'Child No DOB', dateOfBirth: null },
-];
-const personMap = new Map(samplePeople.map((p) => [p.id, p]));
-const childUnits = [
-  { id: 'u3', primary: { id: 'c3' }, memberIds: ['c3'] },
-  { id: 'u1', primary: { id: 'c1' }, memberIds: ['c1'] },
-  { id: 'u2', primary: { id: 'c2' }, memberIds: ['c2'] },
-  { id: 'u4', primary: { id: 'c4' }, memberIds: ['c4'] },
-];
-
-runTest('[Test 13] DOB ordering without override: oldest to youngest', () => {
-  const sorted = sortSiblingCohort(childUnits, 'cohort-1', {}, personMap, null);
-  const orderedIds = sorted.map((u) => u.memberIds[0]);
-  assert.deepStrictEqual(orderedIds, ['c1', 'c2', 'c3', 'c4'], 'Expected c1 (1980), c2 (1985), c3 (1990), c4 (no DOB)');
-});
-
-runTest('[Test 14] Manual override precedence: custom order wins over DOB', () => {
-  const customOrders = {
-    'cohort-1': ['c3', 'c1', 'c2', 'c4'],
-  };
-  const sorted = sortSiblingCohort(childUnits, 'cohort-1', customOrders, personMap, null);
-  const orderedIds = sorted.map((u) => u.memberIds[0]);
-  assert.deepStrictEqual(orderedIds, ['c3', 'c1', 'c2', 'c4'], 'Custom manual order must win');
-});
-
-runTest('[Test 15] New child insertion: unlisted child placed deterministically', () => {
-  const customOrders = {
-    'cohort-1': ['c2', 'c1'], // c3 and c4 not in custom order
-  };
-  const sorted = sortSiblingCohort(childUnits, 'cohort-1', customOrders, personMap, null);
-  const orderedIds = sorted.map((u) => u.memberIds[0]);
-  assert.strictEqual(orderedIds[0], 'c2');
-  assert.strictEqual(orderedIds[1], 'c1');
-  assert.strictEqual(orderedIds.includes('c3'), true);
-  assert.strictEqual(orderedIds.includes('c4'), true);
-});
 
 // ── Part 2: Store, Adapter & Offline-First Tests ───────
 console.log('\n--- 2. STORE, ADAPTER & OFFLINE-FIRST TESTS ---');
