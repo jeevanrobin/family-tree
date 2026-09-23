@@ -86,9 +86,10 @@ function AppGatewayRoute() {
  * Protected Family Route:
  * Authoritative security check for /app/family/:familyId/*
  * Verifies that the authenticated user belongs to the requested family.
+ * Uses wildcard route to preserve FamilyTreeApp instance across view navigation.
  * If unauthorized, renders an explicit Access Denied boundary.
  */
-function ProtectedFamilyRoute({ initialView = 'tree' }) {
+function ProtectedFamilyRoute() {
   const { familyId } = useParams();
   const { user, loading: authLoading } = useAuth();
   const { memberships, activeFamily, switchFamily, loading: familyLoading } = useFamily();
@@ -136,7 +137,8 @@ function ProtectedFamilyRoute({ initialView = 'tree' }) {
     );
   }
 
-  return <FamilyTreeApp activeFamily={verifiedMembership.family} initialView={initialView} />;
+  // FamilyTreeApp derives viewMode from URL, no need for initialView prop
+  return <FamilyTreeApp activeFamily={verifiedMembership.family} />;
 }
 
 /**
@@ -256,14 +258,8 @@ export default function App() {
           <Route path="/app" element={<AppGatewayRoute />} />
 
           {/* /app/family/:familyId/* Secure Family Routes */}
-          <Route path="/app/family/:familyId" element={<ProtectedFamilyRoute initialView="tree" />} />
-          <Route path="/app/family/:familyId/timeline" element={<ProtectedFamilyRoute initialView="timeline" />} />
-          <Route path="/app/family/:familyId/memories" element={<ProtectedFamilyRoute initialView="memories" />} />
-          <Route path="/app/family/:familyId/memories/:storyId" element={<ProtectedFamilyRoute initialView="memories" />} />
-          <Route path="/app/family/:familyId/archive" element={<ProtectedFamilyRoute initialView="archive" />} />
-          <Route path="/app/family/:familyId/archive/photo/:photoId" element={<ProtectedFamilyRoute initialView="archive" />} />
-          <Route path="/app/family/:familyId/archive/document/:docId" element={<ProtectedFamilyRoute initialView="archive" />} />
-          <Route path="/app/family/:familyId/insights" element={<ProtectedFamilyRoute initialView="insights" />} />
+          {/* Single wildcard route preserves FamilyTreeApp instance across view navigation */}
+          <Route path="/app/family/:familyId/*" element={<ProtectedFamilyRoute />} />
 
           {/* Backward compatibility for legacy /app sub-routes */}
           <Route path="/app/timeline" element={<AppGatewayRoute />} />
