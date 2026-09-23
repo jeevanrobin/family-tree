@@ -15,19 +15,36 @@ export function FamilyProvider({ children }) {
   const [currentRole, setCurrentRole] = useState(ROLES.VIEWER);
   const [loadingMemberships, setLoadingMemberships] = useState(true);
   const [syncStatus, setSyncStatus] = useState('synced');
-  
-  // Track which family has been initialized to prevent duplicate setRepository calls
+
+  // Guard against concurrent initialization and track initialized family
+  const initializingRef = useRef(false);
   const initializedFamilyIdRef = useRef(null);
+  const hasInitializedRef = useRef(false);
 
   // Fetch verified memberships directly from Supabase
   const loadUserMemberships = useCallback(async () => {
-    if (!isSupabaseConfigured || !user) {
+    if (!isSupabaseConfigured || !user?.id) {
       setMemberships([]);
       setActiveFamily(null);
       setCurrentRole(ROLES.VIEWER);
       setLoadingMemberships(false);
       return [];
     }
+
+    // Guard: Skip if already initializing
+    if (initializingRef.current) {
+      console.log('loadUserMemberships: Already initializing, skipping');
+      return [];
+    }
+
+    // Guard: Skip if already initialized with the same user
+    if (hasInitializedRef.current) {
+      console.log('loadUserMemberships: Already initialized, skipping');
+      return memberships;
+    }
+
+    initializingRef.current = true;
+    console.log('loadUserMemberships: Starting initialization for user', user.id);
 
     try {
       setLoadingMemberships(true);
@@ -66,18 +83,23 @@ export function FamilyProvider({ children }) {
         const storedId = localStorage.getItem(FAMILY_ID_KEY);
         const matched = verified.find((m) => m.familyId === storedId);
 
-        const chosen = matched || verified[0];
+        const targetFamilyId = matched?.familyId || verified[0].familyId;
         
-        // Only initialize repository once per family ID to prevent reload on tab focus
-        if (chosen.familyId !== initializedFamilyIdRef.current) {
-          initializedFamilyIdRef.current = chosen.familyId;
+        // Only initialize repository if this is a different family
+        if (targetFamilyId !== initializedFamilyIdRef.current) {
+          console.log('loadUserMemberships: Initializing repository for family', targetFamilyId);
+          
+          const chosen = matched || verified[0];
+          initializedFamilyIdRef.current = targetFamilyId;
           setActiveFamily(chosen.family);
           setCurrentRole(chosen.role);
-          localStorage.setItem(FAMILY_ID_KEY, chosen.familyId);
+          localStorage.setItem(FAMILY_ID_KEY, targetFamilyId);
 
           // Configure FamilyStore with SyncAdapter (IndexedDB + Supabase) for this verified active family
-          const adapter = createRepository(chosen.familyId);
+          const adapter = createRepository(targetFamilyId);
           familyStore.setRepository(adapter);
+        } else {
+          console.log('loadUserMemberships: Family already initialized, skipping setRepository');
         }
       } else {
         setActiveFamily(null);
@@ -85,6 +107,7 @@ export function FamilyProvider({ children }) {
         localStorage.removeItem(FAMILY_ID_KEY);
       }
 
+      hasInitializedRef.current = true;
       return verified;
     } catch (err) {
       console.error('Error in loadUserMemberships:', err);
@@ -92,15 +115,37 @@ export function FamilyProvider({ children }) {
       setActiveFamily(null);
       return [];
     } finally {
+      initializingRef.current = false;
       setLoadingMemberships(false);
     }
-  }, [user]);
+  }, [user?.id]); // Only depend on user.id, not user object
 
+  // Initialize family once when auth is ready
   useEffect(() => {
-    if (!authLoading) {
-      loadUserMemberships();
+    // Skip if auth is still loading
+    if (authLoading) {
+      console.log('FamilyContext: Auth loading, skipping');
+      return;
     }
-  }, [authLoading, loadUserMemberships]);
+
+    // Skip if no user
+    if (!user?.id) {
+      console.log('FamilyContext: No user, clearing state');
+      setMemberships([]);
+      setActiveFamily(null);
+      setLoadingMemberships(false);
+      return;
+    }
+
+    // Skip if already initialized for this user
+    if (hasInitializedRef.current) {
+      console.log('FamilyContext: Already initialized, skipping');
+      return;
+    }
+
+    console.log('FamilyContext: Auth ready, loading memberships');
+    loadUserMemberships();
+  }, [authLoading, user?.id, loadUserMemberships]);
 
   // Track sync status
   useEffect(() => {
@@ -155,6 +200,7 @@ export function FamilyProvider({ children }) {
       setActiveFamily(null);
       setCurrentRole(ROLES.VIEWER);
       initializedFamilyIdRef.current = null;
+      hasInitializedRef.current = false;
 
       // Clear in-memory family data so private family state never lingers after logout
       familyStore.loadFromData([], [], [], [], [], []);

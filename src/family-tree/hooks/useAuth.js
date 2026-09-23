@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { authService } from '../auth/authService.js';
 
 /**
@@ -10,6 +10,10 @@ export function useAuth() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Track initialization to prevent duplicate auth state updates
+  const hasInitializedRef = useRef(false);
+  const userIdRef = useRef(null);
 
   // Initialize auth state
   useEffect(() => {
@@ -32,14 +36,19 @@ export function useAuth() {
           }
           
           setUser(currentUser);
+          userIdRef.current = currentUser?.id;
         } else {
           setUser(null);
+          userIdRef.current = null;
         }
+
+        hasInitializedRef.current = true;
       } catch (err) {
         console.error('Auth initialization error:', err);
         setError(err.message);
         setUser(null);
         setSession(null);
+        userIdRef.current = null;
       } finally {
         setLoading(false);
       }
@@ -51,27 +60,63 @@ export function useAuth() {
   // Listen for auth state changes
   useEffect(() => {
     const result = authService.onAuthStateChange((event, session) => {
-      // Ignore TOKEN_REFRESHED events - these happen frequently on tab focus
-      // and don't require re-fetching user data (session is still valid)
+      console.log('useAuth: onAuthStateChange event=', event, 'session=', !!session);
+      
+      const newUserId = session?.user?.id;
+      const currentUserId = userIdRef.current;
+
+      // TOKEN_REFRESHED: Session is still valid, just update session silently
       if (event === 'TOKEN_REFRESHED') {
+        console.log('useAuth: TOKEN_REFRESHED - updating session only');
         setSession(session);
-        return; // Don't re-fetch user on token refresh
+        return;
       }
 
-      setSession(session);
-      
-      if (session) {
+      // SIGNED_IN: Check if this is a new user session or just session recovery
+      if (event === 'SIGNED_IN' && session) {
+        // If we're already initialized with the same user, this is just session recovery
+        if (hasInitializedRef.current && newUserId === currentUserId) {
+          console.log('useAuth: SIGNED_IN session recovery for same user - updating session only');
+          setSession(session);
+          return;
+        }
+
+        // This is a new sign-in or different user
+        console.log('useAuth: SIGNED_IN new session - updating user');
+        setSession(session);
+        setUser(session.user);
+        userIdRef.current = newUserId;
+        hasInitializedRef.current = true;
+        return;
+      }
+
+      // SIGNED_OUT: Clear everything
+      if (event === 'SIGNED_OUT') {
+        console.log('useAuth: SIGNED_OUT - clearing state');
+        setSession(null);
+        setUser(null);
+        userIdRef.current = null;
+        hasInitializedRef.current = false;
+        return;
+      }
+
+      // USER_UPDATED: Fetch fresh user data
+      if (event === 'USER_UPDATED' && session) {
+        console.log('useAuth: USER_UPDATED - fetching fresh user data');
+        setSession(session);
         authService.getUser().then(({ user, error }) => {
           if (error) {
             console.error('Error fetching user:', error);
-            setUser(null);
           } else {
             setUser(user);
+            userIdRef.current = user?.id;
           }
         });
-      } else {
-        setUser(null);
+        return;
       }
+
+      // Default: Just update session
+      setSession(session);
     });
 
     const sub = result?.data?.subscription || result?.subscription;
@@ -96,6 +141,8 @@ export function useAuth() {
       
       setSession(result.session);
       setUser(result.user);
+      userIdRef.current = result.user?.id;
+      hasInitializedRef.current = true;
       return result;
     } catch (err) {
       setError(err.message);
@@ -136,6 +183,8 @@ export function useAuth() {
       
       setUser(null);
       setSession(null);
+      userIdRef.current = null;
+      hasInitializedRef.current = false;
       return result;
     } catch (err) {
       setError(err.message);
@@ -175,6 +224,7 @@ export function useAuth() {
       }
       
       setUser(result.user);
+      userIdRef.current = result.user?.id;
       return result;
     } catch (err) {
       setError(err.message);
