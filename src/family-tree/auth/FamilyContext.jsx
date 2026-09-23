@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
 import familyStore from '../store/FamilyStore.js';
@@ -15,6 +15,9 @@ export function FamilyProvider({ children }) {
   const [currentRole, setCurrentRole] = useState(ROLES.VIEWER);
   const [loadingMemberships, setLoadingMemberships] = useState(true);
   const [syncStatus, setSyncStatus] = useState('synced');
+  
+  // Track which family has been initialized to prevent duplicate setRepository calls
+  const initializedFamilyIdRef = useRef(null);
 
   // Fetch verified memberships directly from Supabase
   const loadUserMemberships = useCallback(async () => {
@@ -64,13 +67,18 @@ export function FamilyProvider({ children }) {
         const matched = verified.find((m) => m.familyId === storedId);
 
         const chosen = matched || verified[0];
-        setActiveFamily(chosen.family);
-        setCurrentRole(chosen.role);
-        localStorage.setItem(FAMILY_ID_KEY, chosen.familyId);
+        
+        // Only initialize repository once per family ID to prevent reload on tab focus
+        if (chosen.familyId !== initializedFamilyIdRef.current) {
+          initializedFamilyIdRef.current = chosen.familyId;
+          setActiveFamily(chosen.family);
+          setCurrentRole(chosen.role);
+          localStorage.setItem(FAMILY_ID_KEY, chosen.familyId);
 
-        // Configure FamilyStore with SyncAdapter (IndexedDB + Supabase) for this verified active family
-        const adapter = createRepository(chosen.familyId);
-        familyStore.setRepository(adapter);
+          // Configure FamilyStore with SyncAdapter (IndexedDB + Supabase) for this verified active family
+          const adapter = createRepository(chosen.familyId);
+          familyStore.setRepository(adapter);
+        }
       } else {
         setActiveFamily(null);
         setCurrentRole(ROLES.VIEWER);
@@ -120,6 +128,7 @@ export function FamilyProvider({ children }) {
     localStorage.setItem(FAMILY_ID_KEY, newFamilyId);
     setActiveFamily(target.family);
     setCurrentRole(target.role);
+    initializedFamilyIdRef.current = newFamilyId;
 
     // Switch FamilyStore repository to the new family and reload
     const adapter = createRepository(newFamilyId);
@@ -145,6 +154,7 @@ export function FamilyProvider({ children }) {
       setMemberships([]);
       setActiveFamily(null);
       setCurrentRole(ROLES.VIEWER);
+      initializedFamilyIdRef.current = null;
 
       // Clear in-memory family data so private family state never lingers after logout
       familyStore.loadFromData([], [], [], [], [], []);
