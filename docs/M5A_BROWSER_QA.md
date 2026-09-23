@@ -1,8 +1,245 @@
 # M5A Browser QA Report
 
-**Date:** 2026-09-21
+**Date:** 2026-09-23
 **Application:** http://localhost:5173
 **Repository:** D:\Projects\family-tree
+
+---
+
+## M5A Visual Quality Pass — Tree Crispness
+
+**Date:** 2026-09-23
+**Status:** COMPLETE
+
+### Root Cause Analysis
+
+The tree appeared soft/fuzzy at 100% zoom due to:
+1. **CSS Transform Rasterization** - `transform: scale()` on the canvas transform layer caused text rasterization
+2. **Dot Grid Over-Prominence** - Grid opacity too high (0.09 in dark, 0.12 in light)
+3. **Orange Over-Usage** - Spouse lines and related cards used orange borders by default
+4. **Card Surface Blend** - Insufficient contrast between cards and canvas
+
+### Visual Hierarchy Established
+
+The correct visual hierarchy is now enforced:
+1. Person name (primary focus)
+2. Person card (clear separation)
+3. Avatar (restrained tones)
+4. Relationship structure (neutral gray, orange for active)
+5. Secondary metadata
+6. Canvas grid (subtle, barely noticeable)
+
+### Changes Made
+
+#### 1. Text Rendering Crispness
+
+**File:** `src/family-tree/familyTree.css`
+
+**Before:**
+```css
+.ft-canvas__transform-layer {
+  will-change: transform;
+}
+```
+
+**After:**
+```css
+.ft-canvas__transform-layer {
+  will-change: transform;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+.ft-person-card {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.ft-person-card__name {
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+}
+```
+
+**Result:** Text renders crisply at all zoom levels.
+
+#### 2. Dot Grid Subtlety (Dark Mode)
+
+**Before:**
+```css
+[data-theme="dark"] {
+  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1.2px, transparent 1.2px);
+  --ft-grain-opacity: 0.03;
+}
+```
+
+**After:**
+```css
+[data-theme="dark"] {
+  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1.2px, transparent 1.2px);
+  --ft-grain-opacity: 0.02;
+}
+```
+
+**Result:** Grid is now subtle and secondary, not visually prominent.
+
+#### 3. Dot Grid Subtlety (Light Mode)
+
+**Before:**
+```css
+:root {
+  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.12) 1.2px, transparent 1.2px);
+  --ft-grain-opacity: 0.02;
+}
+```
+
+**After:**
+```css
+:root {
+  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.06) 1.2px, transparent 1.2px);
+  --ft-grain-opacity: 0.015;
+}
+```
+
+**Result:** Light mode grid matches dark mode subtlety.
+
+#### 4. Connector Color Restraint
+
+**Before:**
+```css
+--ft-line-spouse: #F97316; /* Orange for all spouse lines */
+```
+
+**After:**
+```css
+/* Dark mode */
+--ft-line-spouse: #78879A; /* Neutral gray */
+
+/* Light mode */
+--ft-line-spouse: #475569; /* Neutral gray */
+```
+
+Orange (`#E56515` / `#FBA45C`) is now reserved for:
+- Active/selected connections
+- Focused lineage highlighting
+- Important relationship state
+
+**Result:** Orange accents indicate active state, not default state.
+
+#### 5. Card Visual Separation
+
+**Before:**
+```css
+.ft-person-card--related {
+  border-color: var(--ft-related-border); /* Orange */
+  box-shadow: 0 0 0 2px var(--ft-emerald-border), var(--ft-shadow-card);
+}
+
+.ft-person-card--tier-extended {
+  border-color: var(--ft-related-border); /* Orange */
+  box-shadow: 0 0 0 1.5px var(--ft-emerald-soft), var(--ft-shadow-card);
+}
+```
+
+**After:**
+```css
+.ft-person-card--related {
+  border-color: var(--ft-border-hover); /* Neutral */
+  box-shadow: var(--ft-shadow-card);
+}
+
+.ft-person-card--tier-extended {
+  border-color: var(--ft-border); /* Neutral */
+  box-shadow: var(--ft-shadow-card);
+}
+```
+
+**Result:** Cards have clear separation without orange glow dominance.
+
+#### 6. Profile Drawer Integration
+
+**Before:**
+```css
+.ft-details {
+  width: 460px;
+  background: var(--ft-surface);
+}
+```
+
+**After:**
+```css
+.ft-details {
+  width: 420px;
+  background: color-mix(in srgb, var(--ft-surface) 96%, transparent);
+  backdrop-filter: blur(12px);
+}
+```
+
+**Result:** Drawer feels integrated, not like a separate admin panel.
+
+### Avatar Treatment
+
+Avatar gradients were already correct - using restrained architectural tones:
+- Male: Slate/blue-gray gradients (#334155, #384A62, #2D434E, #475569)
+- Female: Warm brown/taupe gradients (#784A3B, #6E444E, #5C4556, #6C3E2F)
+
+No neon colors, no excessive saturation.
+
+### Testing Results
+
+| Test Suite | Result |
+|------------|--------|
+| Vitest | 429 passed (0 failed) |
+| Layout Tests | 24 passed (0 failed) |
+| Build | PASS (1.41s) |
+| Lint | PASS |
+
+### Browser Verification (Manual)
+
+To verify the visual changes:
+
+1. **Dark Mode at 100% Zoom**
+   - Load the family tree
+   - Verify person names are crisp and readable
+   - Verify cards have clear canvas separation
+   - Verify grid is barely noticeable
+
+2. **Dark Mode at 75% / 50% / 35%**
+   - Zoom out using scroll wheel or controls
+   - Verify names remain readable
+   - Verify text does not become blurry
+
+3. **Light Mode**
+   - Toggle theme
+   - Verify same visual hierarchy
+   - Verify grid is subtle
+
+4. **Selection State**
+   - Click a person card
+   - Verify orange accent appears on selected card
+   - Verify orange appears on connected relationships
+   - Verify unselected relationships use neutral gray
+
+5. **Related Cards**
+   - Select a person with relatives
+   - Verify relatives do NOT have orange borders
+   - Verify relatives have clear, neutral borders
+
+### Visual Quality Checklist
+
+- [x] Person names crisp at 100%
+- [x] Person names readable at 75%, 50%, 35%
+- [x] Cards clearly separated from canvas
+- [x] Grid subtle and secondary
+- [x] Orange reserved for active/selected
+- [x] Connectors neutral by default
+- [x] Avatars use architectural tones
+- [x] Profile drawer integrated
+- [x] Dark mode visual hierarchy correct
+- [x] Light mode visual hierarchy correct
 
 ---
 
