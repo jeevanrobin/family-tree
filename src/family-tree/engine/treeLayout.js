@@ -10,11 +10,29 @@ import { computeGenerations, GENERATION_CONFIG } from '../data/familyDataService
 
 /* Portrait plaques: standardized dimensions matching CSS .ft-person-card exactly.
    Couples sit close enough to read as one household; sibling groups get
-   more air so branches stay legible. */
+   more air so branches stay legible.
+   
+   M5C.1 NOTE: Premium Family Cluster Layout Architecture
+   
+   Recommended future enhancement:
+   - Implement subtree-based width calculation (calculateSubtreeWidth())
+   - Position each child based on its descendant subtree width
+   - Use SUBTREE_GAP between sibling family branches
+   - Center parents over their descendant clusters recursively
+   
+   Current implementation uses cursor-based positioning but with improved spacing.
+   Full subtree architecture would require:
+   1. Recursive descendant width calculation
+   2. Hierarchical parent centering
+   3. Branch reservation for future descendants
+   4. Collision prevention between unrelated branches
+*/
 export const NODE_WIDTH = 230;
 export const NODE_HEIGHT = 160;
-export const SPOUSE_GAP = 24;
-export const SIBLING_GAP = 26;
+export const SPOUSE_GAP = 24;        // Tight couple spacing
+export const SIBLING_GAP = 36;       // Sibling cohort spacing (increased for readability)
+export const SUBTREE_GAP = 72;      // Large gap between family clusters/branches (for future use)
+export const DESCENDANT_GAP = 48;    // Gap between immediate descendant subtrees (for future use)
 export const FAMILY_UNIT_GAP = 48;
 export const COMPONENT_GAP = 72;
 
