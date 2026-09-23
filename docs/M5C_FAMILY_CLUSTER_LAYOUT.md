@@ -131,28 +131,70 @@ Result: 904px
 
 ---
 
-## M5C.3 — Hierarchical Parent Centering (FUTURE)
+## M5C.3 — Hierarchical Parent Centering (COMPLETE)
 
 ### Objective
-Position parents at the center of their descendant footprint.
+Position parents at the center of their descendant footprint using subtree widths from M5C.2.
 
-### Requirements
-1. Calculate descendant subtree width (✓ M5C.2)
-2. Position parent unit at centerX of subtree
-3. Cascade positioning down to children
+### Implementation
 
-### Algorithm (Proposed)
+**Algorithm**
 ```
-for each generation g from minGen to maxGen:
-  for each unit in generation g:
-    if unit has children:
-      center unit over child subtrees
+1. Calculate subtree geometry (M5C.2)
+2. Position root generation centered at X=0
+3. For each unit:
+   - Reserve width based on descendants
+   - Center parent unit within reserved width
+   - Position children with SUBTREE_GAP
+   - Recursively position grandchildren
 ```
 
-### Challenges
-- Avoiding collisions between unrelated branches
-- Handling cross-branch marriages
-- Ensuring parents remain connected to ancestors
+**Key Innovation**
+Child branches receive UNEQUAL width:
+- Leaf child: 230px
+- Child with 3 grandchildren: 602px+
+- Parent centered over total footprint
+
+**Visual Result**
+- Tree width: 2182px → 3410px (+56%)
+- 8 sibling branches now separated by SUBTREE_GAP (72px)
+- Large branches get proportional space
+- Clear family cluster separation
+
+### Code Changes
+
+**treeLayout.js**
+- Import computeSubtreeGeometry
+- positionUnitAndDescendants() recursive function
+- Use subtree.width for branch reservation
+- Center units over descendant footprint
+
+**subtreeGeometry.js**
+- mapSubtreeToPersons() helper added
+- Fixed descendantCount calculation
+- Process only root units (not all persons)
+
+### Test Coverage
+
+**New Tests (33 total)**
+- M5C.3 Integration Tests (5 tests)
+  - Child subtree width tests
+  - Uneven branch spacing
+  - Parent centering verification
+  - SUBTREE_GAP accounting
+
+**All Tests Pass**
+- Vitest: 462 passed
+- Layout: 24 passed
+- Build: PASS
+
+### Visual Acceptance
+
+**Medida 36-Person Family**
+- Before: Continuous horizontal strip (2252px)
+- After: Distinct family clusters (3410px)
+- 8 sibling branches properly separated
+- Descendants influence ancestor spacing
 
 ---
 
