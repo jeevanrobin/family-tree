@@ -28,10 +28,10 @@
 [data-theme="light"] {
   --ft-bg: #EAECEF;
   --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #F8FAFC 0%, #E2E8F0 80%);
-  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.02), transparent 70%);
-  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.12) 1.2px, transparent 1.2px);
+  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.01), transparent 70%);
+  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.06) 1.2px, transparent 1.2px);
   --ft-grid-size: 28px 28px;
-  --ft-grain-opacity: 0.02;
+  --ft-grain-opacity: 0.015;
   --ft-surface: #FFFFFF;
   --ft-surface-soft: #F1F4F8;
   --ft-surface-elevated: #FFFFFF;
@@ -85,7 +85,7 @@
 
   --ft-line-color: #64748B;
   --ft-line-connected: #475569;
-  --ft-line-spouse: #E56515;
+  --ft-line-spouse: #475569;
   --ft-line-active-start: #E56515;
   --ft-line-active-end: #FBA45C;
 
@@ -110,10 +110,10 @@
 [data-theme="dark"] {
   --ft-bg: #090D14;
   --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #141C26 0%, #090D14 75%);
-  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.03), transparent 70%);
-  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1.2px, transparent 1.2px);
+  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.02), transparent 70%);
+  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1.2px, transparent 1.2px);
   --ft-grid-size: 28px 28px;
-  --ft-grain-opacity: 0.03;
+  --ft-grain-opacity: 0.02;
   --ft-surface: #141C26;
   --ft-surface-soft: #1A2432;
   --ft-surface-elevated: #222F40;
@@ -167,7 +167,7 @@
 
   --ft-line-color: #5A6878;
   --ft-line-connected: #78879A;
-  --ft-line-spouse: #F97316;
+  --ft-line-spouse: #78879A;
   --ft-line-active-start: #FBA45C;
   --ft-line-active-end: #E56515;
 
@@ -954,6 +954,8 @@ button {
   width: 100%;
   height: 100%;
   will-change: transform;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
 }
 
 /* Minimal Generation Guides */
@@ -1123,6 +1125,13 @@ button {
   min-height: 160px;
   max-height: 160px;
   box-sizing: border-box;
+  
+  /* Prevent blur from GPU scaling - render text crisply */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 @keyframes ftNodeEntrance {
@@ -1203,9 +1212,9 @@ button {
 }
 
 .ft-person-card--related {
-  border-color: var(--ft-related-border);
+  border-color: var(--ft-border-hover);
   background: var(--ft-related-bg);
-  box-shadow: 0 0 0 2px var(--ft-emerald-border), var(--ft-shadow-card);
+  box-shadow: var(--ft-shadow-card);
   opacity: 1;
   transform: scale(1.01);
 }
@@ -1223,8 +1232,8 @@ button {
 
 .ft-person-card--tier-extended {
   opacity: 0.94;
-  border-color: var(--ft-related-border);
-  box-shadow: 0 0 0 1.5px var(--ft-emerald-soft), var(--ft-shadow-card);
+  border-color: var(--ft-border);
+  box-shadow: var(--ft-shadow-card);
 }
 
 .ft-person-card--tier-unrelated {
@@ -1358,6 +1367,10 @@ button {
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 0.15s ease;
+  
+  /* Prevent rasterization at scale */
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
 }
 
 .ft-person-card__dates {
@@ -1754,11 +1767,12 @@ button {
   position: absolute;
   top: 0;
   right: 0;
-  width: 460px;
+  width: 420px;
   height: 100%;
-  background: var(--ft-surface);
+  background: color-mix(in srgb, var(--ft-surface) 96%, transparent);
   border-left: 1px solid var(--ft-border);
   box-shadow: var(--ft-shadow-lg);
+  backdrop-filter: blur(12px);
   z-index: 40;
   display: flex;
   flex-direction: column;
