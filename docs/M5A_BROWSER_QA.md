@@ -1571,3 +1571,232 @@ Added subtle gradient transitions for intentional feel:
 **Landing Page Final Polish: COMPLETE**
 
 STOP. Do NOT start M5A.4.
+
+---
+
+## Selected Person / Profile Drawer Visual Refinement
+
+**Date:** 2026-09-23
+**Status:** COMPLETE
+
+### Problems Observed
+
+1. Selected person card had excessive orange border/glow
+2. Opening PersonDetails made tree unreadable (excessive dimming)
+3. Orange lineage connectors dominated the canvas
+4. SELF/SPOUSE badges visually competed with person names
+5. Surrounding family members became unreadable
+6. Profile drawer visually dominated workspace
+
+### Visual Hierarchy Established
+
+**Correct hierarchy:**
+1. Selected person's name/content (primary focus)
+2. Selected person card (elevated surface, subtle accent)
+3. Immediate family (readable, not dimmed)
+4. Relevant relationship connectors (subtle accent)
+5. Other family members (still readable)
+6. Canvas background (secondary)
+
+### Changes Made
+
+#### 1. Selected Person Card — Subtle Premium Treatment
+
+**File:** `src/family-tree/familyTree.css` (line 1155)
+
+**Before:**
+```css
+.ft-person-card--selected {
+  border-color: var(--ft-accent) !important;
+  border-top-color: var(--ft-accent) !important;
+  background: var(--ft-selected-bg) !important;
+  box-shadow: 0 0 0 3px var(--ft-accent), var(--ft-shadow-card-hover) !important;
+  transform: translateY(-4px) scale(1.03) !important;
+}
+
+.ft-person-card--selected .ft-person-card__avatar {
+  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 4.5px var(--ft-accent), 0 0 16px var(--ft-selected-glow);
+  transform: scale(1.05);
+}
+```
+
+**After:**
+```css
+.ft-person-card--selected {
+  border-color: var(--ft-border-hover) !important;
+  border-top-color: var(--ft-accent) !important;
+  background: var(--ft-surface-elevated) !important;
+  box-shadow: 
+    0 0 0 1px var(--ft-accent-soft),
+    0 8px 24px -4px rgba(0, 0, 0, 0.20),
+    var(--ft-shadow-card) !important;
+  transform: translateY(-2px) scale(1.01) !important;
+}
+
+.ft-person-card--selected .ft-person-card__avatar {
+  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 3px var(--ft-accent-soft);
+  transform: scale(1.03);
+}
+```
+
+**Result:** Orange is an accent, not the entire treatment. Subtle elevation, refined shadow, minimal transform.
+
+#### 2. Connector Hierarchy — Restrained Orange
+
+**Before:**
+```css
+.ft-canvas__line--active {
+  stroke: var(--ft-accent) !important;
+  stroke-width: clamp(2.8px, calc(2.4px / var(--canvas-scale, 1)), 5.5px) !important;
+  opacity: 1 !important;
+}
+```
+
+**After:**
+```css
+.ft-canvas__line--active {
+  stroke: var(--ft-accent) !important;
+  stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4px) !important;
+  opacity: 0.85 !important;
+}
+```
+
+**Result:** Active connectors are visible but don't dominate. Orange stays localized.
+
+#### 3. Family Readability — Reduced Dimming
+
+**Before:**
+```css
+.ft-person-card--tier-unrelated {
+  opacity: 0.82;
+  transform: scale(0.98);
+}
+
+.ft-person-card--dimmed {
+  opacity: 0.75;
+  filter: brightness(0.96);
+}
+```
+
+**After:**
+```css
+.ft-person-card--tier-unrelated {
+  opacity: 0.88;
+  transform: scale(0.99);
+}
+
+.ft-person-card--dimmed {
+  opacity: 0.92;
+  filter: none;
+}
+```
+
+**Result:** Surrounding family members remain readable. Names don't disappear.
+
+#### 4. SELF/SPOUSE Badges — Understated
+
+**Before:**
+```css
+.ft-person-card__relation-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--ft-accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+```
+
+**After:**
+```css
+.ft-person-card__relation-pill {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--ft-lavender);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  opacity: 0.92;
+}
+```
+
+**Result:** Badges are useful but don't visually compete with person's name.
+
+#### 5. Profile Drawer — Clean Integration
+
+**Before:**
+```css
+.ft-details {
+  width: 420px;
+  background: color-mix(in srgb, var(--ft-surface) 96%, transparent);
+  border-left: 1px solid var(--ft-border);
+  box-shadow: var(--ft-shadow-lg);
+  backdrop-filter: blur(12px);
+}
+```
+
+**After:**
+```css
+.ft-details {
+  width: 420px;
+  background: color-mix(in srgb, var(--ft-surface) 98%, transparent);
+  border-left: 1px solid var(--ft-border-subtle);
+  box-shadow: -8px 0 32px -8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(16px);
+}
+```
+
+**Result:** Drawer feels integrated with workspace, not like a separate admin panel. Subtle shadow, gentle separation.
+
+### Visual Quality Verification
+
+| Test | Dark Mode | Light Mode |
+|------|-----------|------------|
+| Selected card visual | **PASS** | **PASS** |
+| Surrounding family readability | **PASS** | **PASS** |
+| Connector hierarchy | **PASS** | **PASS** |
+| Orange accent restraint | **PASS** | **PASS** |
+| SELF/SPOUSE badges | **PASS** | **PASS** |
+| Profile drawer integration | **PASS** | **PASS** |
+| No backdrop dimming | **PASS** | **PASS** |
+| No layout regression | **PASS** | **PASS** |
+
+### Zoom Level Testing
+
+| Zoom | Status | Notes |
+|------|--------|-------|
+| 100% | **PASS** | Premium selected state, readable family |
+| 75% | **PASS** | Subtle hierarchy maintained |
+| 50% | **PASS** | Names remain readable, connectors subtle |
+
+### Test Results
+
+| Suite | Result |
+|-------|--------|
+| Vitest | **429 passed / 0 skipped / 0 failed** |
+| Build | **PASS** |
+| Lint | **PASS** (warnings only) |
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `src/family-tree/familyTree.css` | Selected card refinement, connector restraint, family readability, badge understatement, drawer integration |
+
+### Visual Feel Achieved
+
+**Premium genealogy workspace:**
+- Focused-person feels elevated, not highlighted
+- Family context remains readable
+- Orange accents guide attention without dominating
+- Drawer integrates cleanly, doesn't block context
+- Selection state is clear but not jarring
+
+**Not:**
+- ❌ Debugging diagram (excessive dimming)
+- ❌ Selection inspector (drawer dominating)
+- ❌ Admin dashboard (harsh borders/glows)
+
+---
+
+**Selected Person / Profile Drawer Visual Refinement: COMPLETE**
+
+STOP. Do NOT start M5B.3.

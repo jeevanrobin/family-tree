@@ -1051,11 +1051,11 @@ button {
   transition: all 0.3s ease;
 }
 
-/* Active Highlighted Connections — localized Medida orange accent */
+/* Active Highlighted Connections — subtle orange accent, restrained prominence */
 .ft-canvas__line--active {
   stroke: var(--ft-accent) !important;
-  stroke-width: clamp(2.8px, calc(2.4px / var(--canvas-scale, 1)), 5.5px) !important;
-  opacity: 1 !important;
+  stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4px) !important;
+  opacity: 0.85 !important;
 }
 
 .ft-canvas__line--animated {
@@ -1077,7 +1077,7 @@ button {
 
 /* Muted connector state: remains clearly visible and continuous */
 .ft-canvas__line--dimmed {
-  opacity: 0.45 !important;
+  opacity: 0.60 !important;
 }
 
 /* ── Modern Profile Object Cards ──────────────────────────── */
@@ -1151,26 +1151,29 @@ button {
   transition-duration: 0.1s;
 }
 
-/* Selected State — Medida orange edge, soft halo, gentle lift */
+/* Selected State — Premium focused-person, subtle accent, elevated surface */
 .ft-person-card--selected {
-  border-color: var(--ft-accent) !important;
+  border-color: var(--ft-border-hover) !important;
   border-top-color: var(--ft-accent) !important;
-  background: var(--ft-selected-bg) !important;
-  box-shadow: 0 0 0 3px var(--ft-accent), var(--ft-shadow-card-hover) !important;
-  transform: translateY(-4px) scale(1.03) !important;
+  background: var(--ft-surface-elevated) !important;
+  box-shadow: 
+    0 0 0 1px var(--ft-accent-soft),
+    0 8px 24px -4px rgba(0, 0, 0, 0.20),
+    var(--ft-shadow-card) !important;
+  transform: translateY(-2px) scale(1.01) !important;
   z-index: 15;
 }
 
 .ft-person-card--selected .ft-person-card__avatar {
   border-color: var(--ft-accent);
-  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 4.5px var(--ft-accent), 0 0 16px var(--ft-selected-glow);
-  transform: scale(1.05);
+  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 3px var(--ft-accent-soft);
+  transform: scale(1.03);
 }
 
 .ft-person-card--selected .ft-person-card__name {
   color: var(--ft-text-primary);
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.005em;
 }
 
 .ft-person-card__selected-crown {
@@ -1222,23 +1225,23 @@ button {
 /* Constellation Hierarchy Tiers — Preserving readability across all branches */
 .ft-person-card--tier-immediate {
   opacity: 1;
-  transform: scale(1.02);
+  transform: scale(1.01);
   z-index: 10;
 }
 
 .ft-person-card--tier-sibling {
-  opacity: 0.96;
+  opacity: 0.98;
 }
 
 .ft-person-card--tier-extended {
-  opacity: 0.94;
+  opacity: 0.95;
   border-color: var(--ft-border);
   box-shadow: var(--ft-shadow-card);
 }
 
 .ft-person-card--tier-unrelated {
-  opacity: 0.82;
-  transform: scale(0.98);
+  opacity: 0.88;
+  transform: scale(0.99);
 }
 
 .ft-person-card--tier-unrelated:hover {
@@ -1247,32 +1250,32 @@ button {
 }
 
 .ft-person-card--dimmed {
-  opacity: 0.75;
-  transform: scale(0.98);
-  filter: brightness(0.96);
+  opacity: 0.92;
+  transform: scale(0.99);
+  filter: none;
 }
 
 .ft-person-card--dimmed:hover {
   opacity: 1;
-  filter: brightness(1);
   transform: translateY(-3px);
 }
 
 .ft-person-card__relation-pill {
   position: absolute;
-  top: -9px;
-  right: 14px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  top: -8px;
+  right: 12px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--ft-accent-ink);
-  background: var(--ft-accent);
-  padding: 2px 8px;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  background: var(--ft-lavender);
+  padding: 2px 7px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
   animation: ftPillPop 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
   z-index: 10;
+  opacity: 0.92;
 }
 
 @keyframes ftPillPop {
@@ -1769,10 +1772,10 @@ button {
   right: 0;
   width: 420px;
   height: 100%;
-  background: color-mix(in srgb, var(--ft-surface) 96%, transparent);
-  border-left: 1px solid var(--ft-border);
-  box-shadow: var(--ft-shadow-lg);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--ft-surface) 98%, transparent);
+  border-left: 1px solid var(--ft-border-subtle);
+  box-shadow: -8px 0 32px -8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(16px);
   z-index: 40;
   display: flex;
   flex-direction: column;
