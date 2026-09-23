@@ -98,9 +98,13 @@ export class SyncEngine {
 
   handleOnline() {
     if (this.destroyed) return;
-    this.setStatus(SYNC_STATUS.SYNCING);
-    // Automatic reconnect recovery: trigger queue flush and pull updates
-    this.sync();
+    // Only trigger sync if we were actually offline
+    // This prevents unnecessary sync when browser fires spurious 'online' events on tab focus
+    if (this.status === SYNC_STATUS.OFFLINE) {
+      this.setStatus(SYNC_STATUS.SYNCING);
+      // Automatic reconnect recovery: trigger queue flush and pull updates
+      this.sync();
+    }
   }
 
   handleOffline() {
