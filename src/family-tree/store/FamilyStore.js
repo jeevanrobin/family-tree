@@ -1597,7 +1597,89 @@ export class FamilyStore {
     // Safely load verified data
     this.loadFromData(peopleArray, relsArray, storiesArray, eventsArray, photosArray, docsArray, siblingOrder);
     this.notify();
+
+    // CRITICAL: Create sync mutations for imported entities
+    // Without these mutations, imported data never syncs to Supabase
+    this._createImportMutations(peopleArray, relsArray, storiesArray, eventsArray, photosArray, docsArray);
+    
     return true;
+  }
+
+  /**
+   * Creates sync mutations for imported entities.
+   * This ensures imported data syncs to cloud just like normal CRUD operations.
+   * @private
+   */
+  _createImportMutations(people, relationships, stories, events, photos, documents) {
+    if (!this.repository || typeof this.repository.savePerson !== 'function') {
+      return;
+    }
+
+    // Queue mutations for all imported people
+    for (const person of people) {
+      const normalized = this.getPersonById(person.id);
+      if (normalized) {
+        Promise.resolve(this.repository.savePerson(normalized, { operation: 'create' }))
+          .catch((err) => {
+            console.warn('FamilyStore: Import mutation failed for person:', person.id, err);
+          });
+      }
+    }
+
+    // Queue mutations for all imported relationships
+    for (const rel of relationships) {
+      const normalized = this.relationships.find((r) => r.id === rel.id);
+      if (normalized) {
+        Promise.resolve(this.repository.saveRelationship?.(normalized, { operation: 'create' }))
+          .catch((err) => {
+            console.warn('FamilyStore: Import mutation failed for relationship:', rel.id, err);
+          });
+      }
+    }
+
+    // Queue mutations for all imported stories
+    for (const story of stories) {
+      const normalized = this.stories.find((s) => s.id === story.id);
+      if (normalized) {
+        Promise.resolve(this.repository.saveStory?.(normalized, { operation: 'create' }))
+          .catch((err) => {
+            console.warn('FamilyStore: Import mutation failed for story:', story.id, err);
+          });
+      }
+    }
+
+    // Queue mutations for all imported life events
+    for (const event of events) {
+      const normalized = this.lifeEvents.find((e) => e.id === event.id);
+      if (normalized) {
+        Promise.resolve(this.repository.saveLifeEvent?.(normalized, { operation: 'create' }))
+          .catch((err) => {
+            console.warn('FamilyStore: Import mutation failed for event:', event.id, err);
+          });
+      }
+    }
+
+    // Queue mutations for all imported photos
+    for (const photo of photos) {
+      const normalized = this.photos.find((p) => p.id === photo.id);
+      if (normalized) {
+        Promise.resolve(this.repository.savePhoto?.(normalized, { operation: 'create' }))
+          .catch((err) => {
+            console.warn('FamilyStore: Import mutation failed for photo:', photo.id, err);
+          });
+      }
+    }
+
+    // Queue mutations for all imported documents
+    for (const doc of documents) {
+      const normalized = this.documents.find((d) => d.id === doc.id);
+      if (normalized) {
+        Promise.resolve(this.repository.saveDocument?.(normalized, { operation: 'create' }))
+          .catch((err) => {
+            console.warn('FamilyStore: Import mutation failed for document:', doc.id, err);
+          });
+      }
+    }
   }
 
   resetToSampleData() {
