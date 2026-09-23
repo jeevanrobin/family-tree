@@ -4,29 +4,16 @@
  * Dynamically computes spatial coordinates, couple groupings, sibling distribution,
  * descendant subtrees, and connection routes from pure people & relationship data.
  * ZERO HARDCODED IDS OR FIXED COORDINATES.
+ * 
+ * M5C.3: Subtree Geometry Applied to Actual Positioning
+ * - Uses FamilySubtree metadata from subtreeGeometry.js
+ * - Positions child branches based on calculated subtree widths
+ * - Centers parents over complete descendant footprint
+ * - SUBTREE_GAP (72px) between sibling family branches
  */
 
 import { computeGenerations, GENERATION_CONFIG } from '../data/familyDataService.js';
-
-/* Portrait plaques: standardized dimensions matching CSS .ft-person-card exactly.
-   Couples sit close enough to read as one household; sibling groups get
-   more air so branches stay legible.
-   
-   M5C.1 NOTE: Premium Family Cluster Layout Architecture
-   
-   Recommended future enhancement:
-   - Implement subtree-based width calculation (calculateSubtreeWidth())
-   - Position each child based on its descendant subtree width
-   - Use SUBTREE_GAP between sibling family branches
-   - Center parents over their descendant clusters recursively
-   
-   Current implementation uses cursor-based positioning but with improved spacing.
-   Full subtree architecture would require:
-   1. Recursive descendant width calculation
-   2. Hierarchical parent centering
-   3. Branch reservation for future descendants
-   4. Collision prevention between unrelated branches
-*/
+import { computeSubtreeGeometry, FamilySubtree } from './subtreeGeometry.js';
 export const NODE_WIDTH = 230;
 export const NODE_HEIGHT = 160;
 export const SPOUSE_GAP = 24;        // Tight couple spacing
@@ -60,17 +47,20 @@ function resolveRank(gen, minGen, maxGen) {
 }
 
 /**
- * Computes a completely data-driven spatial tree layout
+ * Computes a completely data-driven spatial tree layout with subtree geometry
  */
-export function computeTreeLayout(persons, relationships) {
+export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
   if (!persons || persons.length === 0) {
     return {
       nodes: new Map(),
       lines: [],
       generationTracks: [],
       bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0, width: 0, height: 0 },
+      fullBounds: { minX: 0, maxX: 0, minY: 0, maxY: 0, width: 0, height: 0 },
       nodeWidth: NODE_WIDTH,
       nodeHeight: NODE_HEIGHT,
+      branchBadges: [],
+      allNodes: new Map(),
     };
   }
 
@@ -79,6 +69,9 @@ export function computeTreeLayout(persons, relationships) {
 
   // Compute dynamic generations from graph
   const genMap = computeGenerations(persons, relationships);
+
+  // M5C.3: Build subtree geometry FIRST
+  const subtreeMap = computeSubtreeGeometry(persons, relationships, genMap);
 
   // Build graph relationships
   const childToParents = new Map();
@@ -117,10 +110,10 @@ export function computeTreeLayout(persons, relationships) {
   const minGen = Math.min(...Array.from(genLayers.keys()));
   const maxGen = Math.max(...Array.from(genLayers.keys()));
 
-  // 1. Identify Connected Units layer by layer
-  // A family unit is either a married couple [personA, personB] or an individual [personA]
+  // Build family units with proper spouse orientation
   const processedPersons = new Set();
-
+  const layerUnits = new Map();
+  
   function getOrBuildUnit(pId) {
     if (processedPersons.has(pId)) return null;
     const person = personMap.get(pId);
@@ -154,143 +147,127 @@ export function computeTreeLayout(persons, relationships) {
     };
   }
 
-  // 2. Build and position units generation by generation
-  const calculatedPositions = new Map(); // personId -> { x, y }
-  const layerUnits = new Map();
-
+  // Build units by generation
   for (let g = minGen; g <= maxGen; g++) {
     const list = genLayers.get(g) || [];
     const units = [];
-    list.forEach((p) => {
+    list.forEach(p => {
       const u = getOrBuildUnit(p.id);
       if (u) units.push(u);
     });
-
-    // Sort units in generation g to preserve branch locality:
-    // If units have parents in earlier generations, align them by their parents' visual X positions!
-    units.forEach((unit) => {
-      const p1Parents = childToParents.get(unit.primary.id) || [];
-      const p2Parents = unit.spouse ? (childToParents.get(unit.spouse.id) || []) : [];
-
-      let parentXSum = 0;
-      let parentCount = 0;
-
-      p1Parents.forEach((parentId) => {
-        const pos = calculatedPositions.get(parentId);
-        if (pos) {
-          parentXSum += pos.x + NODE_WIDTH / 2;
-          parentCount++;
-        }
-      });
-
-      p2Parents.forEach((parentId) => {
-        const pos = calculatedPositions.get(parentId);
-        if (pos) {
-          parentXSum += pos.x + NODE_WIDTH / 2;
-          parentCount++;
-        }
-      });
-
-      unit.avgParentX = parentCount > 0 ? parentXSum / parentCount : null;
-
-      // In a couple with parents in earlier generations (e.g. cross-branch marriage):
-      // Orient the spouses so that the spouse whose parent is further left sits on the left!
-      if (unit.spouse && p1Parents.length > 0 && p2Parents.length > 0) {
-        const pos1 = calculatedPositions.get(p1Parents[0]);
-        const pos2 = calculatedPositions.get(p2Parents[0]);
-        if (pos1 && pos2 && pos1.x > pos2.x) {
-          // Swap primary and spouse so the spouse on the left corresponds to the leftmost parent branch
-          const temp = unit.primary;
-          unit.primary = unit.spouse;
-          unit.spouse = temp;
-        }
-      }
-    });
-
-    // Sort units by average parent X (falling back to initial order)
-    units.sort((a, b) => {
-      if (a.avgParentX !== null && b.avgParentX !== null) {
-        return a.avgParentX - b.avgParentX;
-      }
-      if (a.avgParentX !== null) return -1;
-      if (b.avgParentX !== null) return 1;
-      return 0;
-    });
-
-    // Position units with compact sibling spacing
-    const y = (g - minGen) * GENERATION_HEIGHT;
-    let currentX = 0;
-
-    units.forEach((unit) => {
-      let unitStartX = currentX;
-      if (unit.avgParentX !== null) {
-        const desiredStartX = unit.avgParentX - unit.width / 2;
-        unitStartX = Math.max(currentX, desiredStartX);
-      }
-
-      // Assign position to primary person
-      calculatedPositions.set(unit.primary.id, { x: unitStartX, y });
-
-      // Assign position to spouse (right of primary)
-      if (unit.spouse) {
-        calculatedPositions.set(unit.spouse.id, {
-          x: unitStartX + NODE_WIDTH + SPOUSE_GAP,
-          y,
-        });
-      }
-
-      currentX = unitStartX + unit.width + SIBLING_GAP;
-    });
-
     layerUnits.set(g, units);
   }
 
-  // 2B. Bottom-Up Pass: Center parent units directly above their children
-  for (let g = maxGen - 1; g >= minGen; g--) {
-    const units = layerUnits.get(g) || [];
-    units.forEach((unit) => {
-      const childIds = unit.childrenIds || [];
-      const childCenters = [];
-      childIds.forEach((cId) => {
-        const p = calculatedPositions.get(cId);
-        if (p) {
-          childCenters.push(p.x + NODE_WIDTH / 2);
-        }
+  // M5C.3: Position using subtree widths
+  const calculatedPositions = new Map();
+  
+  // Position recursively - top-down with width-based centering
+  function positionUnitAndDescendants(unit, startX, y) {
+    // Get subtree for this unit
+    const subtree = subtreeMap.get(unit.primary.id);
+    const reservedWidth = subtree ? subtree.width : unit.width;
+    
+    // Center the unit within its reserved subtree width
+    const unitCenterX = startX + reservedWidth / 2;
+    const unitStartX = unitCenterX - unit.width / 2;
+    
+    calculatedPositions.set(unit.primary.id, { x: unitStartX, y });
+    
+    if (unit.spouse) {
+      calculatedPositions.set(unit.spouse.id, {
+        x: unitStartX + NODE_WIDTH + SPOUSE_GAP,
+        y
       });
-
-      if (childCenters.length > 0) {
-        const minChildCenter = Math.min(...childCenters);
-        const maxChildCenter = Math.max(...childCenters);
-        const childrenCenter = (minChildCenter + maxChildCenter) / 2;
-
-        if (units.length === 1) {
-          const newStartX = childrenCenter - unit.width / 2;
-          const curY = calculatedPositions.get(unit.primary.id).y;
-          calculatedPositions.set(unit.primary.id, { x: newStartX, y: curY });
-          if (unit.spouse) {
-            calculatedPositions.set(unit.spouse.id, {
-              x: newStartX + NODE_WIDTH + SPOUSE_GAP,
-              y: curY,
-            });
-          }
+    }
+    
+    // Position children using their subtree widths
+    const childIds = unit.childrenIds || [];
+    if (childIds.length === 0) return;
+    
+    const childGen = unit.gen + 1;
+    const childY = (childGen - minGen) * GENERATION_HEIGHT;
+    const childUnits = layerUnits.get(childGen) || [];
+    
+    // Find child units (avoid duplicates for couples)
+    const myChildUnits = [];
+    const seen = new Set();
+    
+    childIds.forEach(childId => {
+      if (seen.has(childId)) return;
+      seen.add(childId);
+      
+      const childUnit = childUnits.find(u => 
+        u.primary.id === childId || u.spouse?.id === childId
+      );
+      
+      if (childUnit) {
+        if (childUnit.spouse) {
+          seen.add(childUnit.spouse.id);
         }
+        myChildUnits.push(childUnit);
       }
     });
-
-    // Ensure no overlapping units in generation g
-    let curX = -Infinity;
-    units.forEach((unit) => {
-      const pos = calculatedPositions.get(unit.primary.id);
-      if (pos.x < curX) {
-        calculatedPositions.set(unit.primary.id, { x: curX, y: pos.y });
-        if (unit.spouse) {
-          calculatedPositions.set(unit.spouse.id, {
-            x: curX + NODE_WIDTH + SPOUSE_GAP,
-            y: pos.y,
-          });
-        }
+    
+    // Apply sibling ordering if available
+    const cohortKey = `${unit.primary.id}-children`;
+    if (siblingOrders[cohortKey]) {
+      const order = siblingOrders[cohortKey];
+      myChildUnits.sort((a, b) => {
+        const aIdx = order.indexOf(a.primary.id);
+        const bIdx = order.indexOf(b.primary.id);
+        if (aIdx === -1 && bIdx === -1) return 0;
+        if (aIdx === -1) return 1;
+        if (bIdx === -1) return -1;
+        return aIdx - bIdx;
+      });
+    }
+    
+    // Calculate total width needed for all children
+    let totalChildWidth = 0;
+    myChildUnits.forEach((cu, idx) => {
+      const childSubtree = subtreeMap.get(cu.primary.id);
+      totalChildWidth += childSubtree ? childSubtree.width : cu.width;
+      if (idx < myChildUnits.length - 1) {
+        totalChildWidth += SUBTREE_GAP;
       }
-      curX = calculatedPositions.get(unit.primary.id).x + unit.width + SIBLING_GAP;
+    });
+    
+    // Position children sequentially within the parent's reserved width
+    let childX = unitCenterX - totalChildWidth / 2;
+    
+    myChildUnits.forEach((child, idx) => {
+      const childSubtree = subtreeMap.get(child.primary.id);
+      const childWidth = childSubtree ? childSubtree.width : child.width;
+      
+      positionUnitAndDescendants(child, childX, childY);
+      
+      childX += childWidth + (idx < myChildUnits.length - 1 ? SUBTREE_GAP : 0);
+    });
+  }
+
+  // Position root generation
+  const rootUnits = layerUnits.get(minGen) || [];
+  if (rootUnits.length > 0) {
+    // Calculate total width needed
+    let totalWidth = 0;
+    rootUnits.forEach((unit, idx) => {
+      const subtree = subtreeMap.get(unit.primary.id);
+      totalWidth += subtree ? subtree.width : unit.width;
+      if (idx < rootUnits.length - 1) {
+        totalWidth += SUBTREE_GAP;
+      }
+    });
+    
+    const rootY = 0;
+    let currentX = -totalWidth / 2;
+    
+    rootUnits.forEach((unit, idx) => {
+      const subtree = subtreeMap.get(unit.primary.id);
+      const width = subtree ? subtree.width : unit.width;
+      
+      positionUnitAndDescendants(unit, currentX, rootY);
+      
+      currentX += width + (idx < rootUnits.length - 1 ? SUBTREE_GAP : 0);
     });
   }
 

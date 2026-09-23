@@ -169,11 +169,20 @@ export function computeSubtreeGeometry(persons, relationships, genMap) {
   const processedUnits = new Set();
   const subtreeMap = new Map();
   
-  // Find all root units (people without parents, or earliest generation)
+  // Find all ROOT units - people without parents OR in earliest generation
   const minGen = Math.min(...Array.from(genMap.values()));
   
-  // Process all family units recursively
-  persons.forEach(person => {
+  // Only process people who are roots (no parents or in minGen)
+  const rootPersons = persons.filter(person => {
+    const personId = String(person.id);
+    const parents = childToParents.get(personId) || [];
+    const gen = genMap.get(personId) ?? 0;
+    // Root if no parents OR in minimum generation
+    return parents.length === 0 || gen === minGen;
+  });
+  
+  // Process all ROOT family units recursively
+  rootPersons.forEach(person => {
     const personId = String(person.id);
     
     // Skip if already processed as spouse
@@ -194,15 +203,29 @@ export function computeSubtreeGeometry(persons, relationships, genMap) {
       processedUnits
     );
     
-    subtreeMap.set(personId, subtree);
-    
-    // Also map spouse to same subtree
-    if (spouseId && !subtreeMap.has(spouseId)) {
-      subtreeMap.set(spouseId, subtree);
-    }
+    // Map ALL persons in the subtree to this subtree object
+    mapSubtreeToPersons(subtree, subtreeMap);
   });
   
   return subtreeMap;
+}
+
+/**
+ * Recursively map all persons in a subtree to the subtree object
+ */
+function mapSubtreeToPersons(subtree, subtreeMap) {
+  // Map root person
+  subtreeMap.set(subtree.rootPersonId, subtree);
+  
+  // Map spouse if exists
+  if (subtree.spouseId) {
+    subtreeMap.set(subtree.spouseId, subtree);
+  }
+  
+  // Recursively map all persons in child subtrees
+  subtree.childSubtrees.forEach(childSubtree => {
+    mapSubtreeToPersons(childSubtree, subtreeMap);
+  });
 }
 
 /**
@@ -291,7 +314,7 @@ function buildSubtree(
   let subtreeWidth;
   let subtreeHeight = GENERATION_HEIGHT;
   let personCount = hasSpouse ? 2 : 1;
-  let descendantCount = childSubtrees.length;
+  let descendantCount = 0;
   let branchCount = childSubtrees.length > 0 ? childSubtrees.length : 1;
   
   if (childSubtrees.length === 0) {
@@ -313,7 +336,7 @@ function buildSubtree(
       
       // Aggregate counts
       personCount += child.personCount;
-      descendantCount += child.descendantCount + 1; // +1 for the child itself
+      descendantCount += child.personCount; // All persons in child subtree are descendants
       branchCount = Math.max(branchCount, child.branchCount);
     });
     
