@@ -399,7 +399,6 @@
   font-size: clamp(1.05rem, 1.8vw, 1.2rem);
   line-height: 1.7;
   color: var(--ft-text-secondary);
-  opacity: 0.94;
   max-width: 34rem;
   margin-bottom: 34px;
 }
