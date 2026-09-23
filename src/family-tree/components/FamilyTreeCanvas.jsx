@@ -156,8 +156,11 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
       <div
         className="ft-canvas__transform-layer"
         style={{
-          transform: `translate3d(${transform.x}px, ${transform.y}px, 0px) scale(${transform.scale})`,
+          transform: transform.scale > 1
+            ? `translate3d(${transform.x / transform.scale}px, ${transform.y / transform.scale}px, 0px)`
+            : `translate3d(${transform.x}px, ${transform.y}px, 0px) scale(${transform.scale})`,
           transformOrigin: '0 0',
+          zoom: transform.scale > 1 ? transform.scale : 1,
         }}
       >
         {/* Generation Guide Tracks */}

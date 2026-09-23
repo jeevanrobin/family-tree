@@ -96,12 +96,12 @@
   --ft-status-deceased: #94A3B8;
   --ft-status-deceased-bg: rgba(148, 163, 184, 0.15);
 
-  --ft-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
-  --ft-shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --ft-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.10), 0 2px 6px -2px rgba(15, 23, 42, 0.05);
-  --ft-shadow-lg: 0 18px 44px -8px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
-  --ft-shadow-plaque: 0 3px 12px -1px rgba(15, 23, 42, 0.10), 0 1px 3px rgba(15, 23, 42, 0.05);
-  --ft-shadow-plaque-hover: 0 14px 32px -4px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+  --ft-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --ft-shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ft-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.15), 0 2px 6px -2px rgba(15, 23, 42, 0.08);
+  --ft-shadow-lg: 0 18px 44px -8px rgba(15, 23, 42, 0.20), 0 4px 12px -2px rgba(15, 23, 42, 0.12);
+  --ft-shadow-plaque: 0 3px 12px -1px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
+  --ft-shadow-plaque-hover: 0 14px 32px -4px rgba(15, 23, 42, 0.22), 0 4px 10px -2px rgba(15, 23, 42, 0.10);
   --ft-shadow-card: var(--ft-shadow-plaque);
   --ft-shadow-card-hover: var(--ft-shadow-plaque-hover);
 }
@@ -956,6 +956,17 @@ button {
   will-change: transform;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: subpixel-antialiased;
+  
+  /* RENDERING ARCHITECTURE:
+   * Zoom levels > 100% use CSS 'zoom' property instead of transform scale.
+   * This prevents bilinear interpolation blur - browser renders text at
+   * actual device pixels rather than scaling a pre-rendered raster.
+   * 
+   * Scale <= 100%: uses transform: scale() for smooth GPU-accelerated rendering
+   * Scale > 100%: uses zoom property for crisp text at high magnification
+   * 
+   * The zoom property is applied via inline styles in FamilyTreeCanvas.jsx
+   */
 }
 
 /* Minimal Generation Guides */
