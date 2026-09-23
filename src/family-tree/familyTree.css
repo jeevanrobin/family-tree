@@ -26,45 +26,45 @@
 /* ── Light Mode Tokens (Warm Paper) ──────────────────────── */
 :root,
 [data-theme="light"] {
-  --ft-bg: #EAECEF;
-  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #F8FAFC 0%, #E2E8F0 80%);
-  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.01), transparent 70%);
-  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.06) 1.2px, transparent 1.2px);
+  --ft-bg: #E0E4E8;
+  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #F1F5F9 0%, #D4DAE0 80%);
+  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.015), transparent 70%);
+  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.07) 1.2px, transparent 1.2px);
   --ft-grid-size: 28px 28px;
   --ft-grain-opacity: 0.015;
   --ft-surface: #FFFFFF;
-  --ft-surface-soft: #F1F4F8;
+  --ft-surface-soft: #F6F8FA;
   --ft-surface-elevated: #FFFFFF;
-  --ft-surface-hover: #F8FAFC;
+  --ft-surface-hover: #FAFBFC;
   --ft-overlay: rgba(15, 23, 42, 0.45);
 
   --ft-text-primary: #0F172A;
-  --ft-text-secondary: #334155;
-  --ft-text-muted: #64748B;
+  --ft-text-secondary: #1E293B;
+  --ft-text-muted: #475569;
   --ft-text-inverse: #FFFFFF;
 
   --ft-graphite: #0F172A;
-  --ft-border: #CBD5E1;
-  --ft-border-subtle: #E2E8F0;
-  --ft-border-hover: #94A3B8;
-  --ft-border-header: #94A3B8;
+  --ft-border: #94A3B8;
+  --ft-border-subtle: #CBD5E1;
+  --ft-border-hover: #64748B;
+  --ft-border-header: #64748B;
 
   --ft-emerald: #E56515;
   --ft-emerald-hover: #C9540E;
-  --ft-emerald-soft: rgba(229, 101, 21, 0.08);
+  --ft-emerald-soft: rgba(229, 101, 21, 0.10);
   --ft-emerald-border: rgba(229, 101, 21, 0.35);
 
   --ft-mint: #FBA45C;
   --ft-mint-soft: rgba(251, 164, 92, 0.16);
 
   --ft-coral: #B4472F;
-  --ft-coral-soft: rgba(180, 71, 47, 0.10);
+  --ft-coral-soft: rgba(180, 71, 47, 0.12);
 
   --ft-lavender: #475569;
-  --ft-lavender-soft: rgba(71, 85, 105, 0.10);
+  --ft-lavender-soft: rgba(71, 85, 105, 0.12);
 
   --ft-champagne: #475569;
-  --ft-champagne-soft: rgba(71, 85, 105, 0.10);
+  --ft-champagne-soft: rgba(71, 85, 105, 0.12);
 
   --ft-male: #475569;
   --ft-female: #785E50;
@@ -83,9 +83,9 @@
   --ft-related-border: rgba(229, 101, 21, 0.55);
   --ft-related-bg: #FFFBF8;
 
-  --ft-line-color: #64748B;
-  --ft-line-connected: #475569;
-  --ft-line-spouse: #475569;
+  --ft-line-color: #475569;
+  --ft-line-connected: #334155;
+  --ft-line-spouse: #334155;
   --ft-line-active-start: #E56515;
   --ft-line-active-end: #FBA45C;
 
@@ -93,15 +93,15 @@
 
   --ft-status-alive: #10B981;
   --ft-status-alive-bg: rgba(16, 185, 129, 0.12);
-  --ft-status-deceased: #94A3B8;
-  --ft-status-deceased-bg: rgba(148, 163, 184, 0.15);
+  --ft-status-deceased: #64748B;
+  --ft-status-deceased-bg: rgba(100, 116, 139, 0.15);
 
-  --ft-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.08);
-  --ft-shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.10), 0 1px 2px rgba(15, 23, 42, 0.06);
-  --ft-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.15), 0 2px 6px -2px rgba(15, 23, 42, 0.08);
-  --ft-shadow-lg: 0 18px 44px -8px rgba(15, 23, 42, 0.20), 0 4px 12px -2px rgba(15, 23, 42, 0.12);
-  --ft-shadow-plaque: 0 3px 12px -1px rgba(15, 23, 42, 0.15), 0 1px 3px rgba(15, 23, 42, 0.08);
-  --ft-shadow-plaque-hover: 0 14px 32px -4px rgba(15, 23, 42, 0.22), 0 4px 10px -2px rgba(15, 23, 42, 0.10);
+  --ft-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.10);
+  --ft-shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.12), 0 1px 2px rgba(15, 23, 42, 0.08);
+  --ft-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.18), 0 2px 6px -2px rgba(15, 23, 42, 0.10);
+  --ft-shadow-lg: 0 18px 44px -8px rgba(15, 23, 42, 0.25), 0 4px 12px -2px rgba(15, 23, 42, 0.15);
+  --ft-shadow-plaque: 0 3px 12px -1px rgba(15, 23, 42, 0.18), 0 1px 3px rgba(15, 23, 42, 0.10);
+  --ft-shadow-plaque-hover: 0 14px 32px -4px rgba(15, 23, 42, 0.25), 0 4px 10px -2px rgba(15, 23, 42, 0.12);
   --ft-shadow-card: var(--ft-shadow-plaque);
   --ft-shadow-card-hover: var(--ft-shadow-plaque-hover);
 }
