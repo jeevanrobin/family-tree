@@ -51,17 +51,17 @@ export function getLifespanInfo(person) {
 
 export function getAvatarGradient(person) {
   const maleGradients = [
-    'linear-gradient(135deg, #4A5568 0%, #2D3748 100%)',
-    'linear-gradient(135deg, #516175 0%, #344050 100%)',
-    'linear-gradient(135deg, #475569 0%, #2C3A4A 100%)',
-    'linear-gradient(135deg, #4A5E72 0%, #30404F 100%)',
+    'linear-gradient(135deg, #334155 0%, #1E293B 60%, #0F172A 100%)',
+    'linear-gradient(135deg, #384A62 0%, #223147 60%, #121D2C 100%)',
+    'linear-gradient(135deg, #2D434E 0%, #1E2E36 60%, #101B20 100%)',
+    'linear-gradient(135deg, #475569 0%, #334155 60%, #1E293B 100%)',
   ];
 
   const femaleGradients = [
-    'linear-gradient(135deg, #C4664E 0%, #8B3A28 100%)',
-    'linear-gradient(135deg, #B8724A 0%, #7A4830 100%)',
-    'linear-gradient(135deg, #A85C42 0%, #6E3828 100%)',
-    'linear-gradient(135deg, #C07050 0%, #844432 100%)',
+    'linear-gradient(135deg, #784A3B 0%, #543328 60%, #2E1B15 100%)',
+    'linear-gradient(135deg, #6E444E 0%, #4D2D37 60%, #2A171E 100%)',
+    'linear-gradient(135deg, #5C4556 0%, #412E3C 60%, #241821 100%)',
+    'linear-gradient(135deg, #6C3E2F 0%, #4B2A1E 60%, #2B160E 100%)',
   ];
 
   const list = person?.gender === 'female' ? femaleGradients : maleGradients;

@@ -1,0 +1,289 @@
+/* ============================================================
+   RARE UI ADAPTER STYLING — ANVAYA FAMILYTREE
+   Bridges Rare UI components with the Medida / Anvaya design tokens.
+   ============================================================ */
+
+/* ── 1. Fluid Orb ─────────────────────────────────────────── */
+[data-slot="fluid-orb"] {
+  position: relative;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.ft-fluid-orb-hero-ambient {
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 440px;
+  height: 440px;
+  opacity: 0.75;
+  filter: blur(2px) drop-shadow(0 0 60px rgba(229, 101, 21, 0.25));
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.5s ease;
+}
+
+[data-theme="light"] .ft-fluid-orb-hero-ambient {
+  opacity: 0.6;
+  filter: blur(2px) drop-shadow(0 0 50px rgba(229, 101, 21, 0.18));
+}
+
+@media (max-width: 900px) {
+  .ft-fluid-orb-hero-ambient {
+    top: -20px;
+    right: -20px;
+    width: 300px;
+    height: 300px;
+    opacity: 0.5;
+  }
+}
+
+/* ── 2. Scroll Progress Pill ──────────────────────────────── */
+[data-slot="scroll-progress-root"] {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 80;
+  font-family: var(--ft-font-body);
+}
+
+.ft-scroll-progress-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px 0 12px;
+  background: var(--ft-surface-elevated, #16161c);
+  border: 1px solid var(--ft-border, #262E36);
+  border-radius: 9999px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: var(--ft-text-primary, #F7F7F5);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ft-scroll-progress-pill:hover {
+  border-color: var(--ft-accent, #E56515);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.ft-scroll-progress-pill__indicator {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ft-scroll-progress-pill__label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ft-text-primary, #F7F7F5);
+  white-space: nowrap;
+}
+
+.ft-scroll-progress-pill__chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--ft-text-muted, #757D85);
+  transition: transform 0.25s ease;
+}
+
+.ft-scroll-progress-menu {
+  position: absolute;
+  bottom: 54px;
+  right: 0;
+  width: 210px;
+  background: var(--ft-surface-elevated, #16161c);
+  border: 1px solid var(--ft-border, #262E36);
+  border-radius: 18px;
+  padding: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ft-scroll-progress-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ft-text-secondary, #9AA2A9);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.ft-scroll-progress-menu__item:hover {
+  background: var(--ft-surface-hover, rgba(255, 255, 255, 0.06));
+  color: var(--ft-text-primary, #F7F7F5);
+}
+
+.ft-scroll-progress-menu__item--active {
+  background: var(--ft-emerald-soft, rgba(229, 101, 21, 0.12));
+  color: var(--ft-accent, #E56515);
+  font-weight: 600;
+}
+
+/* ── 3. Animated Counter ─────────────────────────────────── */
+[data-slot="animated-counter"] {
+  display: inline-flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* ── 4. Delete Button ─────────────────────────────────────── */
+[data-slot="delete-button"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: 9999px;
+  user-select: none;
+}
+
+.ft-delete-btn-tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ft-coral, #E0715A);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.ft-delete-btn-tile:hover {
+  background: var(--ft-coral-soft, rgba(224, 113, 90, 0.14));
+}
+
+.ft-delete-btn-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.ft-delete-btn-circle {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  border: 1px solid var(--ft-border, #262E36);
+  background: var(--ft-surface, #15191E);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.ft-delete-btn-circle--confirm {
+  color: var(--ft-status-alive, #5FA86F);
+  border-color: rgba(95, 168, 111, 0.4);
+}
+.ft-delete-btn-circle--confirm:hover {
+  background: var(--ft-status-alive-bg, rgba(95, 168, 111, 0.15));
+}
+
+.ft-delete-btn-circle--cancel {
+  color: var(--ft-text-muted, #757D85);
+  border-color: var(--ft-border, #262E36);
+}
+.ft-delete-btn-circle--cancel:hover {
+  background: var(--ft-surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--ft-text-primary, #F7F7F5);
+}
+
+/* ── 5. Notification Bell ─────────────────────────────────── */
+[data-slot="notification-bell"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--ft-text-secondary, #9AA2A9);
+  transition: color 0.2s ease;
+}
+
+[data-slot="notification-bell"]:hover {
+  color: var(--ft-text-primary, #F7F7F5);
+}
+
+.ft-bell-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--ft-accent, #E56515);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--ft-surface, #15191E);
+}
+
+/* ── 6. Folder Component Archival Theme ───────────────────── */
+[data-slot="folder"] {
+  position: relative;
+  user-select: none;
+  font-family: var(--ft-font-body);
+}
+
+.ft-archival-folder-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 8px;
+  border-radius: 16px;
+  background: var(--ft-surface, #15191E);
+  border: 1px solid var(--ft-border, #262E36);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.ft-archival-folder-wrap:hover {
+  border-color: var(--ft-accent, #E56515);
+  background: var(--ft-surface-hover, #1C2229);
+  transform: translateY(-4px);
+  box-shadow: var(--ft-shadow-lg);
+}
+
+.ft-archival-folder-wrap__title {
+  font-family: var(--ft-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ft-text-primary, #F7F7F5);
+  text-align: center;
+  margin: 0;
+}
+
+.ft-archival-folder-wrap__meta {
+  font-family: var(--ft-font-mono);
+  font-size: 0.72rem;
+  color: var(--ft-text-secondary, #9AA2A9);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

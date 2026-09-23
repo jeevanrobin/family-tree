@@ -7,6 +7,8 @@
 import React, { useEffect, useCallback } from 'react';
 import { useMediaUrl } from '../../hooks/useMediaUrl.js';
 import { mediaStorageService, PHOTO_BUCKET } from '../../media/mediaStorageService.js';
+import DeleteButton from '../rare-ui/DeleteButton.jsx';
+
 
 function LightboxImage({ photo }) {
   const storagePath = photo.storage_path || photo.storagePath || '';
@@ -62,15 +64,14 @@ export default function PhotoLightbox({
   if (!isOpen || !currentPhoto) return null;
 
   const handleDelete = () => {
-    if (window.confirm('Delete this photo from the album?')) {
-      const storagePath = currentPhoto.storage_path || currentPhoto.storagePath;
-      if (storagePath) {
-        mediaStorageService.deletePhoto({ storagePath });
-      }
-      onDeletePhoto?.(currentPhoto.id);
-      onClose();
+    const storagePath = currentPhoto.storage_path || currentPhoto.storagePath;
+    if (storagePath) {
+      mediaStorageService.deletePhoto({ storagePath });
     }
+    onDeletePhoto?.(currentPhoto.id);
+    onClose();
   };
+
 
   return (
     <div className="ft-lightbox" role="dialog" aria-label="Photo Lightbox Viewer">
@@ -165,16 +166,12 @@ export default function PhotoLightbox({
             )}
 
             {onDeletePhoto && (
-              <button
-                className="ft-lightbox__action-btn ft-lightbox__action-btn--delete"
-                onClick={handleDelete}
+              <DeleteButton
+                onConfirm={handleDelete}
                 title="Delete Photo"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-              </button>
+                confirmTitle="Confirm delete photo"
+                size={30}
+              />
             )}
           </div>
         </div>

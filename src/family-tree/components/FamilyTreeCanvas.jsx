@@ -141,7 +141,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   return (
     <div
       ref={containerRef}
-      className={`ft-canvas ${isPanning ? 'ft-canvas--panning' : ''}`}
+      className={`ft-canvas ${isPanning ? 'ft-canvas--panning' : ''} ${transform?.scale < 0.55 ? 'ft-canvas--compact-zoom' : ''}`}
+      style={{ '--canvas-scale': transform?.scale || 1 }}
       onMouseDown={interaction.handleMouseDown}
       onMouseMove={interaction.handleMouseMove}
       onMouseUp={interaction.handleMouseUp}

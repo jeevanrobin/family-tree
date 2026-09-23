@@ -33,6 +33,8 @@ import {
   canUploadMedia as checkCanUploadMedia,
   canUploadDocument as checkCanUploadDocument,
 } from '../auth/roles.js';
+import DeleteButton from './rare-ui/DeleteButton.jsx';
+
 
 function PersonHeroCameo({ person }) {
   const photoSrc = person.photo || person.photoUrl || '';
@@ -478,20 +480,12 @@ export default function PersonDetails({
                           </button>
                         )}
                         {canDelStory && (
-                          <button
-                            className="ft-details__action-btn ft-details__action-btn--delete"
-                            onClick={() => {
-                              if (window.confirm('Delete this memory?')) {
-                                onDeleteStory(s.id);
-                              }
-                            }}
+                          <DeleteButton
+                            onConfirm={() => onDeleteStory(s.id)}
                             title="Delete Memory"
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                            </svg>
-                          </button>
+                            confirmTitle="Confirm delete memory"
+                            size={24}
+                          />
                         )}
                       </div>
                     )}
@@ -550,20 +544,12 @@ export default function PersonDetails({
                               </button>
                             )}
                             {canDelEvent && (
-                              <button
-                                className="ft-details__action-btn ft-details__action-btn--delete"
-                                onClick={() => {
-                                  if (window.confirm('Delete this life event?')) {
-                                    onDeleteEvent(e.id);
-                                  }
-                                }}
+                              <DeleteButton
+                                onConfirm={() => onDeleteEvent(e.id)}
                                 title="Delete Event"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                                </svg>
-                              </button>
+                                confirmTitle="Confirm delete life event"
+                                size={24}
+                              />
                             )}
                           </div>
                         )}

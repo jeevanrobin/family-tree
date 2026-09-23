@@ -3,6 +3,9 @@
  * Robust parsing, formatting, and validation utilities for family history dates.
  * Supports exact dates (YYYY-MM-DD), month-year (YYYY-MM), and year-only (YYYY)
  * as well as common user input formats (DD-MM-YYYY, DD/MM/YYYY).
+ * 
+ * M5B: Optional Jev AI fallback for natural language dates.
+ * Deterministic parser remains authoritative.
  */
 
 export const MONTH_NAMES_SHORT = [
@@ -38,6 +41,32 @@ export function getDaysInMonth(year, month) {
 }
 
 /**
+ * Formats a stored value (e.g. "1920-03-15", "1920", "1920-03") for display.
+ */
+export function formatStoredDate(value) {
+  if (!value) return '';
+  const parsed = parseDateInput(String(value));
+  if (!parsed.isValid || parsed.isEmpty) return value;
+  return parsed.value;
+}
+
+import { 
+  extractDateWithJev, 
+  shouldUseJevFallback, 
+  configureJevExtraction,
+  getJevStatus,
+  REVIEW_BELOW 
+} from './jevDateExtraction.js';
+
+export { 
+  extractDateWithJev, 
+  shouldUseJevFallback, 
+  configureJevExtraction,
+  getJevStatus,
+  REVIEW_BELOW 
+};
+
+/**
  * Parses user input string into a standardized date object or null.
  * Handles:
  * - YYYY
@@ -46,8 +75,41 @@ export function getDaysInMonth(year, month) {
  * - DD-MM-YYYY
  * - DD/MM/YYYY
  * - D-M-YYYY or D/M/YYYY
+ * 
+ * @param {string} raw - Raw user input
+ * @param {Object} options - Parsing options
+ * @param {boolean} options.aiFallback - Enable Jev AI fallback (default: false)
+ * @returns {Object} Parsed date object or error
  */
-export function parseDateInput(raw) {
+export function parseDateInput(raw, options = {}) {
+  const { aiFallback = false } = options;
+  
+  // Try deterministic parser first
+  const deterministicResult = parseDateInputDeterministic(raw);
+  
+  // If deterministic parsing succeeded with confidence, return it
+  if (deterministicResult.isValid && !deterministicResult.isEmpty) {
+    return deterministicResult;
+  }
+  
+  // If AI fallback is disabled or not needed, return deterministic result
+  if (!aiFallback) {
+    return deterministicResult;
+  }
+  
+  // Mark that we attempted AI fallback (actual API call should be async)
+  // For now, return deterministic result and let caller invoke Jev if needed
+  return {
+    ...deterministicResult,
+    aiFallbackRecommended: shouldUseJevFallback(deterministicResult)
+  };
+}
+
+/**
+ * Deterministic date parser (original implementation).
+ * Handles structured date formats only.
+ */
+function parseDateInputDeterministic(raw) {
   if (!raw || typeof raw !== 'string' || !raw.trim()) {
     return { isValid: true, isEmpty: true, value: '', year: null, month: null, day: null, precision: 'empty' };
   }
@@ -68,6 +130,7 @@ export function parseDateInput(raw) {
       month: null,
       day: null,
       precision: 'year',
+      source: 'deterministic'
     };
   }
 
@@ -88,6 +151,7 @@ export function parseDateInput(raw) {
       month: mo,
       day: null,
       precision: 'month',
+      source: 'deterministic'
     };
   }
 
@@ -116,6 +180,7 @@ export function parseDateInput(raw) {
       month: mo,
       day: dy,
       precision: 'day',
+      source: 'deterministic'
     };
   }
 
@@ -144,23 +209,22 @@ export function parseDateInput(raw) {
       month: mo,
       day: dy,
       precision: 'day',
+      source: 'deterministic'
     };
   }
 
   return {
     isValid: false,
     error: 'Please enter a valid date (YYYY, YYYY-MM, or DD-MM-YYYY).',
+    source: 'deterministic'
   };
 }
 
 /**
- * Formats a stored value (e.g. "1920-03-15", "1920", "1920-03") for display.
+ * @deprecated Use parseDateInput instead
  */
-export function formatStoredDate(value) {
-  if (!value) return '';
-  const parsed = parseDateInput(String(value));
-  if (!parsed.isValid || parsed.isEmpty) return value;
-  return parsed.value;
+export function parseDateInputLegacy(raw) {
+  return parseDateInputDeterministic(raw);
 }
 
 /**

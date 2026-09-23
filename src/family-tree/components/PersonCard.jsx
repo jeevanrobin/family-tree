@@ -26,7 +26,7 @@ export default function PersonCard({
   const isStoragePath = rawPhoto.startsWith('family/');
   const resolvedPhoto = useMediaUrl(isStoragePath ? rawPhoto : '', rawPhoto);
 
-  let cardClasses = `ft-person-card ft-person-card--${generationRank}`;
+  let cardClasses = `ft-person-card ft-person-card--${generationRank} ft-person-card--${person.gender || 'unspecified'}`;
   if (isSelected) cardClasses += ' ft-person-card--selected';
   else if (isRelated) cardClasses += ' ft-person-card--related';
   else if (constellationTier && constellationTier !== 'default') {

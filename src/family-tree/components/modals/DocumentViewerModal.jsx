@@ -7,6 +7,8 @@
 import React from 'react';
 import { useMediaUrl } from '../../hooks/useMediaUrl.js';
 import { mediaStorageService, DOCUMENT_BUCKET } from '../../media/mediaStorageService.js';
+import DeleteButton from '../rare-ui/DeleteButton.jsx';
+
 
 export default function DocumentViewerModal({
   isOpen,
@@ -33,14 +35,13 @@ export default function DocumentViewerModal({
     /\.pdf/i.test(resolvedUrl);
 
   const handleDelete = () => {
-    if (window.confirm('Delete this archival document record?')) {
-      if (storagePath) {
-        mediaStorageService.deleteDocument({ storagePath });
-      }
-      onDelete?.(document.id);
-      onClose();
+    if (storagePath) {
+      mediaStorageService.deleteDocument({ storagePath });
     }
+    onDelete?.(document.id);
+    onClose();
   };
+
 
   return (
     <div className="ft-view-modal" role="dialog" aria-label="Archival Document Record">
@@ -124,16 +125,17 @@ export default function DocumentViewerModal({
         </div>
 
         <div className="ft-modal-footer">
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {onDelete && (
-              <button
-                type="button"
-                className="ft-form-btn ft-form-btn--secondary"
-                style={{ color: 'var(--ft-coral)' }}
-                onClick={handleDelete}
-              >
-                Delete Record
-              </button>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <DeleteButton
+                  onConfirm={handleDelete}
+                  title="Delete Record"
+                  confirmTitle="Confirm delete archival record"
+                  size={32}
+                />
+                <span style={{ fontSize: '0.8rem', color: 'var(--ft-coral)' }}>Delete</span>
+              </div>
             )}
             {onEdit && (
               <button

@@ -15,6 +15,7 @@ dist-ssr
 # Environment
 .env
 .env.local
+.env.test.local
 
 # Supabase
 supabase/.temp/
@@ -29,3 +30,8 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Test state
+test-results/
+playwright-report/
+playwright/.cache/

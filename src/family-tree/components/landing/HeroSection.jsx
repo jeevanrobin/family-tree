@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import FadeContent from '../react-bits/FadeContent.jsx';
 import ClickSpark from '../react-bits/ClickSpark.jsx';
 import LineagePreview from './LineagePreview.jsx';
+import FluidOrb from '../rare-ui/FluidOrb.jsx';
 
 /**
  * HeroSection
@@ -30,9 +31,15 @@ export default function HeroSection({
   showLocalMode = false,
 }) {
   return (
-    <section className="fl-hero" id="hero" aria-labelledby="fl-hero-title">
-      <div className="fl-container">
+    <section className="fl-hero" id="hero" aria-labelledby="fl-hero-title" style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Ambient Rare UI Fluid Orb background glow */}
+      <div style={{ position: 'absolute', top: '-60px', right: '-40px', zIndex: 0, opacity: 0.55, pointerEvents: 'none' }}>
+        <FluidOrb size={380} color="#E56515" isReducedMotion={isReducedMotion} />
+      </div>
+
+      <div className="fl-container" style={{ position: 'relative', zIndex: 1 }}>
         <div className="fl-hero__grid">
+
           <div>
             <FadeContent duration={500} delay={80} isReducedMotion={isReducedMotion}>
               <span className="fl-eyebrow">Private family history platform</span>

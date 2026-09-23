@@ -8,12 +8,25 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { sampleAlbumPhotos } from '../../data/sampleData.js';
 import SmoothScrollContainer from '../react-bits/SmoothScrollContainer.jsx';
 import ScrollReveal from '../react-bits/ScrollReveal.jsx';
+import FolderComponent from '../rare-ui/FolderComponent.jsx';
 
 export default function AlbumView({ onClose }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedIndex, setSelectedIndex] = useState(null);
 
   const categories = ['All', 'Gatherings', 'Portraits', 'Historic', 'Places'];
+
+  const folderCollections = useMemo(() => {
+    return ['Gatherings', 'Portraits', 'Historic', 'Places'].map((cat) => {
+      const photos = sampleAlbumPhotos.filter((p) => p.category === cat);
+      return {
+        category: cat,
+        count: photos.length,
+        previews: photos.slice(0, 3),
+      };
+    });
+  }, []);
+
 
   const filteredPhotos = useMemo(() => {
     if (activeCategory === 'All') return sampleAlbumPhotos;
@@ -72,6 +85,51 @@ export default function AlbumView({ onClose }) {
               {cat}
             </button>
           ))}
+        </div>
+
+        {/* Rare UI 3D Archival Folders Shelf */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px',
+            padding: '4px 0',
+          }}
+          role="region"
+          aria-label="Tactile Archival Folders"
+        >
+          {folderCollections.map((col) => {
+            const isSelected = activeCategory === col.category;
+            return (
+              <div
+                key={col.category}
+                className="ft-archival-folder-wrap"
+                style={{
+                  borderColor: isSelected ? 'var(--ft-accent)' : undefined,
+                  background: isSelected ? 'var(--ft-emerald-soft, rgba(229, 101, 21, 0.08))' : undefined,
+                }}
+                onClick={() => setActiveCategory(isSelected ? 'All' : col.category)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && setActiveCategory(col.category)}
+                aria-pressed={isSelected}
+                aria-label={`${col.category} Archival Folder containing ${col.count} photos`}
+              >
+                <FolderComponent
+                  size="sm"
+                  color={isSelected ? 'amber' : 'black'}
+                  previews={col.previews}
+                />
+                <h4 className="ft-archival-folder-wrap__title">{col.category}</h4>
+                <span className="ft-archival-folder-wrap__meta">
+                  <span>{col.count} photos</span>
+                  <span>&bull;</span>
+                  <span>{isSelected ? 'Viewing' : 'Hover to preview'}</span>
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Photo Grid with Smooth Scroll & ScrollReveal */}

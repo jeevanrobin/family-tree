@@ -10,6 +10,8 @@
     "test": "node scripts/test-m3b-security.js && node scripts/test-m3c-sync.js && node scripts/test-m3d-media.js && node scripts/test-m3e-collaboration.js && node scripts/verify-m3e1-production.js && node scripts/test-m4a-search.js && node scripts/test-m4b-timeline.js && node scripts/test-m4c-memories.js && node scripts/test-m4d-archive.js && node scripts/test-m4e-insights.js && node scripts/test-add-member-ux.js && node scripts/test-edit-person-prefill.js && node scripts/test-profile-photo-upload.js && node scripts/test-modal-layout.js && node scripts/test-family-date-picker.js && node scripts/test-link-existing-relationship.js && node scripts/test-sibling-display.js && node scripts/test-combobox-suggestions.js && node scripts/test-tree-layout-polish.js && node scripts/test-lineage-and-dual-parent.js && node scripts/test-fresh-start.js && node scripts/test-landing-auth-family.js && node scripts/test-auth-pages.js && node scripts/test-scalable-tree-architecture.js && node scripts/test-backup-id-integrity.js && node scripts/test-recursive-subtree-layout.js",
     "test:vitest": "vitest run",
     "test:all": "npm test && npm run test:vitest",
+    "test:browser": "playwright test",
+    "test:browser:ui": "playwright test --ui",
     "test:subtree": "node scripts/test-recursive-subtree-layout.js",
     "test:backup": "node scripts/test-backup-id-integrity.js",
     "test:scalable": "node scripts/test-scalable-tree-architecture.js",
@@ -25,16 +27,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.3.3",
     "@supabase/supabase-js": "^2.113.0",
+    "clsx": "^2.1.1",
+    "motion": "^13.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.3"
+    "react-router-dom": "^7.18.3",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
     "@vitest/coverage-v8": "^5.0.1",
+    "bcryptjs": "^3.0.3",
     "oxlint": "^1.79.0",
     "vite": "^8.2.2",
     "vitest": "^5.0.1"

@@ -14,6 +14,8 @@ import { useFamily } from '../auth/FamilyContext.jsx';
 import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
 import UserProfileMenu from './UserProfileMenu.jsx';
+import NotificationBell from './rare-ui/NotificationBell.jsx';
+
 
 export default function TreeHeader({
   totalPersons,
@@ -450,6 +452,16 @@ export default function TreeHeader({
             )}
           </button>
         </Magnet>
+
+        {/* Rare UI Notification Bell for Collaboration & Settings */}
+        <Magnet strength={3} active={!isReducedMotion}>
+          <NotificationBell
+            count={syncStatus === 'pending' || syncStatus === 'offline' ? 1 : 0}
+            onClick={() => setSettingsModalOpen(true)}
+            title="Family Archive Collaboration & Settings"
+          />
+        </Magnet>
+
 
         {/* Profile & Settings Menu with Destination Navigation */}
         <UserProfileMenu

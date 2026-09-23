@@ -26,49 +26,49 @@
 /* ── Light Mode Tokens (Warm Paper) ──────────────────────── */
 :root,
 [data-theme="light"] {
-  --ft-bg: #F7F7F5;
-  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #FFFFFF 0%, #F7F7F5 62%);
-  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.015), transparent 70%);
-  --ft-grain-opacity: 0.032;
+  --ft-bg: #EAECEF;
+  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #F8FAFC 0%, #E2E8F0 80%);
+  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.02), transparent 70%);
+  --ft-bg-grid: radial-gradient(circle, rgba(15, 23, 42, 0.12) 1.2px, transparent 1.2px);
+  --ft-grid-size: 28px 28px;
+  --ft-grain-opacity: 0.02;
   --ft-surface: #FFFFFF;
-  --ft-surface-soft: #F1F1EE;
+  --ft-surface-soft: #F1F4F8;
   --ft-surface-elevated: #FFFFFF;
-  --ft-surface-hover: #FAFAF8;
-  --ft-overlay: rgba(21, 25, 30, 0.42);
+  --ft-surface-hover: #F8FAFC;
+  --ft-overlay: rgba(15, 23, 42, 0.45);
 
-  --ft-text-primary: #15191E;
-  --ft-text-secondary: #6D747C;
-  --ft-text-muted: #9AA0A7;
+  --ft-text-primary: #0F172A;
+  --ft-text-secondary: #334155;
+  --ft-text-muted: #64748B;
   --ft-text-inverse: #FFFFFF;
 
-  --ft-graphite: #15191E;
-  --ft-border: #E3E3DE;
-  --ft-border-subtle: #EDEDE8;
-  --ft-border-hover: #CFCFC8;
+  --ft-graphite: #0F172A;
+  --ft-border: #CBD5E1;
+  --ft-border-subtle: #E2E8F0;
+  --ft-border-hover: #94A3B8;
+  --ft-border-header: #94A3B8;
 
   --ft-emerald: #E56515;
   --ft-emerald-hover: #C9540E;
-  --ft-emerald-soft: rgba(229, 101, 21, 0.075);
-  --ft-emerald-border: rgba(229, 101, 21, 0.24);
+  --ft-emerald-soft: rgba(229, 101, 21, 0.08);
+  --ft-emerald-border: rgba(229, 101, 21, 0.35);
 
   --ft-mint: #FBA45C;
-  --ft-mint-soft: rgba(251, 164, 92, 0.14);
+  --ft-mint-soft: rgba(251, 164, 92, 0.16);
 
   --ft-coral: #B4472F;
-  --ft-coral-soft: rgba(180, 71, 47, 0.09);
+  --ft-coral-soft: rgba(180, 71, 47, 0.10);
 
-  --ft-lavender: #6D747C;
-  --ft-lavender-soft: rgba(109, 116, 124, 0.10);
+  --ft-lavender: #475569;
+  --ft-lavender-soft: rgba(71, 85, 105, 0.10);
 
-  --ft-champagne: #6D747C;
-  --ft-champagne-soft: rgba(109, 116, 124, 0.10);
+  --ft-champagne: #475569;
+  --ft-champagne-soft: rgba(71, 85, 105, 0.10);
 
-  --ft-male: #8A9099;
-  --ft-female: #C08161;
+  --ft-male: #475569;
+  --ft-female: #785E50;
 
-  /* Solid-fill accent for primary actions. Deliberately identical in both
-     themes so a filled button always reads as Medida orange and never
-     washes out to white behind its white label. */
   --ft-accent: #E56515;
   --ft-accent-hover: #C9540E;
   --ft-accent-active: #B04A0B;
@@ -76,80 +76,81 @@
   --ft-accent-tint: #FBA45C;
 
   --ft-selected-border: #E56515;
-  --ft-selected-bg: #FFFCFA;
-  --ft-selected-glow: rgba(229, 101, 21, 0.16);
-  --ft-selected-bloom: rgba(229, 101, 21, 0.13);
+  --ft-selected-bg: #FFFFFF;
+  --ft-selected-glow: rgba(229, 101, 21, 0.25);
+  --ft-selected-bloom: rgba(229, 101, 21, 0.20);
 
-  --ft-related-border: rgba(229, 101, 21, 0.42);
-  --ft-related-bg: #FFFDFB;
+  --ft-related-border: rgba(229, 101, 21, 0.55);
+  --ft-related-bg: #FFFBF8;
 
-  --ft-line-color: #D2D2CB;
-  --ft-line-connected: #ABABA2;
-  --ft-line-spouse: rgba(229, 101, 21, 0.55);
+  --ft-line-color: #64748B;
+  --ft-line-connected: #475569;
+  --ft-line-spouse: #E56515;
   --ft-line-active-start: #E56515;
   --ft-line-active-end: #FBA45C;
 
-  --ft-gen-band: rgba(21, 25, 30, 0.003);
+  --ft-gen-band: rgba(15, 23, 42, 0.02);
 
-  --ft-status-alive: #4C8C5A;
-  --ft-status-alive-bg: rgba(76, 140, 90, 0.10);
-  --ft-status-deceased: #9AA0A7;
-  --ft-status-deceased-bg: rgba(154, 160, 167, 0.12);
+  --ft-status-alive: #10B981;
+  --ft-status-alive-bg: rgba(16, 185, 129, 0.12);
+  --ft-status-deceased: #94A3B8;
+  --ft-status-deceased-bg: rgba(148, 163, 184, 0.15);
 
-  --ft-shadow-xs: 0 1px 2px rgba(21, 25, 30, 0.04);
-  --ft-shadow-sm: 0 1px 3px rgba(21, 25, 30, 0.06), 0 1px 2px rgba(21, 25, 30, 0.03);
-  --ft-shadow-md: 0 4px 16px -2px rgba(21, 25, 30, 0.07), 0 2px 6px -2px rgba(21, 25, 30, 0.03);
-  --ft-shadow-lg: 0 18px 44px -8px rgba(21, 25, 30, 0.13), 0 4px 12px -2px rgba(21, 25, 30, 0.05);
-  --ft-shadow-plaque: 0 1px 2px rgba(21, 25, 30, 0.05), 0 6px 16px -8px rgba(21, 25, 30, 0.10);
-  --ft-shadow-plaque-hover: 0 2px 4px rgba(21, 25, 30, 0.05), 0 16px 32px -12px rgba(21, 25, 30, 0.16);
+  --ft-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --ft-shadow-sm: 0 2px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ft-shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.10), 0 2px 6px -2px rgba(15, 23, 42, 0.05);
+  --ft-shadow-lg: 0 18px 44px -8px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  --ft-shadow-plaque: 0 3px 12px -1px rgba(15, 23, 42, 0.10), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --ft-shadow-plaque-hover: 0 14px 32px -4px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
   --ft-shadow-card: var(--ft-shadow-plaque);
   --ft-shadow-card-hover: var(--ft-shadow-plaque-hover);
 }
 
 /* ── Dark Mode Tokens (Deep Ink) ──────────────────────────── */
 [data-theme="dark"] {
-  --ft-bg: #0D1115;
-  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #171C21 0%, #0D1115 66%);
-  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.025), transparent 70%);
-  --ft-grain-opacity: 0.045;
-  --ft-surface: #171C21;
-  --ft-surface-soft: #1E252C;
-  --ft-surface-elevated: #1E252C;
-  --ft-surface-hover: #232B33;
-  --ft-overlay: rgba(5, 7, 10, 0.72);
+  --ft-bg: #090D14;
+  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #141C26 0%, #090D14 75%);
+  --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.03), transparent 70%);
+  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1.2px, transparent 1.2px);
+  --ft-grid-size: 28px 28px;
+  --ft-grain-opacity: 0.03;
+  --ft-surface: #141C26;
+  --ft-surface-soft: #1A2432;
+  --ft-surface-elevated: #222F40;
+  --ft-surface-hover: #1E2837;
+  --ft-overlay: rgba(3, 7, 13, 0.78);
 
-  --ft-text-primary: #F7F7F5;
-  --ft-text-secondary: #9AA2A9;
-  --ft-text-muted: #757D85;
-  --ft-text-inverse: #0D1115;
+  --ft-text-primary: #F1F5F9;
+  --ft-text-secondary: #94A3B8;
+  --ft-text-muted: #64748B;
+  --ft-text-inverse: #090D14;
 
-  --ft-graphite: #0D1115;
-  --ft-border: #262E36;
-  --ft-border-subtle: #1E252C;
-  --ft-border-hover: #38424C;
+  --ft-graphite: #090D14;
+  --ft-border: rgba(255, 255, 255, 0.15);
+  --ft-border-subtle: rgba(255, 255, 255, 0.08);
+  --ft-border-hover: rgba(255, 255, 255, 0.32);
+  --ft-border-header: rgba(255, 255, 255, 0.25);
 
   --ft-emerald: #FBA45C;
   --ft-emerald-hover: #FFB776;
-  --ft-emerald-soft: rgba(251, 164, 92, 0.10);
-  --ft-emerald-border: rgba(251, 164, 92, 0.26);
+  --ft-emerald-soft: rgba(251, 164, 92, 0.12);
+  --ft-emerald-border: rgba(251, 164, 92, 0.35);
 
   --ft-mint: #FBA45C;
-  --ft-mint-soft: rgba(251, 164, 92, 0.15);
+  --ft-mint-soft: rgba(251, 164, 92, 0.18);
 
   --ft-coral: #E0715A;
-  --ft-coral-soft: rgba(224, 113, 90, 0.14);
+  --ft-coral-soft: rgba(224, 113, 90, 0.16);
 
-  --ft-lavender: #9AA2A9;
-  --ft-lavender-soft: rgba(154, 162, 169, 0.12);
+  --ft-lavender: #94A3B8;
+  --ft-lavender-soft: rgba(148, 163, 184, 0.12);
 
-  --ft-champagne: #9AA2A9;
-  --ft-champagne-soft: rgba(154, 162, 169, 0.12);
+  --ft-champagne: #94A3B8;
+  --ft-champagne-soft: rgba(148, 163, 184, 0.12);
 
-  --ft-male: #7C858E;
-  --ft-female: #C98467;
+  --ft-male: #94A3B8;
+  --ft-female: #A08B7E;
 
-  /* Same solid accent as light mode — a filled primary button must stay
-     unmistakably orange, not the pale tint used for text and strokes. */
   --ft-accent: #E56515;
   --ft-accent-hover: #F0761E;
   --ft-accent-active: #C9540E;
@@ -157,32 +158,32 @@
   --ft-accent-tint: #FBA45C;
 
   --ft-selected-border: #FBA45C;
-  --ft-selected-bg: #1C1F21;
-  --ft-selected-glow: rgba(251, 164, 92, 0.20);
-  --ft-selected-bloom: rgba(251, 164, 92, 0.16);
+  --ft-selected-bg: #1B232D;
+  --ft-selected-glow: rgba(251, 164, 92, 0.32);
+  --ft-selected-bloom: rgba(251, 164, 92, 0.22);
 
-  --ft-related-border: rgba(251, 164, 92, 0.40);
-  --ft-related-bg: #1A1E22;
+  --ft-related-border: rgba(251, 164, 92, 0.50);
+  --ft-related-bg: #19202A;
 
-  --ft-line-color: #2B333B;
-  --ft-line-connected: #46515C;
-  --ft-line-spouse: rgba(251, 164, 92, 0.50);
+  --ft-line-color: #5A6878;
+  --ft-line-connected: #78879A;
+  --ft-line-spouse: #F97316;
   --ft-line-active-start: #FBA45C;
   --ft-line-active-end: #E56515;
 
-  --ft-gen-band: rgba(247, 247, 245, 0.003);
+  --ft-gen-band: rgba(255, 255, 255, 0.02);
 
-  --ft-status-alive: #5FA86F;
-  --ft-status-alive-bg: rgba(95, 168, 111, 0.15);
-  --ft-status-deceased: #6B747C;
-  --ft-status-deceased-bg: rgba(107, 116, 124, 0.18);
+  --ft-status-alive: #10B981;
+  --ft-status-alive-bg: rgba(16, 185, 129, 0.18);
+  --ft-status-deceased: #94A3B8;
+  --ft-status-deceased-bg: rgba(148, 163, 184, 0.18);
 
-  --ft-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
-  --ft-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --ft-shadow-md: 0 4px 18px rgba(0, 0, 0, 0.42);
-  --ft-shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.58);
-  --ft-shadow-plaque: 0 1px 2px rgba(0, 0, 0, 0.34), 0 8px 20px -10px rgba(0, 0, 0, 0.5);
-  --ft-shadow-plaque-hover: 0 2px 4px rgba(0, 0, 0, 0.36), 0 18px 36px -14px rgba(0, 0, 0, 0.62);
+  --ft-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --ft-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.40);
+  --ft-shadow-md: 0 6px 20px -2px rgba(0, 0, 0, 0.55);
+  --ft-shadow-lg: 0 24px 52px rgba(0, 0, 0, 0.70);
+  --ft-shadow-plaque: 0 4px 18px -2px rgba(0, 0, 0, 0.60), 0 1px 4px rgba(0, 0, 0, 0.40);
+  --ft-shadow-plaque-hover: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 4px 12px -2px rgba(0, 0, 0, 0.45);
   --ft-shadow-card: var(--ft-shadow-plaque);
   --ft-shadow-card-hover: var(--ft-shadow-plaque-hover);
 }
@@ -928,8 +929,8 @@ button {
   user-select: none;
   -webkit-user-select: none;
   background-color: var(--ft-bg);
-  background-image: var(--ft-bg-warmth), var(--ft-bg-ambient);
-  background-size: 100% 100%;
+  background-image: var(--ft-bg-grid), var(--ft-bg-warmth), var(--ft-bg-ambient);
+  background-size: var(--ft-grid-size, 28px 28px), 100% 100%, 100% 100%;
 }
 
 .ft-canvas::after {
@@ -968,25 +969,24 @@ button {
 
 .ft-canvas__generation-row {
   position: absolute;
-  left: -2400px;
-  right: -2400px;
-  border-top: 1px dashed color-mix(in srgb, var(--ft-border) 18%, transparent);
+  left: -4000px;
+  right: -4000px;
+  border-top: 1px dashed var(--ft-border);
   background: transparent;
   pointer-events: none;
+  opacity: 0.65;
 }
 
 .ft-canvas__generation-badge {
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 10px 0 0;
-  background: transparent;
-  border-radius: 0;
-  box-shadow: none;
-  border: none;
-  border-left: 2px solid var(--ft-accent);
-  padding-left: 9px;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--ft-surface);
+  border: 1px solid var(--ft-border);
+  border-radius: 9999px;
+  box-shadow: var(--ft-shadow-sm);
   pointer-events: none;
   white-space: nowrap;
 }
@@ -1017,40 +1017,42 @@ button {
 
 .ft-canvas__line {
   fill: none;
-  transition: stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease;
+  stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4.5px);
+  transition: stroke 0.3s ease, opacity 0.3s ease;
 }
 
 .ft-canvas__line--parent {
   stroke: var(--ft-line-color);
-  stroke-width: 1.5px;
+  stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4.5px);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .ft-canvas__line--spouse {
   stroke: var(--ft-line-spouse);
-  stroke-width: 1.5px;
+  stroke-width: clamp(2.2px, calc(2px / var(--canvas-scale, 1)), 5px);
   stroke-linecap: round;
 }
 
 .ft-canvas__line--sibling {
   stroke: var(--ft-line-color);
-  stroke-width: 1.5px;
+  stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4.5px);
   stroke-linecap: round;
-  stroke-dasharray: 6 4;
+  stroke-dasharray: 6 5;
 }
 
 .ft-canvas__spouse-ring {
   fill: var(--ft-surface);
   stroke: var(--ft-line-spouse);
-  stroke-width: 1.5px;
+  stroke-width: clamp(1.8px, calc(1.6px / var(--canvas-scale, 1)), 3.5px);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25));
   transition: all 0.3s ease;
 }
 
 /* Active Highlighted Connections — localized Medida orange accent */
 .ft-canvas__line--active {
   stroke: var(--ft-accent) !important;
-  stroke-width: 2px !important;
+  stroke-width: clamp(2.8px, calc(2.4px / var(--canvas-scale, 1)), 5.5px) !important;
   opacity: 1 !important;
 }
 
@@ -1066,13 +1068,14 @@ button {
 
 .ft-canvas__spouse-ring--active {
   fill: var(--ft-accent) !important;
-  stroke: var(--ft-surface) !important;
-  r: 4.5px !important;
+  stroke: #FFFFFF !important;
+  r: 5px !important;
+  filter: drop-shadow(0 0 6px var(--ft-accent)) !important;
 }
 
 /* Muted connector state: remains clearly visible and continuous */
 .ft-canvas__line--dimmed {
-  opacity: 0.38 !important;
+  opacity: 0.45 !important;
 }
 
 /* ── Modern Profile Object Cards ──────────────────────────── */
@@ -1095,23 +1098,23 @@ button {
   display: flex;
   align-items: center;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 6px;
   width: 230px;
   height: 160px;
-  padding: 12px 12px 10px;
+  padding: 12px 14px;
   background: var(--ft-surface);
-  border: 1px solid var(--ft-border);
+  border: 1.5px solid var(--ft-border);
   border-radius: 12px;
-  border-top: 2px solid var(--ft-border);
+  border-top: 3.5px solid var(--ft-border-header, var(--ft-border));
   box-shadow: var(--ft-shadow-card);
   cursor: pointer;
   position: relative;
   overflow: visible;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.25s ease,
-              background-color 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s ease,
+              background-color 0.2s ease;
   animation: ftNodeEntrance 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   
   /* Strictly synchronized with NODE_WIDTH = 230 and NODE_HEIGHT = 160 */
@@ -1128,9 +1131,9 @@ button {
 }
 
 .ft-person-card:hover {
-  border-color: var(--ft-emerald);
+  border-color: var(--ft-accent);
   box-shadow: var(--ft-shadow-card-hover);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   background: var(--ft-surface-hover);
 }
 
@@ -1142,39 +1145,40 @@ button {
 /* Selected State — Medida orange edge, soft halo, gentle lift */
 .ft-person-card--selected {
   border-color: var(--ft-accent) !important;
+  border-top-color: var(--ft-accent) !important;
   background: var(--ft-selected-bg) !important;
-  box-shadow: 0 0 0 4px var(--ft-selected-glow), var(--ft-shadow-card-hover) !important;
-  transform: translateY(-4px) scale(1.06) !important;
+  box-shadow: 0 0 0 3px var(--ft-accent), var(--ft-shadow-card-hover) !important;
+  transform: translateY(-4px) scale(1.03) !important;
   z-index: 15;
 }
 
 .ft-person-card--selected .ft-person-card__avatar {
   border-color: var(--ft-accent);
-  box-shadow: 0 0 0 3px var(--ft-accent), 0 0 16px var(--ft-selected-glow);
-  transform: scale(1.06);
+  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 4.5px var(--ft-accent), 0 0 16px var(--ft-selected-glow);
+  transform: scale(1.05);
 }
 
 .ft-person-card--selected .ft-person-card__name {
   color: var(--ft-text-primary);
-  font-weight: 900; /* Enhanced weight */
-  letter-spacing: -0.005em;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .ft-person-card__selected-crown {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -5px;
+  right: -5px;
   pointer-events: none;
 }
 
 .ft-person-card__selected-beacon {
   display: block;
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--ft-selected-border);
-  box-shadow: 0 0 8px var(--ft-selected-border);
-  border: 1.5px solid var(--ft-surface);
+  box-shadow: 0 0 10px var(--ft-selected-border);
+  border: 2px solid var(--ft-surface);
   animation: ftBeaconPulse 2.2s ease-in-out infinite;
 }
 
@@ -1201,13 +1205,12 @@ button {
 .ft-person-card--related {
   border-color: var(--ft-related-border);
   background: var(--ft-related-bg);
-  box-shadow: 0 0 0 2px var(--ft-emerald-soft), var(--ft-shadow-card);
-  /* When connected to selected person, enhance brightness */
-  opacity: 0.96;
+  box-shadow: 0 0 0 2px var(--ft-emerald-border), var(--ft-shadow-card);
+  opacity: 1;
   transform: scale(1.01);
 }
 
-/* Constellation Hierarchy Tiers - Enhanced for visual focal point */
+/* Constellation Hierarchy Tiers — Preserving readability across all branches */
 .ft-person-card--tier-immediate {
   opacity: 1;
   transform: scale(1.02);
@@ -1215,35 +1218,35 @@ button {
 }
 
 .ft-person-card--tier-sibling {
-  opacity: 0.92;
-  transform: scale(0.98);
+  opacity: 0.96;
 }
 
 .ft-person-card--tier-extended {
-  opacity: 0.96;
-  transform: scale(1.0);
+  opacity: 0.94;
   border-color: var(--ft-related-border);
   box-shadow: 0 0 0 1.5px var(--ft-emerald-soft), var(--ft-shadow-card);
 }
 
 .ft-person-card--tier-unrelated {
-  opacity: 0.5;
-  transform: scale(0.9);
+  opacity: 0.82;
+  transform: scale(0.98);
 }
 
 .ft-person-card--tier-unrelated:hover {
-  opacity: 0.95;
-  transform: translateY(-2px);
+  opacity: 1;
+  transform: translateY(-3px);
 }
 
 .ft-person-card--dimmed {
-  opacity: 0.25; /* Even softer for unrelated branches */
-  transform: scale(0.95);
-  filter: brightness(0.9) saturate(0.9);
+  opacity: 0.75;
+  transform: scale(0.98);
+  filter: brightness(0.96);
 }
 
 .ft-person-card--dimmed:hover {
-  opacity: 0.90;
+  opacity: 1;
+  filter: brightness(1);
+  transform: translateY(-3px);
 }
 
 .ft-person-card__relation-pill {
@@ -1258,7 +1261,7 @@ button {
   background: var(--ft-accent);
   padding: 2px 8px;
   border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   animation: ftPillPop 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
   z-index: 10;
 }
@@ -1276,30 +1279,31 @@ button {
 }
 
 .ft-person-card__avatar {
-  width: 60px; /* Reduced avatar size */
-  height: 60px; /* Reduced avatar size */
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--ft-shadow-xs);
-  border: 1.5px solid var(--ft-border);
+  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 3.5px var(--ft-border);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 0.25s ease,
-              border-color 0.25s ease;
+              box-shadow 0.25s ease;
   overflow: hidden;
-  background: var(--ft-surface-soft);
+  position: relative;
 }
 
 .ft-person-card:hover .ft-person-card__avatar {
-  transform: scale(1.04);
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px var(--ft-surface), 0 0 0 4px var(--ft-accent);
 }
 
 .ft-person-card__initials {
-  font-size: 0.9rem; /* Slightly reduced for smaller avatar */
-  font-weight: 700;
+  font-family: var(--ft-font-body);
+  font-size: 1.05rem;
+  font-weight: 800;
   color: #ffffff;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
 .ft-person-card__photo {
@@ -1311,91 +1315,114 @@ button {
 
 .ft-person-card__status-dot {
   position: absolute;
-  bottom: 1px;
+  bottom: 0px;
   right: 0px;
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   border: 2px solid var(--ft-surface);
+  box-sizing: content-box;
 }
 
 .ft-person-card__status-dot--alive {
   background-color: var(--ft-status-alive);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
 .ft-person-card__status-dot--deceased {
   background-color: var(--ft-status-deceased);
 }
 
-/* Typography Block — names read fully, nothing is clipped mid-word */
+/* Typography Block — names read crisp and clear at all zoom scales */
 .ft-person-card__info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   width: 100%;
   text-align: center;
 }
 
 .ft-person-card__name {
-  font-family: var(--ft-font-display);
-  font-size: 1.05rem; /* Keep highly readable */
-  font-weight: 800; /* Increased weight for better readability */
-  letter-spacing: -0.01em;
+  font-family: var(--ft-font-body);
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
   color: var(--ft-text-primary);
-  line-height: 1.28;
+  line-height: 1.25;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   transition: color 0.15s ease;
 }
 
 .ft-person-card__dates {
   font-family: var(--ft-font-mono);
-  font-size: 0.72rem; /* Slightly reduced */
-  font-weight: 500;
+  font-size: 0.70rem;
+  font-weight: 600;
   color: var(--ft-text-secondary);
-  margin-top: 2px; /* Reduced margin */
+  margin-top: 3px;
+  padding: 2px 8px;
+  background: var(--ft-surface-soft);
+  border: 1px solid var(--ft-border-subtle);
+  border-radius: 9999px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  display: inline-block;
 }
 
 .ft-person-card__occupation {
-  font-size: 0.68rem; /* Reduced */
-  line-height: 1.3;
+  font-family: var(--ft-font-body);
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.25;
   color: var(--ft-text-muted);
-  margin-top: 2px; /* Reduced margin */
+  margin-top: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* Reduced lines to save space */
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
   overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  max-width: 96%;
 }
 
-/* Subtle Gender Indicator Bar */
+/* Subtle Gender Indicator Bar along the top rim (restrained, brand-aligned) */
 .ft-person-card__gender-bar {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 0;
-  bottom: auto;
-  width: auto;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  opacity: 0.55;
+  display: none;
 }
 
-.ft-person-card--ancestor .ft-person-card__avatar { width: 76px; height: 76px; border-width: 2px; }
-.ft-person-card--parent .ft-person-card__avatar { width: 72px; height: 72px; }
-.ft-person-card--child { background: color-mix(in srgb, var(--ft-surface) 88%, transparent); }
-.ft-person-card--child .ft-person-card__avatar { width: 64px; height: 64px; }
-.ft-person-card--child .ft-person-card__name { font-size: 0.96rem; }
-
-.ft-person-card__gender-bar--male {
-  background-color: var(--ft-male);
+/* ── Low-Zoom Readability Enhancements (scale < 55%) ──────── */
+.ft-canvas--compact-zoom .ft-person-card {
+  border-width: clamp(1.5px, calc(1.2px / var(--canvas-scale, 1)), 3px);
+  border-top-width: clamp(3.5px, calc(2.8px / var(--canvas-scale, 1)), 7px);
 }
 
-.ft-person-card__gender-bar--female {
-  background-color: var(--ft-female);
+.ft-canvas--compact-zoom .ft-person-card__occupation {
+  display: none !important;
+}
+
+.ft-canvas--compact-zoom .ft-person-card__name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.22;
+  -webkit-line-clamp: 2;
+  letter-spacing: -0.01em;
+}
+
+.ft-canvas--compact-zoom .ft-person-card__dates {
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 2px 10px;
+}
+
+.ft-canvas--compact-zoom .ft-person-card__initials {
+  font-size: 1.2rem;
+  font-weight: 800;
 }
 
 /* ── Floating Zoom & Reset Tools ─────────────────────────── */
@@ -1608,7 +1635,7 @@ button {
 }
 
 .ft-minimap__bg {
-  fill: color-mix(in srgb, var(--ft-surface) 95%, #000);
+  fill: var(--ft-surface-soft);
 }
 
 .ft-minimap__node {
@@ -1624,9 +1651,9 @@ button {
 .ft-minimap__node--gen-4 { fill: #ec4899; opacity: 0.85; }
 
 .ft-minimap__node--selected {
-  fill: #ef4444 !important;
+  fill: var(--ft-accent) !important;
   opacity: 1 !important;
-  filter: drop-shadow(0 0 3px #ef4444);
+  filter: drop-shadow(0 0 3px var(--ft-accent));
 }
 
 .ft-minimap__viewport {

@@ -10,7 +10,17 @@ import HowItWorksSection from './HowItWorksSection.jsx';
 import PrivacySection from './PrivacySection.jsx';
 import FinalCTA from './FinalCTA.jsx';
 import LandingFooter from './LandingFooter.jsx';
+import ScrollProgress from '../rare-ui/ScrollProgress.jsx';
 import './landing.css';
+
+const LANDING_SECTIONS = [
+  { id: 'hero', label: 'Story' },
+  { id: 'product-preview', label: 'Preview' },
+  { id: 'features', label: 'Features' },
+  { id: 'how-it-works', label: 'How It Works' },
+  { id: 'privacy', label: 'Privacy' },
+];
+
 
 /**
  * Public Landing Page — "Anvaya FamilyTree"
@@ -166,6 +176,13 @@ export default function LandingPage() {
         <LandingFooter onNavigate={scrollToSection} />
       </div>
 
+      {/* Rare UI Interactive Scroll Progress Navigator */}
+      <ScrollProgress
+        sections={LANDING_SECTIONS}
+        containerRef={scrollRef}
+        onNavigateSection={scrollToSection}
+      />
+
       {/* Scroll-to-top — sticky within the landing scroll container */}
       <button
         type="button"
@@ -185,3 +202,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

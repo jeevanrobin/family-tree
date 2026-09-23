@@ -8,6 +8,8 @@
 import React, { useMemo } from 'react';
 import { analyzeFamily } from '../../insights/familyInsightsEngine.js';
 import UserProfileMenu from '../UserProfileMenu.jsx';
+import AnimatedCounter from '../rare-ui/AnimatedCounter.jsx';
+
 
 export default function FamilyInsightsView({
   store,
@@ -123,7 +125,9 @@ export default function FamilyInsightsView({
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && onNavigateToTree && onNavigateToTree()}
             >
-              <span className="ft-insights-metric-card__num">{overview.totalPeople}</span>
+              <span className="ft-insights-metric-card__num">
+                <AnimatedCounter value={overview.totalPeople} />
+              </span>
               <span className="ft-insights-metric-card__label">Family Members</span>
               <span className="ft-insights-metric-card__sub">{overview.livingMembers} living · {overview.deceasedMembers} ancestral</span>
             </div>
@@ -135,7 +139,9 @@ export default function FamilyInsightsView({
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && onNavigateToArchive && onNavigateToArchive()}
             >
-              <span className="ft-insights-metric-card__num">{overview.photoCount}</span>
+              <span className="ft-insights-metric-card__num">
+                <AnimatedCounter value={overview.photoCount} />
+              </span>
               <span className="ft-insights-metric-card__label">Photographs</span>
               <span className="ft-insights-metric-card__sub">{coverage.photoCoveragePercent}% of family pictured</span>
             </div>
@@ -147,7 +153,9 @@ export default function FamilyInsightsView({
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && onNavigateToMemories && onNavigateToMemories()}
             >
-              <span className="ft-insights-metric-card__num">{overview.storyCount}</span>
+              <span className="ft-insights-metric-card__num">
+                <AnimatedCounter value={overview.storyCount} />
+              </span>
               <span className="ft-insights-metric-card__label">Oral Stories</span>
               <span className="ft-insights-metric-card__sub">{coverage.storyCoveragePercent}% members documented</span>
             </div>
@@ -159,7 +167,9 @@ export default function FamilyInsightsView({
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && onNavigateToTimeline && onNavigateToTimeline()}
             >
-              <span className="ft-insights-metric-card__num">{overview.eventCount}</span>
+              <span className="ft-insights-metric-card__num">
+                <AnimatedCounter value={overview.eventCount} />
+              </span>
               <span className="ft-insights-metric-card__label">Life Milestones</span>
               <span className="ft-insights-metric-card__sub">{coverage.eventCoveragePercent}% members recorded</span>
             </div>
@@ -171,13 +181,17 @@ export default function FamilyInsightsView({
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && onNavigateToArchive && onNavigateToArchive()}
             >
-              <span className="ft-insights-metric-card__num">{overview.documentCount}</span>
+              <span className="ft-insights-metric-card__num">
+                <AnimatedCounter value={overview.documentCount} />
+              </span>
               <span className="ft-insights-metric-card__label">Archival Documents</span>
               <span className="ft-insights-metric-card__sub">{coverage.documentTypes.length} categories verified</span>
             </div>
 
             <div className="ft-insights-metric-card ft-insights-metric-card--highlight">
-              <span className="ft-insights-metric-card__num">{completeness.averageCompleteness}%</span>
+              <span className="ft-insights-metric-card__num">
+                <AnimatedCounter value={completeness.averageCompleteness} suffix="%" />
+              </span>
               <span className="ft-insights-metric-card__label">Archive Completeness</span>
               <span className="ft-insights-metric-card__sub">Deterministic profile health</span>
             </div>
