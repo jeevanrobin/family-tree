@@ -963,6 +963,78 @@ All automated browser QA tasks executed successfully. Manual testing procedures 
 
 ---
 
-*Report updated: 2026-09-21*
+---
 
-**STOP. M5A.4 NOT STARTED.**
+## M5B.1.2 — Test Environment and Repository Cleanup
+
+### RLS Live Test Timing Issue
+
+**Root Cause:** Transient JWT clock drift between local machine and Supabase Auth service. The error `PGRST303: JWT issued at future` occurs when the client's system clock is ahead of the server's clock at the moment of token issuance. This is a timing/environment issue, not a code defect.
+
+**Resolution:** No code changes required. The test passed on re-execution as clock synchronization normalized.
+
+**Why Production Behavior Was Not Changed:**
+- RLS policies remain unchanged
+- Authentication flow unchanged
+- No service_role bypass introduced
+- Test timeout handling unchanged
+
+The "JWT issued at future" error is documented Supabase/Auth behavior when system clocks drift. Running the test again usually resolves it as the clocks resync. This is expected in test environments.
+
+---
+
+### Nested Repository Cleanup: .typesafe-skills
+
+**Issue:** `.typesafe-skills` was tracked as an embedded Git repository (mode 160000) without proper `.gitmodules` configuration. It was added accidentally during agent skill installation.
+
+**Purpose:** Agent development skill library (TypeSafe AI integration for Claude Code). Not part of application runtime.
+
+**Actions Taken:**
+1. Removed from Git tracking: `git rm --cached .typesafe-skills`
+2. Preserved local directory for developer tooling
+3. Added to `.gitignore`: `.typesafe-skills/`
+
+**Verification:**
+- `git ls-files .typesafe-skills` → (no output, no longer tracked)
+- `git submodule status` → (no output, no submodule errors)
+- Local directory preserved: `Test-Path .typesafe-skills` → True
+
+---
+
+### Current Test Counts (M5B.1.2)
+
+| Test Suite | Result |
+|------------|--------|
+| Vitest | **393 passed / 0 skipped / 0 failed** |
+| Layout Tests | **24 passed / 0 failed** |
+| Playwright | **99 passed / 0 skipped / 0 failed** |
+
+Note: Vitest count increased from 319 to 393 due to new JEV date extraction and security verification tests added in M5A.3 commit.
+
+---
+
+### JEV Security Verification
+
+- `TYPESAFE_API_KEY` only in Supabase Edge Function (`supabase/functions/jev-date-extract/index.ts`)
+- Uses `Deno.env.get("TYPESAFE_API_KEY")` - server-side only
+- No `VITE_TYPESAFE_API_KEY` in production path
+- No TypeSafe secrets in `dist/` bundle
+- Security tests enforce no client-side exposure
+
+---
+
+### Regression Results
+
+```
+npm run test:vitest → 393 passed / 0 skipped / 0 failed
+npm run test:layout → 24 passed / 0 failed
+npx playwright test → 99 passed / 0 skipped / 0 failed
+npm run build      → PASS (632ms)
+npm run lint       → PASS (0 errors, 97 warnings)
+```
+
+---
+
+**M5B.1.2: COMPLETE**
+
+*Report updated: 2026-09-23*

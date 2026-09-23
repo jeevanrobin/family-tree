@@ -35,3 +35,6 @@ supabase/.temp/
 test-results/
 playwright-report/
 playwright/.cache/
+
+# Agent skills (local dev tooling, not part of application)
+.typesafe-skills/
