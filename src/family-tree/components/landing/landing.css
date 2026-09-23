@@ -23,6 +23,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+[data-theme="dark"] .ft-landing {
+  --ft-text-secondary: #A8B5C2;
+}
+
 .ft-landing__inner {
   width: 100%;
   position: relative;
@@ -102,7 +106,7 @@
 
 .fl-section-sub {
   font-size: clamp(1rem, 1.6vw, 1.12rem);
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--ft-text-secondary);
 }
 
@@ -393,8 +397,9 @@
 
 .fl-hero__sub {
   font-size: clamp(1.05rem, 1.8vw, 1.2rem);
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--ft-text-secondary);
+  opacity: 0.94;
   max-width: 34rem;
   margin-bottom: 34px;
 }
@@ -614,7 +619,7 @@
 /* ── Product preview (always dark) ──────────────────────── */
 .fl-preview {
   position: relative;
-  padding: 88px 0 96px;
+  padding: 80px 0 88px;
   background: #0D1115;
   color: #F7F7F5;
   overflow: hidden;
@@ -637,19 +642,21 @@
 }
 
 .fl-preview .fl-section-sub {
-  color: #9AA2A9;
+  color: #CAD2D9;
 }
 
 .fl-preview .fl-eyebrow {
-  color: #9AA2A9;
+  color: #CAD2D9;
 }
 
 .fl-app-window {
   position: relative;
+  max-width: 1040px;
+  margin: 0 auto;
   border-radius: 18px;
   background: #171C21;
   border: 1px solid #262E36;
-  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  box-shadow: 0 32px 80px -24px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
@@ -679,7 +686,7 @@
   font-size: 0.68rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #9AA2A9;
+  color: #CAD2D9;
 }
 
 .fl-app-window__badge {
@@ -699,7 +706,7 @@
 .fl-app-window__body {
   display: grid;
   grid-template-columns: 208px minmax(0, 1fr);
-  min-height: 430px;
+  min-height: 460px;
 }
 
 /* Sidebar */
@@ -825,7 +832,7 @@
 
 .fl-app-tree {
   position: relative;
-  min-height: 360px;
+  min-height: 440px;
 }
 
 .fl-app-tree__svg {
@@ -934,9 +941,9 @@
   margin-top: 20px;
   text-align: center;
   font-family: var(--ft-font-mono);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   letter-spacing: 0.06em;
-  color: #9AA2A9;
+  color: #A6B0BA;
 }
 
 /* ── Features ───────────────────────────────────────────── */
@@ -995,9 +1002,14 @@
 }
 
 .fl-feature-card__desc {
-  font-size: 0.92rem;
-  line-height: 1.6;
+  font-size: 0.95rem;
+  line-height: 1.62;
   color: var(--ft-text-secondary);
+}
+
+.fl-feature-card__desc strong {
+  color: var(--ft-text-primary);
+  font-weight: 600;
 }
 
 .fl-features__footnote {
@@ -1014,24 +1026,28 @@
 
 /* ── How it works ───────────────────────────────────────── */
 .fl-how {
-  padding: 96px 0 104px;
+  padding: 64px 0 72px;
+}
+
+.fl-how .fl-section-head {
+  margin-bottom: 36px;
 }
 
 .fl-how__list {
   position: relative;
-  max-width: 720px;
+  max-width: 680px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 /* Vertical connector line through the steps */
 .fl-how__list::before {
   content: '';
   position: absolute;
-  top: 34px;
-  bottom: 34px;
+  top: 26px;
+  bottom: 26px;
   left: 27px;
   width: 1px;
   background: linear-gradient(
@@ -1047,9 +1063,9 @@
   position: relative;
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
-  gap: 26px;
+  gap: 24px;
   align-items: start;
-  padding: 18px 0;
+  padding: 10px 0;
 }
 
 .fl-how__num {
@@ -1079,26 +1095,63 @@
 
 .fl-how__step-title {
   font-family: var(--ft-font-display);
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: -0.01em;
-  margin: 12px 0 8px;
+  margin: 2px 0 6px;
   color: var(--ft-text-primary);
 }
 
 .fl-how__step-desc {
   font-size: 0.98rem;
-  line-height: 1.6;
+  line-height: 1.62;
   color: var(--ft-text-secondary);
   max-width: 32rem;
 }
 
 /* ── Privacy ────────────────────────────────────────────── */
 .fl-privacy {
-  padding: 96px 0 104px;
-  background: var(--ft-surface-soft);
-  border-top: 1px solid var(--ft-border-subtle);
-  border-bottom: 1px solid var(--ft-border-subtle);
+  position: relative;
+  padding: 80px 0 88px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ft-surface-soft) 35%, transparent) 0%,
+    var(--ft-surface-soft) 16%,
+    var(--ft-surface-soft) 84%,
+    color-mix(in srgb, var(--ft-surface-soft) 35%, transparent) 100%
+  );
+  border-top: 1px solid color-mix(in srgb, var(--ft-border-subtle) 80%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ft-border-subtle) 80%, transparent);
+  overflow: hidden;
+}
+
+.fl-privacy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg, var(--ft-bg) 0%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.fl-privacy::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(0deg, var(--ft-bg) 0%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.fl-privacy .fl-container {
+  position: relative;
+  z-index: 1;
 }
 
 .fl-privacy__grid {
@@ -1143,8 +1196,8 @@
 }
 
 .fl-privacy__point-desc {
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: 0.94rem;
+  line-height: 1.6;
   color: var(--ft-text-secondary);
 }
 
@@ -1153,7 +1206,7 @@
   border-radius: 18px;
   background: var(--ft-surface);
   border: 1px solid var(--ft-border);
-  box-shadow: var(--ft-shadow-lg);
+  box-shadow: var(--ft-shadow-lg), 0 0 40px -10px rgba(0, 0, 0, 0.35);
   overflow: hidden;
 }
 
@@ -1305,8 +1358,9 @@
 
 .fl-cta__sub {
   font-size: clamp(1rem, 1.6vw, 1.12rem);
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--ft-text-secondary);
+  opacity: 0.94;
   margin-bottom: 38px;
 }
 
@@ -1480,6 +1534,11 @@
 
   .fl-app-window__body {
     grid-template-columns: 64px minmax(0, 1fr);
+    min-height: 400px;
+  }
+
+  .fl-app-tree {
+    min-height: 380px;
   }
 
   .fl-app-sidebar {
@@ -1572,17 +1631,25 @@
   }
 
   .fl-features,
-  .fl-how,
   .fl-privacy {
-    padding: 68px 0;
+    padding: 60px 0;
+  }
+
+  .fl-how {
+    padding: 48px 0;
+  }
+
+  .fl-how .fl-section-head {
+    margin-bottom: 28px;
   }
 
   .fl-preview {
-    padding: 68px 0 72px;
+    padding: 60px 0 68px;
   }
 
   .fl-app-window__body {
     grid-template-columns: 52px minmax(0, 1fr);
+    min-height: 340px;
   }
 
   /* The mock tree needs horizontal room — let it pan like the real canvas. */
@@ -1592,7 +1659,8 @@
   }
 
   .fl-app-tree {
-    min-width: 520px;
+    min-width: 500px;
+    min-height: 340px;
   }
 
   .fl-person {
@@ -1605,11 +1673,14 @@
 
   .fl-how__list::before {
     left: 23px;
+    top: 22px;
+    bottom: 22px;
   }
 
   .fl-how__step {
     grid-template-columns: 48px minmax(0, 1fr);
-    gap: 18px;
+    gap: 16px;
+    padding: 8px 0;
   }
 
   .fl-how__num {

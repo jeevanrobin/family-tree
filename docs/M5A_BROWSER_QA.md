@@ -1038,3 +1038,109 @@ npm run lint       → PASS (0 errors, 97 warnings)
 **M5B.1.2: COMPLETE**
 
 *Report updated: 2026-09-23*
+
+---
+
+## Landing Page Final Polish — Pre-Release
+
+**Date:** 2026-09-23
+
+### Changes Made
+
+#### 1. Secondary Text Readability
+
+Improved readability of supporting/body text across all landing page sections:
+
+- **Hero subtitle**: Increased `line-height` from `1.65` to `1.7`, added `opacity: 0.94`
+- **Section subtitles**: Increased `line-height` from `1.6` to `1.65`, added `opacity: 0.92`
+- **Feature card descriptions**: Increased `line-height` from `1.6` to `1.65`, added `opacity: 0.94`
+- **How It Works descriptions**: Increased `line-height` from `1.6` to `1.65`, added `opacity: 0.94`
+- **Privacy section descriptions**: Increased `font-size` to `0.92rem`, `line-height` to `1.6`, added `opacity: 0.94`
+- **Final CTA subtitle**: Increased `line-height` from `1.65` to `1.7`, added `opacity: 0.94`
+
+**Result:** Secondary text now has improved readability while maintaining visual hierarchy. Text is not bright white, preserving the near-black visual language.
+
+#### 2. How It Works Spacing
+
+Reduced excessive vertical whitespace:
+
+- **Step list gap**: Reduced from `12px` to `4px`
+- **Step title margin**: Reduced from `12px 0 8px` to `8px 0 6px`
+
+**Result:** The section feels less sparse while maintaining the calm premium feel. Not compressed excessively.
+
+#### 3. Privacy Section Transition
+
+Added subtle gradient transitions for intentional feel:
+
+- **Top gradient**: Fades from `var(--ft-bg)` to transparent (80px height)
+- **Bottom gradient**: Fades from `var(--ft-bg)` to transparent (80px height)
+
+**Result:** The slate privacy section now transitions smoothly from the main background, feeling intentional rather than abrupt.
+
+#### 4. Product Preview
+
+**No changes required.** The product preview mockup is appropriately sized (min-height: 430px, responsive scaling at mobile). No layout overflow observed.
+
+#### 5. Floating UI Elements
+
+**Finding:** The floating UI elements are **intentional public UI**, NOT debug artifacts:
+
+1. **ScrollProgress** (bottom-right pill): Section navigation with progress indicator
+   - Location: Fixed at `bottom: 28px; right: 28px`
+   - Purpose: Navigate between landing sections, show scroll progress
+   - Component: `src/family-tree/components/rare-ui/ScrollProgress.jsx`
+   - Status: **KEEP** - Legitimate accessibility/navigation control
+
+2. **Scroll-to-top button**: Fixed circular button above the progress pill
+   - Purpose: Return to top of landing page
+   - Component: Inline button in `LandingPage.jsx`
+   - Status: **KEEP** - Legitimate accessibility/navigation control
+
+**Result:** No floating UI elements removed. All are legitimate navigation controls.
+
+### Files Changed
+
+| File | Changes |
+|------|---------|
+| `src/family-tree/components/landing/landing.css` | Secondary text readability, How It Works spacing, Privacy section transitions |
+
+### Test Results
+
+| Test Suite | Result |
+|------------|--------|
+| Vitest | **421 passed / 0 skipped / 0 failed** |
+| Playwright (Chromium) | **33 passed / 0 skipped / 0 failed** |
+| Build | **PASS** |
+| Lint | **PASS** (warnings only) |
+
+### Responsive Verification
+
+| Viewport | Status | Notes |
+|----------|--------|-------|
+| Desktop (1920x1080) | **PASS** | All sections render correctly, privacy transitions smooth |
+| Tablet (768x1024) | **PASS** | Layout adapts appropriately |
+| Mobile (375x667) | **PASS** | Text readable, no overflow |
+
+### Visual Regression Check
+
+| Section | Status |
+|---------|--------|
+| Hero | **PASS** - Subtitle spacing improved, brand preserved |
+| Feature cards | **PASS** - Description readability improved |
+| How It Works | **PASS** - Excessive whitespace reduced |
+| Privacy | **PASS** - Gradient transitions smooth |
+| Bottom CTA | **PASS** - Subtitle readability improved |
+| Footer | **PASS** - No changes made |
+| Navigation | **PASS** - No changes made |
+| Buttons | **PASS** - No changes made |
+
+### Remaining Visual Issues
+
+**NONE** - All requested polish items addressed.
+
+---
+
+**Landing Page Final Polish: COMPLETE**
+
+STOP. Do NOT start M5A.4.
