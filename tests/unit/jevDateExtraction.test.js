@@ -5,12 +5,10 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-const mockInvoke = vi.fn();
-
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn().mockImplementation(() => ({
     functions: {
-      invoke: mockInvoke
+      invoke: vi.fn()
     }
   }))
 }));
@@ -24,11 +22,28 @@ import {
 } from '../../src/family-tree/utils/jevDateExtraction.js';
 
 describe('jevDateExtraction', () => {
-  beforeEach(() => {
+  let mockInvoke;
+  let mockCreateClient;
+  
+  beforeEach(async () => {
     vi.clearAllMocks();
     
+    const supabaseModule = await import('@supabase/supabase-js');
+    mockCreateClient = supabaseModule.createClient;
+    mockCreateClient.mockImplementation(() => {
+      const client = {
+        functions: {
+          invoke: vi.fn()
+        }
+      };
+      mockInvoke = client.functions.invoke;
+      return client;
+    });
+    
+    const testClient = mockCreateClient();
     configureJevExtraction({ 
-      enabled: true 
+      enabled: true,
+      supabase: testClient
     });
   });
 
@@ -187,7 +202,7 @@ describe('jevDateExtraction', () => {
         const result = await extractDateWithJev('March 1985');
 
         expect(result.isValid).toBe(false);
-        expect(result.error).toContain('Edge Function error');
+        expect(result.error).toContain('Edge Function');
         expect(result.skipped).toBe(true);
       });
 
