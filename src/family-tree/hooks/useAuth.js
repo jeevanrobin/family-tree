@@ -51,6 +51,13 @@ export function useAuth() {
   // Listen for auth state changes
   useEffect(() => {
     const result = authService.onAuthStateChange((event, session) => {
+      // Ignore TOKEN_REFRESHED events - these happen frequently on tab focus
+      // and don't require re-fetching user data (session is still valid)
+      if (event === 'TOKEN_REFRESHED') {
+        setSession(session);
+        return; // Don't re-fetch user on token refresh
+      }
+
       setSession(session);
       
       if (session) {
