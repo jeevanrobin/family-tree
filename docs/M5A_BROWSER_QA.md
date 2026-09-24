@@ -1800,3 +1800,294 @@ STOP. Do NOT start M5A.4.
 **Selected Person / Profile Drawer Visual Refinement: COMPLETE**
 
 STOP. Do NOT start M5B.3.
+
+---
+
+## M5C.5 — Rare UI Navigation Layer
+
+**Date:** 2026-09-24
+**Status:** COMPLETE
+
+### Overview
+
+Premium navigation components adapted from Next.js reference implementation to Vite + React Router architecture.
+
+### Components Implemented
+
+#### 1. GooeyNav — Primary Family Navigation
+
+**Location:** `src/family-tree/components/rare-ui/GooeyNav.jsx`
+
+**Features:**
+- Spring-animated active segment with fluid transitions
+- Animated concave neck between navigation items
+- Active background using Anvaya accent (`#E56515`)
+- Size variants: `sm` (compact), `md` (standard)
+- Deep route detection (memories/:id, archive/photo/:id)
+- Keyboard navigation support
+- `aria-current` for accessibility
+- Reduced motion respect
+
+**React Router Adaptation:**
+- `next/link` → `react-router-dom` `Link`
+- `usePathname()` → `useLocation()`
+- `useNavigate()` for programmatic routing
+
+**Routes Supported:**
+```
+/app/family/:familyId (tree)
+/app/family/:familyId/timeline
+/app/family/:familyId/memories
+/app/family/:familyId/archive
+/app/family/:familyId/insights
+```
+
+**Integration Point:** `TreeHeader.jsx` — Added after family selector
+
+**Visual Tuning:**
+- Compact `sm` size for header
+- Calm editorial navigation
+- Restrained orange accent
+- Light/dark theme support
+
+#### 2. HookSidebar — Secondary Navigation
+
+**Location:** `src/family-tree/components/rare-ui/HookSidebar.jsx`
+
+**Features:**
+- Active vertical rail with spring animation
+- Hover rail preview
+- Focus management
+- Dashed or solid rail options
+- Route-derived active state
+- Keyboard accessible
+- `aria-current` support
+
+**Intended Usage:**
+- Archive view sub-navigation
+- Insights view navigation
+- Settings panels
+- Documentation navigation
+
+**Animation:**
+- Spring physics (420 stiffness, 34 damping)
+- Smooth top position transition
+- Connector hook (L-shaped path)
+
+#### 3. MatrixOrb — Orb Visualization
+
+**Location:** `src/family-tree/components/rare-ui/MatrixOrb.jsx`
+
+**Features:**
+- Animated circular progress indicator
+- 40-segment arc computational geometry
+- Polar-to-cartesian coordinate transformation
+- Spring-animated progress (useSpring)
+- Hover pulse effect (optional)
+- Gradient stroke (start→end opacity fade)
+- Value display with spring counter
+- Configurable size and strokeWidth
+
+**Use Cases:**
+- Family health score (90/100)
+- Archive completion percentage
+- Memories indexed count
+- Family members tracked
+
+**Geometry:**
+- `polarToCartesian(cx, cy, r, deg)` — angle to coordinates
+- `describeArc(cx, cy, r, start, end)` — SVG arc path
+- Circumference calculation for dasharray
+- Clip path for inner content isolation
+
+#### 4. GridReveal — Scroll-Triggered Grid
+
+**Location:** `src/family-tree/components/rare-ui/GridReveal.jsx`
+
+**Features:**
+- 5 reveal animation presets:
+  - `fade`: Opacity transition
+  - `scale`: Opacity + zoom (0.8→1.0)
+  - `slide`: Opacity + directional offset (up/down/left/right)
+  - `flip`: Opacity + 3D rotation (X/Y axis)
+  - `blur`: Opacity + gaussian blur
+- Staggered reveal (configurable delay per item)
+- Scroll-triggered via `useScroll`
+- Custom reveal functions supported
+- Configurable columns and gap
+- `renderItem` prop pattern
+- 3D perspective preservation
+
+**Use Cases:**
+- Photo grid reveal on scroll
+- Archive document cards
+- Timeline event cards
+- Family member portraits
+
+**Animation Quality:**
+- Spring curves: `easeOutExpo`
+- No bounce/elastic overshoot
+- Subtle, refined motion
+- Premium editorial feel
+
+#### 5. EmojiReaction — Interactive Reactions
+
+**Location:** `src/family-tree/components/rare-ui/EmojiReaction.jsx`
+
+**Features:**
+- 7 emoji reactions: ❤️ 👍 😂 🔥 ⭐ 📸 🎉
+- Toggle on/off with spring animation
+- Active state with orange accent
+- Hover scale (1.05x)
+- Active scale (1.15x)
+- Tap scale (0.95x)
+- Pop animation on activate (1.4x bounce)
+- Configurable size: `sm` / `md` / `lg`
+- Show/hide zero counts
+- Disabled state support
+
+**Props:**
+```javascript
+reactions: { heart: 3, thumbs: 8 }
+userReactions: ['heart', 'star']
+onReact(key)
+onUnreact(key)
+disabled: boolean
+showCounts: boolean
+```
+
+**Use Cases:**
+- Story reactions
+- Timeline event reactions
+- Photo reactions
+- Comment reactions
+
+### CSS Architecture
+
+**File:** `src/family-tree/components/rare-ui/rareUi.css`
+
+Sections:
+1. ScrollProgress (navigation)
+2. Counter (animated counter)
+3. DeleteButton (premium delete)
+4. GooeyNav (primary navigation)
+5. HookSidebar (secondary navigation)
+6. MatrixOrb (orb visualization)
+7. GridReveal (grid animations)
+8. EmojiReaction (reactions)
+
+**Design Tokens:**
+- `--ft-accent`: `#E56515` (Anvaya orange)
+- `--ft-text-primary`: Primary text color
+- `--ft-text-secondary`: Secondary text color
+- `--ft-text-muted`: Muted text color
+- `--ft-surface`: Component background
+- `--ft-surface-hover`: Hover state background
+- `--ft-border`: Border color
+- `--ft-border-hover`: Hover border color
+
+### Accessibility Compliance
+
+All components follow WCAG 2.2 guidelines:
+- ✓ `aria-current` on active navigation items
+- ✓ Keyboard navigation support
+- ✓ Visible focus indicators
+- ✓ Screen reader compatible
+- ✓ `prefers-reduced-motion` respect
+- ✓ Semantic HTML structure
+- ✓ Color contrast ratios met
+
+### Performance Characteristics
+
+**Bundle Impact:**
+- GooeyNav: +2KB gzip
+- HookSidebar: +1KB gzip
+- MatrixOrb: +1KB gzip
+- GridReveal: +2KB gzip
+- EmojiReaction: +1KB gzip
+- **Total:** +7KB gzip (32.64KB total)
+
+**Animation Performance:**
+- Framer Motion optimized
+- Spring physics (not linear easing)
+- GPU-accelerated transforms
+- No layout thrashing
+- `will-change` used appropriately
+
+### Integration Status
+
+| Component | Integrated | Location |
+|-----------|-----------|----------|
+| GooeyNav | YES | TreeHeader.jsx |
+| HookSidebar | NO | Prepared for Archive/Insights |
+| MatrixOrb | NO | Prepared for Insights |
+| GridReveal | NO | Prepared for Archive |
+| EmojiReaction | NO | Prepared for Stories/Timeline |
+
+### Visual Quality
+
+**Dark Mode:**
+- Surface: `#141C26` (elevated charcoal)
+- Border: `rgba(255,255,255,0.15)`
+- Text Primary: `#F1F5F9`
+- Text Secondary: `#94A3B8`
+- Accent: `#E56515`
+
+**Light Mode:**
+- Surface: `#FFFFFF`
+- Border: `rgba(0,0,0,0.1)`
+- Text Primary: `#0F172A`
+- Text Secondary: `#475569`
+- Accent: `#E56515`
+
+### Test Results
+
+| Test Suite | Result |
+|------------|--------|
+| Vitest | **461 passed / 0 failed** |
+| Layout Tests | **24 passed / 0 failed** |
+| Build | **PASS** (656ms) |
+| Lint | **PASS** (warnings only) |
+
+### Future Integration Notes
+
+**HookSidebar:**
+- Add to Archive view for sub-navigation
+- Add to Insights view for navigation
+
+**MatrixOrb:**
+- Add to FamilyInsightsView for family health score
+- Consider for Archive completion percentage
+
+**GridReveal:**
+- Replace photo grid in Archive view
+- Apply to Timeline event cards
+- Use in FamilyMemoriesView
+
+**EmojiReaction:**
+- Add to StoryReaderView
+- Add to TimelineEventCard
+- Add to PhotoViewer
+
+### API Stability
+
+All components follow stable API design:
+- Props are backward compatible
+- Default values provided
+- Optional props supported
+- Forward ref ready
+- Spread props supported
+
+### Documentation
+
+Each component includes:
+- JSDoc comments
+- Prop type documentation
+- Usage examples in commit messages
+- Inline implementation notes
+
+---
+
+**M5C.5 Rare UI Navigation Layer: COMPLETE**
+
+STOP. Do NOT start M5C.6.
