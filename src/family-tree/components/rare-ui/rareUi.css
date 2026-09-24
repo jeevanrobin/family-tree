@@ -145,66 +145,90 @@
   line-height: 1;
 }
 
-/* ── 4. Delete Button ─────────────────────────────────────── */
+/* ── 4. Delete Button Premium ─────────────────────────────── */
 [data-slot="delete-button"] {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   position: relative;
-  border-radius: 9999px;
+  border-radius: 16px;
   user-select: none;
 }
 
-.ft-delete-btn-tile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--ft-coral, #E0715A);
-  transition: color 0.2s ease, background 0.2s ease;
+.ft-delete-premium-surface {
+  background: var(--ft-surface, #141C26);
 }
 
-.ft-delete-btn-tile:hover {
-  background: var(--ft-coral-soft, rgba(224, 113, 90, 0.14));
+.ft-delete-premium-glyph {
+  color: var(--ft-text-muted, #64748B);
 }
 
-.ft-delete-btn-panel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 4px;
+.ft-delete-premium-recess {
+  background: var(--ft-surface-soft, #1A2432);
 }
 
-.ft-delete-btn-circle {
+.ft-delete-premium-notch {
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+  background: var(--ft-surface-soft, #1A2432);
+}
+
+.ft-delete-premium-focus {
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.ft-delete-premium-focus:focus-visible {
+  box-shadow: 0 0 0 2px var(--ft-accent, #E56515);
+}
+
+.ft-delete-premium-circle {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 9999px;
-  border: 1px solid var(--ft-border, #262E36);
-  background: var(--ft-surface, #15191E);
+  background: var(--ft-surface, #141C26);
+  border: 1px solid var(--ft-border, rgba(255, 255, 255, 0.15));
+  color: var(--ft-text-muted, #64748B);
   cursor: pointer;
-  transition: all 0.18s ease;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
-.ft-delete-btn-circle--confirm {
-  color: var(--ft-status-alive, #5FA86F);
-  border-color: rgba(95, 168, 111, 0.4);
-}
-.ft-delete-btn-circle--confirm:hover {
-  background: var(--ft-status-alive-bg, rgba(95, 168, 111, 0.15));
+.ft-delete-premium-circle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ft-text-primary, #F1F5F9);
 }
 
-.ft-delete-btn-circle--cancel {
-  color: var(--ft-text-muted, #757D85);
-  border-color: var(--ft-border, #262E36);
+.ft-delete-premium-circle:focus-visible {
+  box-shadow: 0 0 0 2px var(--ft-accent, #E56515);
 }
-.ft-delete-btn-circle--cancel:hover {
-  background: var(--ft-surface-hover, rgba(255, 255, 255, 0.08));
-  color: var(--ft-text-primary, #F7F7F5);
+
+/* Light theme adjustments */
+[data-theme="light"] .ft-delete-premium-surface {
+  background: var(--ft-surface, #FFFFFF);
+}
+
+[data-theme="light"] .ft-delete-premium-glyph {
+  color: var(--ft-text-muted, #475569);
+}
+
+[data-theme="light"] .ft-delete-premium-recess {
+  background: var(--ft-surface-soft, #F1F4F8);
+}
+
+[data-theme="light"] .ft-delete-premium-notch {
+  background: var(--ft-surface-soft, #F1F4F8);
+}
+
+[data-theme="light"] .ft-delete-premium-circle {
+  background: var(--ft-surface, #FFFFFF);
+  border-color: var(--ft-border, #94A3B8);
+  color: var(--ft-text-muted, #475569);
+}
+
+[data-theme="light"] .ft-delete-premium-circle:hover {
+  background: #F8FAFC;
+  color: var(--ft-text-primary, #0F172A);
 }
 
 /* ── 5. Notification Bell ─────────────────────────────────── */

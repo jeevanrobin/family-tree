@@ -1,127 +1,226 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  animate,
   AnimatePresence,
   motion,
+  useMotionTemplate,
+  useMotionValue,
   useReducedMotion,
+  useTransform,
 } from 'motion/react';
 import { cn } from '../../lib/utils.js';
-import './rareUi.css';
 
-export default function DeleteButton({
-  onConfirm,
-  onCancel,
-  title = 'Delete item',
-  confirmTitle = 'Confirm delete',
-  cancelTitle = 'Cancel',
-  size = 32,
-  className,
-  ...props
-}) {
+const HINGE = '3px 6px';
+const LID_OPEN = -35;
+const WALL_TOP = 6;
+const WALL_TOP_OPEN = 13.5;
+const WALL_BASE = 20;
+
+const TILE = 48;
+const PANEL = 84;
+const HOLD = { deleted: 1400, kept: 600 };
+
+const EASE = [0.32, 0.72, 0, 1];
+const EASE_LID = [0.34, 1.1, 0.64, 1];
+
+const WIDTH = { duration: 0.62, ease: EASE };
+const LID = { duration: 0.6, ease: EASE_LID };
+const WALL = { duration: 0.56, ease: EASE };
+const IN = { duration: 0.44, ease: EASE, delay: 0.14 };
+const OUT = { duration: 0.3, ease: EASE };
+const TAP = { duration: 0.2, ease: EASE };
+const SWAP = { duration: 0.22, ease: EASE };
+const SETTLE = { duration: 0.45, ease: EASE };
+const PRESS = {
+  type: 'spring',
+  stiffness: 520,
+  damping: 18,
+  mass: 0.5,
+};
+const INSTANT = { duration: 0 };
+
+const ANVAYA_ACCENT = '#E56515';
+
+const ICON = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  'aria-hidden': true,
+};
+
+const panelMotion = {
+  hidden: { opacity: 0, x: -6, transition: OUT },
+  shown: { opacity: 1, x: 0, transition: { ...IN, staggerChildren: 0.07 } },
+};
+
+const circleMotion = {
+  hidden: { opacity: 0, scale: 0.9, transition: OUT },
+  shown: { opacity: 1, scale: 1, transition: IN },
+};
+
+function Circle({ label, onClick, children }) {
+  const reduced = useReducedMotion() ?? false;
+
+  return (
+    <motion.div className="flex" variants={reduced ? undefined : circleMotion}>
+      <motion.button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        whileHover={reduced ? undefined : { scale: 1.03 }}
+        whileTap={reduced ? undefined : { scale: 0.84 }}
+        transition={PRESS}
+        className="ft-delete-premium-circle"
+      >
+        <svg {...ICON} width="14" height="14" stroke="currentColor" strokeWidth="3.5">
+          {children}
+        </svg>
+      </motion.button>
+    </motion.div>
+  );
+}
+
+export default function DeleteButton({ onConfirm, onCancel, className, ...props }) {
   const reduced = useReducedMotion() ?? false;
   const [open, setOpen] = useState(false);
-  const containerRef = useRef(null);
+  const [status, setStatus] = useState('idle');
+  const trigger = useRef(null);
+  const timing = (transition) => (reduced ? INSTANT : transition);
 
-  // Close confirmation if clicked outside
+  const top = useMotionValue(WALL_TOP);
+  const wall = useTransform(top, (y) => WALL_BASE - y);
+  const bin = useMotionTemplate`M19 ${top}v${wall}a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V${top}`;
+  const settle = useMotionValue(1);
+
   useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false);
-        onCancel?.();
-      }
+    const walls = animate(top, open ? WALL_TOP_OPEN : WALL_TOP, reduced ? INSTANT : WALL);
+    return () => walls.stop();
+  }, [open, reduced, top]);
+
+  useEffect(() => {
+    if (status === 'idle') return;
+    const nudge =
+      status === 'kept' && !reduced ? animate(settle, [1, 0.86, 1], SETTLE) : null;
+    const done = setTimeout(() => setStatus('idle'), HOLD[status]);
+    return () => {
+      nudge?.stop();
+      clearTimeout(done);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open, onCancel]);
+  }, [status, reduced, settle]);
 
-  const handleConfirmClick = (e) => {
-    e.stopPropagation();
+  const resolve = (next) => {
     setOpen(false);
-    onConfirm?.();
-  };
-
-  const handleCancelClick = (e) => {
-    e.stopPropagation();
-    setOpen(false);
-    onCancel?.();
-  };
-
-  const handleTriggerClick = (e) => {
-    e.stopPropagation();
-    setOpen((prev) => !prev);
+    setStatus(next);
+    trigger.current?.focus();
+    (next === 'deleted' ? onConfirm : onCancel)?.();
   };
 
   return (
-    <div
-      ref={containerRef}
+    <motion.div
       data-slot="delete-button"
-      className={cn('inline-flex items-center', className)}
+      data-state={open ? 'open' : 'closed'}
+      data-status={status}
+      className={cn('relative h-12 rounded-2xl ft-delete-premium-surface ft-delete-premium-glyph', className)}
+      animate={{ width: open ? TILE + PANEL : TILE }}
+      transition={timing(WIDTH)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && open) resolve('kept');
+      }}
       {...props}
     >
-      <AnimatePresence mode="wait" initial={false}>
-        {!open ? (
-          <motion.button
-            key="trash-trigger"
-            type="button"
-            className="ft-delete-btn-tile"
-            onClick={handleTriggerClick}
-            title={title}
-            aria-label={title}
-            style={{ width: size, height: size }}
-            whileHover={reduced ? undefined : { scale: 1.08 }}
-            whileTap={reduced ? undefined : { scale: 0.92 }}
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
+      <motion.button
+        ref={trigger}
+        type="button"
+        aria-label="Delete"
+        aria-expanded={open}
+        onClick={() => {
+          if (open) return resolve('kept');
+          setStatus('idle');
+          setOpen(true);
+        }}
+        whileTap={reduced ? undefined : { scale: 0.94 }}
+        transition={TAP}
+        className="relative z-10 grid h-12 w-12 place-items-center rounded-2xl ft-delete-premium-focus"
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {status === 'deleted' ? (
+            <motion.svg
+              key="done"
+              {...ICON}
+              width="20"
+              height="20"
+              stroke={ANVAYA_ACCENT}
+              strokeWidth="2.5"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              transition={timing(SWAP)}
+            >
+              <motion.path
+                d="M4 12.5 9.5 18 20 7"
+                initial={reduced ? undefined : { pathLength: 0 }}
+                animate={reduced ? undefined : { pathLength: 1 }}
+                transition={SETTLE}
+              />
+            </motion.svg>
+          ) : (
+            <motion.svg
+              key="bin"
+              {...ICON}
+              width="20"
+              height="20"
               stroke="currentColor"
               strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              className="overflow-visible"
+              style={{ scale: settle }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={timing(SWAP)}
             >
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              <line x1="10" y1="11" x2="10" y2="17" />
-              <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-          </motion.button>
-        ) : (
+              <motion.path d={bin} />
+              <motion.g
+                style={{ transformBox: 'view-box', transformOrigin: HINGE }}
+                animate={{ rotate: open ? LID_OPEN : 0 }}
+                transition={timing(LID)}
+              >
+                <path d="M3 6h18" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </motion.g>
+            </motion.svg>
+          )}
+        </AnimatePresence>
+      </motion.button>
+
+      <span role="status" aria-live="polite" className="sr-only">
+        {status === 'deleted' ? 'Deleted' : status === 'kept' ? 'Kept' : ''}
+      </span>
+
+      <AnimatePresence>
+        {open && (
           <motion.div
-            key="confirm-panel"
-            className="ft-delete-btn-panel"
-            initial={{ opacity: 0, scale: 0.85, x: 4 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.85, x: 4 }}
-            transition={{ duration: 0.16 }}
+            key="panel"
+            style={{ width: PANEL }}
+            className="absolute inset-y-0 right-0 flex items-center justify-center gap-2 rounded-2xl ft-delete-premium-recess"
+            variants={reduced ? undefined : panelMotion}
+            initial="hidden"
+            animate="shown"
+            exit="hidden"
           >
-            <button
-              type="button"
-              className="ft-delete-btn-circle ft-delete-btn-circle--confirm"
-              onClick={handleConfirmClick}
-              title={confirmTitle}
-              aria-label={confirmTitle}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="ft-delete-btn-circle ft-delete-btn-circle--cancel"
-              onClick={handleCancelClick}
-              title={cancelTitle}
-              aria-label={cancelTitle}
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+            <span
+              aria-hidden
+              className="absolute -left-1.25 top-1/2 z-20 h-2.5 w-1.5 -translate-y-1/2 ft-delete-premium-notch"
+            />
+            <Circle label="Confirm delete" onClick={() => resolve('deleted')}>
+              <path d="M4 12.5 9.5 18 20 7" stroke={ANVAYA_ACCENT} />
+            </Circle>
+            <Circle label="Cancel" onClick={() => resolve('kept')}>
+              <path d="M6 6 18 18M18 6 6 18" />
+            </Circle>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

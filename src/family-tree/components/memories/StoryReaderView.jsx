@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useMediaUrl } from '../../hooks/useMediaUrl.js';
 import { PHOTO_BUCKET } from '../../media/mediaStorageService.js';
 import { getRelatedStories } from '../../memories/familyStoryEngine.js';
+import DeleteButton from '../rare-ui/DeleteButton.jsx';
 
 // Lazy-loaded story hero image with private signed URL support
 function StoryHeroImage({ photo, onOpenLightbox }) {
@@ -261,23 +262,14 @@ export default function StoryReaderView({
           )}
 
           {canEdit && onDeleteStory && (
-            <button
-              type="button"
-              className="ft-story-reader__action-btn ft-story-reader__action-btn--delete"
-              onClick={() => {
-                if (window.confirm('Are you sure you want to delete this memory?')) {
-                  onDeleteStory(story.id);
-                  onClose();
-                }
+            <DeleteButton
+              onConfirm={() => {
+                onDeleteStory(story.id);
+                onClose();
               }}
               aria-label="Delete this story"
               title="Delete memory"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-            </button>
+            />
           )}
         </div>
       </header>
