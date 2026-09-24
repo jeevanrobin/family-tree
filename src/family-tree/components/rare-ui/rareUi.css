@@ -226,78 +226,9 @@
   color: var(--ft-text-muted, #475569);
 }
 
-/* ── 7. GooeyNav Premium Navigation ─────────────────────────── */
-[data-slot="gooey-nav"] {
-  font-family: var(--ft-font-body);
-}
-
-.ft-gooey-surface {
-  background: var(--ft-surface, #141C26);
-}
-
-.ft-gooey-nav-inactive {
-  color: var(--ft-text-muted, #64748B);
-}
-
-.ft-gooey-neck-text {
-  color: var(--ft-text-muted, #64748B);
-}
-
-[data-theme="light"] .ft-gooey-surface {
-  background: var(--ft-surface, #FFFFFF);
-}
-
-[data-theme="light"] .ft-gooey-nav-inactive {
-  color: var(--ft-text-muted, #475569);
-}
-
-[data-theme="light"] .ft-gooey-neck-text {
-  color: var(--ft-text-muted, #475569);
-}
-
-/* ── 8. HookSidebar Secondary Navigation ───────────────────── */
-[data-slot="hook-sidebar"] {
-  font-family: var(--ft-font-body);
-}
-
-.ft-hook-sidebar-label {
-  color: var(--ft-text-primary, #F1F5F9);
-}
-
-.ft-hook-sidebar-active {
-  color: var(--ft-text-primary, #F1F5F9);
-}
-
-.ft-hook-sidebar-inactive {
-  color: var(--ft-text-secondary, #94A3B8);
-}
-
-.ft-hook-sidebar-inactive:hover {
-  color: var(--ft-text-primary, #F1F5F9);
-}
-
-.ft-hook-sidebar-rail-hover {
-  color: var(--ft-text-muted, #64748B);
-}
-
-[data-theme="light"] .ft-hook-sidebar-label {
+[data-theme="light"] .ft-delete-premium-circle:hover {
+  background: #F8FAFC;
   color: var(--ft-text-primary, #0F172A);
-}
-
-[data-theme="light"] .ft-hook-sidebar-active {
-  color: var(--ft-text-primary, #0F172A);
-}
-
-[data-theme="light"] .ft-hook-sidebar-inactive {
-  color: var(--ft-text-muted, #475569);
-}
-
-[data-theme="light"] .ft-hook-sidebar-inactive:hover {
-  color: var(--ft-text-primary, #0F172A);
-}
-
-[data-theme="light"] .ft-hook-sidebar-rail-hover {
-  color: var(--ft-text-muted, #94A3B8);
 }
 
 /* ── 5. Notification Bell ─────────────────────────────────── */
