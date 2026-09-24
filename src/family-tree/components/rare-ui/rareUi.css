@@ -380,3 +380,25 @@
   align-items: center;
   gap: 8px;
 }
+
+/* ── 9. MatrixOrb Premium Orb Visualization ─────────────────── */
+[data-slot="matrix-orb"] {
+  font-family: var(--ft-font-body);
+}
+
+.ft-matrix-orb-label {
+  color: var(--ft-text-secondary, #94A3B8);
+}
+
+[data-theme="light"] .ft-matrix-orb-label {
+  color: var(--ft-text-muted, #475569);
+}
+
+/* ── 10. GridReveal Animated Grid ───────────────────────────── */
+[data-slot="grid-reveal"] {
+  font-family: var(--ft-font-body);
+}
+
+[data-slot="grid-cell"] {
+  transform-style: preserve-3d;
+}
