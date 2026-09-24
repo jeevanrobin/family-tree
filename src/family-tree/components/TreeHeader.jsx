@@ -15,6 +15,8 @@ import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
 import UserProfileMenu from './UserProfileMenu.jsx';
 import NotificationBell from './rare-ui/NotificationBell.jsx';
+import GooeyNav from './rare-ui/GooeyNav.jsx';
+import './rare-ui/rareUi.css';
 
 
 export default function TreeHeader({
@@ -351,6 +353,13 @@ export default function TreeHeader({
           </div>
         </div>
       </div>
+
+      {/* Primary Navigation - GooeyNav */}
+      {activeFamily && (
+        <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '12px' }}>
+          <GooeyNav familyId={activeFamily.id} size="sm" />
+        </div>
+      )}
 
       {/* Center: Generation Filters */}
       {onSelectGenFilter && (
