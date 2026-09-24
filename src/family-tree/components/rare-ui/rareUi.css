@@ -402,3 +402,42 @@
 [data-slot="grid-cell"] {
   transform-style: preserve-3d;
 }
+
+/* ── 11. EmojiReaction Animated Reactions ──────────────────── */
+[data-slot="emoji-reaction"] {
+  font-family: var(--ft-font-body);
+}
+
+.ft-reaction-active {
+  background: rgba(229, 101, 21, 0.12);
+  border-color: #E56515;
+  color: var(--ft-accent, #E56515);
+}
+
+.ft-reaction-inactive {
+  background: var(--ft-surface, rgba(255, 255, 255, 0.04));
+  border-color: var(--ft-border, rgba(255, 255, 255, 0.1));
+  color: var(--ft-text-primary, #F1F5F9);
+}
+
+.ft-reaction-inactive:hover {
+  background: var(--ft-surface-hover, rgba(255, 255, 255, 0.08));
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] .ft-reaction-active {
+  background: rgba(229, 101, 21, 0.08);
+  border-color: #E56515;
+  color: #E56515;
+}
+
+[data-theme="light"] .ft-reaction-inactive {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: var(--ft-text-primary, #0F172A);
+}
+
+[data-theme="light"] .ft-reaction-inactive:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.15);
+}
