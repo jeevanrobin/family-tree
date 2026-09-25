@@ -36,8 +36,10 @@ let stats = {
   totalRequests: 0,
 };
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Same fallback as lib/supabaseClient.js so this module also loads under plain Node (script tests).
+const env = import.meta.env || (typeof process !== 'undefined' && process?.env) || {};
+const supabaseUrl = env.VITE_SUPABASE_URL;
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 
 export function configureLocationNormalization(config = {}) {
   if (config.enabled !== undefined) isEnabled = config.enabled;

@@ -250,9 +250,13 @@ async function runTests() {
   // Test 6: STEP 10 — Real Regression Test with uploaded backup
   // -------------------------------------------------------------
   console.log('\nTest 6: Step 10 Real Regression Test (medida-family-backup-2026-09-16.json)');
-  {
-    const originalBackupPath = 'C:/Users/G1/Downloads/medida-family-backup-2026-09-16.json';
-    assert(fs.existsSync(originalBackupPath), `Original backup file exists at ${originalBackupPath}`);
+  // Uses a real family backup that is not in the repository. Point
+  // BACKUP_REGRESSION_FILE at it to run this step; it is skipped otherwise.
+  const originalBackupPath =
+    process.env.BACKUP_REGRESSION_FILE || 'C:/Users/G1/Downloads/medida-family-backup-2026-09-16.json';
+  if (!fs.existsSync(originalBackupPath)) {
+    console.log(`  - SKIPPED: backup file not found at ${originalBackupPath} (set BACKUP_REGRESSION_FILE to run)`);
+  } else {
 
     const rawOriginal = fs.readFileSync(originalBackupPath, 'utf8');
     const parsedOriginal = JSON.parse(rawOriginal);
