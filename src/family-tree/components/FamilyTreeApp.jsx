@@ -53,6 +53,7 @@ function ViewLoading() {
 export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree', activeFamily: activeFamilyProp = null }) {
   const {
     persons,
+    relationships,
     generations,
     layout,
     selectedId,
@@ -864,6 +865,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             {detailsOpen && selectedPerson && (
               <PersonDetails
                 person={selectedPerson}
+                relationships={relationships}
                 stories={selectedPersonStories}
                 lifeEvents={selectedPersonEvents}
                 photos={selectedPersonPhotos}

@@ -888,6 +888,23 @@ export class FamilyStore {
     return this.getPersonById(spouseId);
   }
 
+  /** Every spouse of a person, earliest marriage first. */
+  getSpouses(personId) {
+    if (!personId) return [];
+    const id = String(personId);
+    return this.relationships
+      .map((r, index) => ({ r, index }))
+      .filter(({ r }) => r.type === 'spouse' && (r.personAId === id || r.personBId === id))
+      .sort((x, y) => {
+        const a = x.r.startDate || '';
+        const b = y.r.startDate || '';
+        if (a && b && a !== b) return a < b ? -1 : 1;
+        return x.index - y.index;
+      })
+      .map(({ r }) => this.getPersonById(r.personAId === id ? r.personBId : r.personAId))
+      .filter(Boolean);
+  }
+
   getSiblings(personId) {
     if (!personId) return [];
     const id = String(personId);

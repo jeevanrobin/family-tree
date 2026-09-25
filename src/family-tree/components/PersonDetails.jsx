@@ -9,7 +9,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   getParents,
   getChildren,
-  getSpouse,
+  getSpouses,
   getSiblings,
   getSiblingDisplayLabel,
   getGeneration,
@@ -96,6 +96,8 @@ function GalleryThumbnailItem({ photo, onOpen }) {
 
 export default function PersonDetails({
   person,
+  // Changes identity on every store update; keeps the family lists below fresh
+  relationships,
   onClose,
   onSelectPerson,
   onCenterPerson,
@@ -147,10 +149,10 @@ export default function PersonDetails({
   const canPhoto = isLocalMode || checkCanUploadMedia(currentRole);
   const canDoc = isLocalMode || checkCanUploadDocument(currentRole);
 
-  const parents = useMemo(() => getParents(person?.id), [person?.id]);
-  const children = useMemo(() => getChildren(person?.id), [person?.id]);
-  const spouse = useMemo(() => getSpouse(person?.id), [person?.id]);
-  const siblings = useMemo(() => getSiblings(person?.id), [person?.id]);
+  const parents = useMemo(() => getParents(person?.id), [person?.id, relationships]);
+  const children = useMemo(() => getChildren(person?.id), [person?.id, relationships]);
+  const spouses = useMemo(() => getSpouses(person?.id), [person?.id, relationships]);
+  const siblings = useMemo(() => getSiblings(person?.id), [person?.id, relationships]);
   const lifespan = useMemo(() => getLifespanInfo(person), [person]);
   const avatarBg = useMemo(() => getAvatarGradient(person), [person]);
   const genNum = useMemo(() => getGeneration(person?.id), [person?.id]);
@@ -189,7 +191,9 @@ export default function PersonDetails({
 
   // Immediate Family Summary Text
   const familySummary = [
-    spouse ? `Spouse: ${spouse.displayName}` : null,
+    spouses.length > 0
+      ? `${spouses.length === 1 ? 'Spouse' : 'Spouses'}: ${spouses.map((s) => s.displayName).join(', ')}`
+      : null,
     children.length > 0 ? `${children.length} ${children.length === 1 ? 'Child' : 'Children'}` : null,
     parents.length > 0 ? `${parents.length} ${parents.length === 1 ? 'Parent' : 'Parents'}` : null,
   ].filter(Boolean).join(' • ');
@@ -706,12 +710,14 @@ export default function PersonDetails({
               </div>
             )}
 
-            {/* Spouse */}
-            {spouse && (
+            {/* Spouses (earliest marriage first) */}
+            {spouses.length > 0 && (
               <div className="ft-details__rel-group">
-                <span className="ft-details__rel-role">Spouse</span>
+                <span className="ft-details__rel-role">{spouses.length === 1 ? 'Spouse' : `Spouses (${spouses.length})`}</span>
                 <div className="ft-details__rel-chips">
+                  {spouses.map((spouse) => (
                   <button
+                    key={spouse.id}
                     className="ft-details__rel-chip"
                     onClick={() => onSelectPerson?.(spouse.id)}
                   >
@@ -725,6 +731,7 @@ export default function PersonDetails({
                       <span className="ft-details__rel-chip-name">{spouse.displayName}</span>
                     </div>
                   </button>
+                  ))}
                 </div>
               </div>
             )}

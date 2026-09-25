@@ -94,6 +94,10 @@ export function getSpouse(personId) {
   return familyStore.getSpouse(personId);
 }
 
+export function getSpouses(personId) {
+  return familyStore.getSpouses(personId);
+}
+
 export function getSiblings(personId) {
   return familyStore.getSiblings(personId);
 }

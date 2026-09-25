@@ -524,3 +524,139 @@ describe('computeTreeLayout options: collapse, focus and sibling order', () => {
     expect(layout.nodes.get('b').x).toBeLessThan(layout.nodes.get('a').x);
   });
 });
+
+describe('computeTreeLayout remarriages', () => {
+  const W = NODE_WIDTH;
+  const H = NODE_HEIGHT;
+  const overlaps = (layout) => {
+    const list = [...layout.nodes.values()];
+    const hits = [];
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i];
+        const b = list[j];
+        if (a.x < b.x + W && b.x < a.x + W && a.y < b.y + H && b.y < a.y + H) {
+          hits.push([a.person.id, b.person.id]);
+        }
+      }
+    }
+    return hits;
+  };
+
+  // gp ─┬─ a ═ s1 (c1), a ═ s2 (c2, c3)
+  //     └─ b
+  const persons = ['gp', 'a', 's1', 's2', 'c1', 'c2', 'c3', 'b'].map((id) => ({ id, displayName: id }));
+  const relationships = [
+    { id: 'r0', type: 'parent-child', parentId: 'gp', childId: 'a' },
+    { id: 'r0b', type: 'parent-child', parentId: 'gp', childId: 'b' },
+    { id: 'r1', type: 'spouse', personAId: 'a', personBId: 's1', startDate: '1970-01-01' },
+    { id: 'r2', type: 'spouse', personAId: 'a', personBId: 's2', startDate: '1980-01-01' },
+    { id: 'r3', type: 'parent-child', parentId: 'a', childId: 'c1' },
+    { id: 'r4', type: 'parent-child', parentId: 's1', childId: 'c1' },
+    { id: 'r5', type: 'parent-child', parentId: 'a', childId: 'c2' },
+    { id: 'r6', type: 'parent-child', parentId: 's2', childId: 'c2' },
+    { id: 'r7', type: 'parent-child', parentId: 'a', childId: 'c3' },
+    { id: 'r8', type: 'parent-child', parentId: 's2', childId: 'c3' },
+  ];
+
+  it('places every spouse beside the person: earlier marriage left, later right', () => {
+    const layout = computeTreeLayout(persons, relationships);
+    const { a, s1, s2 } = Object.fromEntries(['a', 's1', 's2'].map((id) => [id, layout.nodes.get(id)]));
+
+    expect(s1.y).toBe(a.y);
+    expect(s2.y).toBe(a.y);
+    expect(s1.x).toBeLessThan(a.x);
+    expect(s2.x).toBeGreaterThan(a.x);
+    expect(overlaps(layout)).toEqual([]);
+  });
+
+  it('keeps the spouse order when the first spouse is listed before the person', () => {
+    const reordered = [persons[2], ...persons.filter((p) => p.id !== 's1')];
+    const layout = computeTreeLayout(reordered, relationships);
+
+    expect(layout.nodes.get('s1').x).toBeLessThan(layout.nodes.get('a').x);
+    expect(layout.nodes.get('s2').x).toBeGreaterThan(layout.nodes.get('a').x);
+    expect(overlaps(layout)).toEqual([]);
+  });
+
+  it('puts each marriage\'s children under that couple', () => {
+    const layout = computeTreeLayout(persons, relationships);
+    const center = (id) => layout.nodes.get(id).centerX;
+
+    expect(center('c1')).toBeLessThan(center('c2'));
+    expect(center('c2')).toBeLessThan(center('c3'));
+    const stem = (childId) => layout.lines.find((l) => l.type === 'parent-child' && l.childId === childId).sourceX;
+    expect(stem('c1')).toBeCloseTo((center('s1') + center('a')) / 2);
+    expect(stem('c2')).toBeCloseTo((center('a') + center('s2')) / 2);
+  });
+
+  it('gives each marriage its own sibling group for Arrange Family', () => {
+    const layout = computeTreeLayout(persons, relationships);
+
+    expect(layout.nodes.get('c1')).toMatchObject({ cohortKey: 'a-s1-children', cohortSiblingIds: ['c1'], canReorder: false });
+    expect(layout.nodes.get('c2')).toMatchObject({ cohortKey: 'a-s2-children', cohortSiblingIds: ['c2', 'c3'], canReorder: true });
+
+    const reordered = computeTreeLayout(persons, relationships, { customSiblingOrders: { 'a-s2-children': ['c3', 'c2'] } });
+    expect(reordered.nodes.get('c3').x).toBeLessThan(reordered.nodes.get('c2').x);
+  });
+
+  it('draws a spouse line for each marriage', () => {
+    const layout = computeTreeLayout(persons, relationships);
+    const spouseLines = layout.lines.filter((l) => l.type === 'spouse').map((l) => l.id).sort();
+    expect(spouseLines).toEqual(['spouse-a-s1', 'spouse-a-s2']);
+  });
+
+  it('a child with only the remarried parent recorded hangs from that parent', () => {
+    const layout = computeTreeLayout(
+      [...persons, { id: 'c4', displayName: 'c4' }],
+      [...relationships, { id: 'r9', type: 'parent-child', parentId: 'a', childId: 'c4' }]
+    );
+    const line = layout.lines.find((l) => l.type === 'parent-child' && l.childId === 'c4');
+    expect(line.sourceX).toBeCloseTo(layout.nodes.get('a').centerX);
+    expect(overlaps(layout)).toEqual([]);
+  });
+
+  it('collapsing a remarried person hides the children of every marriage', () => {
+    const layout = computeTreeLayout(persons, relationships, { collapsedUnits: new Set(['unit-a']) });
+    for (const id of ['c1', 'c2', 'c3']) expect(layout.nodes.has(id)).toBe(false);
+    expect(layout.nodes.has('s1')).toBe(true);
+  });
+
+  it('handles three marriages without overlapping cards', () => {
+    const p = [...persons, { id: 's3', displayName: 's3' }, { id: 'c5', displayName: 'c5' }];
+    const r = [
+      ...relationships,
+      { id: 'r10', type: 'spouse', personAId: 'a', personBId: 's3', startDate: '1990-01-01' },
+      { id: 'r11', type: 'parent-child', parentId: 'a', childId: 'c5' },
+      { id: 'r12', type: 'parent-child', parentId: 's3', childId: 'c5' },
+    ];
+    const layout = computeTreeLayout(p, r);
+    expect(overlaps(layout)).toEqual([]);
+    expect(layout.nodes.get('s3').x).toBeGreaterThan(layout.nodes.get('s2').x);
+  });
+});
+
+describe('computeTreeLayout remarriage child placement', () => {
+  it('centers an only-marriage-with-children under that couple when there is room', () => {
+    // a ═ s1 (kids k1, k2), a ═ s2 (no kids)
+    const persons = ['a', 's1', 's2', 'k1', 'k2'].map((id) => ({ id, displayName: id }));
+    const relationships = [
+      { id: 'm1', type: 'spouse', personAId: 'a', personBId: 's1', startDate: '1970-01-01' },
+      { id: 'm2', type: 'spouse', personAId: 'a', personBId: 's2', startDate: '1990-01-01' },
+      { id: 'k1a', type: 'parent-child', parentId: 'a', childId: 'k1' },
+      { id: 'k1s', type: 'parent-child', parentId: 's1', childId: 'k1' },
+      { id: 'k2a', type: 'parent-child', parentId: 'a', childId: 'k2' },
+      { id: 'k2s', type: 'parent-child', parentId: 's1', childId: 'k2' },
+    ];
+    const layout = computeTreeLayout(persons, relationships);
+    const n = (id) => layout.nodes.get(id);
+    const rowCenter = (n('k1').centerX + n('k2').centerX) / 2;
+    const coupleCenter = (n('s1').centerX + n('a').centerX) / 2;
+    const unitCenter = (n('s1').centerX + n('s2').centerX) / 2;
+
+    expect(Math.abs(rowCenter - coupleCenter)).toBeLessThan(Math.abs(rowCenter - unitCenter));
+    // Row stays inside the family's footprint.
+    expect(n('k1').x).toBeGreaterThanOrEqual(n('s1').x - 1);
+    expect(n('k2').x + NODE_WIDTH).toBeLessThanOrEqual(n('s2').x + NODE_WIDTH + 1);
+  });
+});
