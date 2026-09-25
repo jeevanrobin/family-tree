@@ -38,3 +38,7 @@ playwright/.cache/
 
 # Agent skills (local dev tooling, not part of application)
 .typesafe-skills/
+
+# Generated test output
+coverage/
+/test_*.png
