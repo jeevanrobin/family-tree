@@ -210,6 +210,14 @@ export class SyncAdapter extends FamilyRepository {
     return this.syncEngine.getStatus();
   }
 
+  async getFailedMutations() {
+    return this.syncEngine.getFailedMutations();
+  }
+
+  async retryFailedMutations() {
+    return this.syncEngine.retryFailed();
+  }
+
   subscribeSyncStatus(listener) {
     return this.syncEngine.subscribe(listener);
   }

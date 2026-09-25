@@ -1477,6 +1477,14 @@ export class FamilyStore {
     return 'synced';
   }
 
+  /** Re-queue cloud changes that failed to sync (sync badge "Retry sync"). */
+  async retryFailedSync() {
+    if (this.repository && typeof this.repository.retryFailedMutations === 'function') {
+      return this.repository.retryFailedMutations();
+    }
+    return null;
+  }
+
   subscribeSyncStatus(listener) {
     if (this.repository && typeof this.repository.subscribeSyncStatus === 'function') {
       return this.repository.subscribeSyncStatus(listener);

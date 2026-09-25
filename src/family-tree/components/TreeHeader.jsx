@@ -11,6 +11,7 @@ import ClickSpark from './react-bits/ClickSpark.jsx';
 import SearchOverlay from './SearchOverlay.jsx';
 import { GENERATION_CONFIG } from '../data/familyDataService.js';
 import { useFamily } from '../auth/FamilyContext.jsx';
+import familyStore from '../store/FamilyStore.js';
 import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
 import UserProfileMenu from './UserProfileMenu.jsx';
@@ -259,6 +260,17 @@ export default function TreeHeader({
             {!isLocalMode && (
               <span
                 className={`ft-sync-badge ft-sync-badge--${syncStatus}`}
+                {...(syncStatus === 'error' && {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: () => familyStore.retryFailedSync(),
+                  onKeyDown: (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      familyStore.retryFailedSync();
+                    }
+                  },
+                })}
                 title={
                   syncStatus === 'synced'
                     ? 'All changes saved to cloud'
@@ -268,12 +280,13 @@ export default function TreeHeader({
                     ? 'Offline — changes safely saved in local cache'
                     : syncStatus === 'pending'
                     ? 'Changes saved locally, pending cloud sync'
-                    : 'Sync alert — changes safely preserved in local cache'
+                    : 'Some changes did not reach the cloud. They are kept on this device — click to retry.'
                 }
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
+                  cursor: syncStatus === 'error' ? 'pointer' : 'default',
                   fontSize: '0.65rem',
                   padding: '1px 6px',
                   borderRadius: '10px',
@@ -328,7 +341,7 @@ export default function TreeHeader({
                     ? 'Saved locally'
                     : syncStatus === 'pending'
                     ? 'Saving...'
-                    : 'Offline cache'}
+                    : 'Retry sync'}
                 </span>
               </span>
             )}

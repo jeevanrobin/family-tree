@@ -25,6 +25,18 @@ const MAX_RETRIES = 5;
 const BASE_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 30000;
 
+const PERSON_REF_FIELDS = ['personId', 'personId1', 'personId2', 'parentId', 'childId', 'personAId', 'personBId'];
+
+/** True when a queued mutation's payload references the given entity ID. */
+function queueItemReferences(item, entityId) {
+  const payload = item.payload || {};
+  if (PERSON_REF_FIELDS.some((field) => payload[field] != null && String(payload[field]) === entityId)) {
+    return true;
+  }
+  const lists = [payload.relatedPersonIds, payload.orderedPersonIds];
+  return lists.some((list) => Array.isArray(list) && list.some((id) => String(id) === entityId));
+}
+
 export class SyncEngine {
   /**
    * @param {string} familyId - Active family UUID
@@ -308,8 +320,40 @@ export class SyncEngine {
         return;
       }
 
+      // Entities whose mutations failed for good. Later mutations of the same
+      // entity, and anything referencing an entity whose create failed, are
+      // held back instead of being pushed against missing or stale rows.
+      const blockedIds = new Map(); // entityId -> whether its create failed
+      const block = (item) => {
+        const id = String(item.entityId);
+        blockedIds.set(id, blockedIds.get(id) || item.operation === MUTATION_OP.CREATE);
+      };
+      const findBlocker = (item) => {
+        for (const [id, createFailed] of blockedIds) {
+          if (String(item.entityId) === id) return id;
+          if (createFailed && queueItemReferences(item, id)) return id;
+        }
+        return null;
+      };
+
       for (const item of pendingItems) {
         if (this.destroyed || !this.isOnline()) break;
+
+        const blocker = findBlocker(item);
+        if (blocker) {
+          await indexedDBManager.updateQueueItem(item.id, {
+            status: 'failed',
+            error: `Waiting on ${blocker}, which failed to sync.`,
+          });
+          block(item);
+          continue;
+        }
+
+        // Failed earlier: keep it (and its dependents) parked until retryFailed().
+        if (item.status === 'failed') {
+          block(item);
+          continue;
+        }
 
         // Bounded retry check
         if (item.attemptCount >= MAX_RETRIES) {
@@ -317,6 +361,7 @@ export class SyncEngine {
             status: 'failed',
             error: `Max retries (${MAX_RETRIES}) reached.`,
           });
+          block(item);
           continue;
         }
 
@@ -341,7 +386,9 @@ export class SyncEngine {
             error: opErr.message,
           });
 
-          if (!isPermanent) {
+          if (isPermanent) {
+            block(item);
+          } else {
             // Schedule bounded exponential backoff retry
             const delay = Math.min(
               BASE_RETRY_DELAY_MS * Math.pow(2, newAttemptCount - 1),
@@ -375,6 +422,26 @@ export class SyncEngine {
 
   return this.flushPromise;
 }
+
+  /**
+   * Mutations that failed for good (or are held behind one), for showing the
+   * user what did not reach the cloud.
+   */
+  async getFailedMutations() {
+    const queue = await indexedDBManager.getPendingQueue(this.familyId);
+    return queue.filter((item) => item.status === 'failed');
+  }
+
+  /**
+   * Put failed mutations back in the queue (fresh retry budget) and flush.
+   */
+  async retryFailed() {
+    const failed = await this.getFailedMutations();
+    for (const item of failed) {
+      await indexedDBManager.updateQueueItem(item.id, { status: 'pending', attemptCount: 0, error: null });
+    }
+    return this.flushQueue();
+  }
 
    /**
     * Convert frontend ID to UUID if mapping exists; otherwise return frontend ID
