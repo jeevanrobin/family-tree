@@ -10496,3 +10496,75 @@ button {
     animation: none !important;
   }
 }
+
+/* ── App Error Boundary ───────────────────────────────────── */
+.ft-error-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--ft-bg);
+  background-image: var(--ft-canvas-glow), var(--ft-bg-ambient);
+  color: var(--ft-text-primary);
+  font-family: var(--ft-font-body);
+}
+
+.ft-error-screen__card {
+  max-width: 440px;
+  padding: 32px;
+  border-radius: 20px;
+  background: var(--ft-surface);
+  border: 1px solid var(--ft-border);
+  box-shadow: var(--ft-shadow-lg);
+}
+
+.ft-error-screen__eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--ft-font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ft-accent);
+}
+
+.ft-error-screen__title {
+  margin: 0 0 10px;
+  font-family: var(--ft-font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ft-error-screen__body {
+  margin: 0 0 24px;
+  line-height: 1.6;
+  color: var(--ft-text-secondary);
+}
+
+.ft-error-screen__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ft-error-screen__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--ft-border);
+  background: transparent;
+  color: var(--ft-text-primary);
+  font: 600 0.9rem var(--ft-font-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ft-error-screen__btn--primary {
+  background: var(--ft-accent);
+  border-color: var(--ft-accent);
+  color: var(--ft-accent-ink);
+}

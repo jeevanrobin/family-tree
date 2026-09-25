@@ -15,6 +15,7 @@ import {
   getAvailableTimelineFilters,
   getEraForEvent,
 } from '../../timeline/familyTimelineEngine.js';
+import { getInitials, getAvatarGradient } from '../../utils/familyHelpers.js';
 import { useMediaUrl } from '../../hooks/useMediaUrl.js';
 import ScrollReveal from '../react-bits/ScrollReveal.jsx';
 import EventDetailModal from './EventDetailModal.jsx';
