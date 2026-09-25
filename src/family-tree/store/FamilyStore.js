@@ -796,11 +796,17 @@ export class FamilyStore {
       throw new Error('Date of birth cannot be after date of death.');
     }
 
+    // Tell the repository which fields changed so the cloud update touches
+    // only those columns (concurrent edits to other fields survive).
+    const changedFields = Object.keys(validated).filter(
+      (key) => key !== 'updatedAt' && validated[key] !== existing[key]
+    );
+
     this.people.set(validated.id, validated);
     this.notify();
 
     if (this.repository && typeof this.repository.savePerson === 'function') {
-      Promise.resolve(this.repository.savePerson(validated, { operation: 'update' }))
+      Promise.resolve(this.repository.savePerson(validated, { operation: 'update', changedFields }))
         .then((savedPerson) => {
           if (savedPerson) applyRepositoryResult(validated, savedPerson);
         })

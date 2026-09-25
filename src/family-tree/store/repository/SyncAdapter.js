@@ -96,8 +96,11 @@ export class SyncAdapter extends FamilyRepository {
 
   // ── Granular Entity Mutations (Offline-First Queueing) ─────
 
-  async savePerson(person, { operation = MUTATION_OP.UPDATE } = {}) {
-    return this.syncEngine.enqueue(ENTITY_TYPES.PERSON, person.id, operation, person);
+  async savePerson(person, { operation = MUTATION_OP.UPDATE, changedFields = null } = {}) {
+    const payload = Array.isArray(changedFields) && operation === MUTATION_OP.UPDATE
+      ? { ...person, _changedFields: changedFields }
+      : person;
+    return this.syncEngine.enqueue(ENTITY_TYPES.PERSON, person.id, operation, payload);
   }
 
   async deletePerson(personId) {

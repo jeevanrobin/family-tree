@@ -161,3 +161,54 @@ describe('localizePersonReferences', () => {
     expect(data.relationships[0]).toMatchObject({ parentId: 'uuid-x', childId: 'uuid-y' });
   });
 });
+
+describe('Concurrent person edits', () => {
+  beforeEach(async () => {
+    await indexedDBManager.clearAllDatabases();
+  });
+
+  afterEach(async () => {
+    await indexedDBManager.clearAllDatabases();
+  });
+
+  it('keeps only the locally edited fields of a pending update and takes the rest from the cloud', async () => {
+    await indexedDBManager.putBatch(STORES.PEOPLE, [
+      person('p1', { occupation: 'Local job', hometown: 'Stale town', updatedAt: '2030-01-01T00:00:00Z' }),
+    ]);
+    await indexedDBManager.enqueue(createQueueItem({
+      familyId: FID,
+      entityType: ENTITY_TYPES.PERSON,
+      entityId: 'p1',
+      operation: MUTATION_OP.UPDATE,
+      payload: { id: 'p1', _changedFields: ['occupation'] },
+    }));
+    const engine = makeEngine({
+      people: [person('p1', { occupation: 'Remote job', hometown: 'Remote town' })],
+    });
+
+    const result = await engine.pullRemoteChanges();
+
+    expect(result.people[0].occupation).toBe('Local job');
+    expect(result.people[0].hometown).toBe('Remote town');
+    engine.destroy();
+  });
+
+  it('lets the cloud clear a field that was not edited locally', async () => {
+    await indexedDBManager.putBatch(STORES.PEOPLE, [
+      person('p1', { occupation: 'Local job', dateOfDeath: '1999-01-01' }),
+    ]);
+    await indexedDBManager.enqueue(createQueueItem({
+      familyId: FID,
+      entityType: ENTITY_TYPES.PERSON,
+      entityId: 'p1',
+      operation: MUTATION_OP.UPDATE,
+      payload: { id: 'p1', _changedFields: ['occupation'] },
+    }));
+    const engine = makeEngine({ people: [person('p1', { occupation: 'x', dateOfDeath: null })] });
+
+    const result = await engine.pullRemoteChanges();
+
+    expect(result.people[0].dateOfDeath).toBeNull();
+    engine.destroy();
+  });
+});

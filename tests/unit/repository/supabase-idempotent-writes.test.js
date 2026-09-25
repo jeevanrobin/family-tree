@@ -126,3 +126,44 @@ describe('SupabaseAdapter idempotent writes', () => {
     expect(db.story_persons).toHaveLength(1);
   });
 });
+
+describe('SupabaseAdapter partial person updates', () => {
+  let adapter;
+
+  beforeEach(() => {
+    for (const key of Object.keys(db)) delete db[key];
+    adapter = new SupabaseAdapter(FID);
+    adapter._validateSessionAndScope = vi.fn().mockResolvedValue({ userId: 'u1', role: 'owner' });
+  });
+
+  it('updates only the changed columns, preserving a concurrent edit to another field', async () => {
+    await adapter.savePerson({ id: 'p1', firstName: 'Ravi', occupation: 'Teacher', hometown: 'Warangal', _isNew: true });
+    // Another family member changes the hometown in the cloud.
+    db.family_members[0].hometown = 'Hyderabad';
+
+    // This client edited only the occupation, from a stale copy.
+    await adapter.savePerson({
+      id: 'p1', firstName: 'Ravi', occupation: 'Principal', hometown: 'Warangal', _changedFields: ['occupation'],
+    });
+
+    expect(db.family_members[0].occupation).toBe('Principal');
+    expect(db.family_members[0].hometown).toBe('Hyderabad');
+  });
+
+  it('writes the full row when no field information is given', async () => {
+    await adapter.savePerson({ id: 'p1', firstName: 'Ravi', hometown: 'Warangal', _isNew: true });
+    db.family_members[0].hometown = 'Hyderabad';
+
+    await adapter.savePerson({ id: 'p1', firstName: 'Ravi', hometown: 'Warangal' });
+
+    expect(db.family_members[0].hometown).toBe('Warangal');
+  });
+
+  it('skips the cloud write when nothing stored in the cloud changed', async () => {
+    await adapter.savePerson({ id: 'p1', firstName: 'Ravi', _isNew: true });
+
+    const saved = await adapter.savePerson({ id: 'p1', firstName: 'Ravi', _changedFields: [] });
+
+    expect(saved.firstName).toBe('Ravi');
+  });
+});

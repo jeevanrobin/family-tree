@@ -576,10 +576,32 @@ export class SyncEngine {
       const pendingQueue = await indexedDBManager.getPendingQueue(fid);
       const pendingIds = new Set(pendingQueue.map((item) => String(item.entityId)));
 
+      // For pending person updates we know exactly which fields were edited
+      // locally: overlay only those on the cloud version. Pending creates (or
+      // updates without field info) fall back to the field-level merge.
+      const pendingPersonFields = new Map();
+      for (const item of pendingQueue) {
+        if (item.entityType !== ENTITY_TYPES.PERSON) continue;
+        const id = String(item.entityId);
+        const fields = item.operation === MUTATION_OP.UPDATE ? item.payload?._changedFields : null;
+        const known = pendingPersonFields.get(id);
+        if (!Array.isArray(fields) || known === 'all') {
+          pendingPersonFields.set(id, 'all');
+        } else {
+          pendingPersonFields.set(id, new Set([...(known || []), ...fields]));
+        }
+      }
+
       const people = await this._reconcileStore(STORES.PEOPLE, remoteData.people, {
         tombstoneSet,
         pendingIds,
-        mergeLocal: (local, remote) => mergePersonRecords(local, remote).merged,
+        mergeLocal: (local, remote) => {
+          const fields = pendingPersonFields.get(String(local.id));
+          if (!fields || fields === 'all') return mergePersonRecords(local, remote).merged;
+          const merged = { ...remote };
+          for (const field of fields) merged[field] = local[field];
+          return merged;
+        },
       });
 
       const personIdSet = new Set(people.map((p) => String(p.id)));

@@ -37,6 +37,42 @@ function personToRow(person, familyId) {
   };
 }
 
+// Client person field → family_members column, for partial updates.
+const PERSON_FIELD_COLUMNS = {
+  firstName: 'first_name',
+  middleName: 'middle_name',
+  lastName: 'last_name',
+  displayName: 'display_name',
+  gender: 'gender',
+  livingStatus: 'living_status',
+  dateOfBirth: 'date_of_birth',
+  dateOfDeath: 'date_of_death',
+  placeOfBirth: 'place_of_birth',
+  hometown: 'hometown',
+  currentLocation: 'current_location',
+  occupation: 'occupation',
+  photo: 'photo_url',
+  photoUrl: 'photo_url',
+  biography: 'biography',
+  notes: 'notes',
+  privacy: 'privacy',
+};
+
+/**
+ * Only the columns for fields this client actually changed, so concurrent
+ * edits to different fields of the same person by different family members
+ * don't overwrite each other. Returns null when no column-level info exists.
+ */
+function personChangedColumns(person, row) {
+  if (!Array.isArray(person._changedFields)) return null;
+  const partial = {};
+  for (const field of person._changedFields) {
+    const column = PERSON_FIELD_COLUMNS[field];
+    if (column) partial[column] = row[column];
+  }
+  return partial;
+}
+
 function rowToPerson(row) {
   return {
     id: row.local_id || row.id,
@@ -517,10 +553,25 @@ export class SupabaseAdapter extends FamilyRepository {
       return rowToPerson(data);
     }
 
+    const changedColumns = personChangedColumns(person, row);
+    if (changedColumns && Object.keys(changedColumns).length === 0) {
+      // Nothing persisted in the cloud changed; return the current row.
+      const current = throwIfError(
+        await supabase
+          .from('family_members')
+          .select('*')
+          .eq('local_id', person.id)
+          .eq('family_id', this.familyId)
+          .single(),
+        'load person'
+      );
+      return rowToPerson(current);
+    }
+
      const data = throwIfError(
        await supabase
          .from('family_members')
-         .update(row)
+         .update(changedColumns || row)
          .eq('local_id', person.id)
          .eq('family_id', this.familyId)
          .select()
