@@ -108,28 +108,28 @@
 
 /* ── Dark Mode Tokens (Deep Ink) ──────────────────────────── */
 [data-theme="dark"] {
-  --ft-bg: #090D14;
-  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #141C26 0%, #090D14 75%);
+  --ft-bg: #080C12;
+  --ft-bg-ambient: radial-gradient(115% 85% at 50% -10%, #0F1621 0%, #080C12 75%);
   --ft-bg-warmth: radial-gradient(60% 45% at 50% 8%, rgba(229, 101, 21, 0.02), transparent 70%);
-  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1.2px, transparent 1.2px);
+  --ft-bg-grid: radial-gradient(circle, rgba(255, 255, 255, 0.025) 1.2px, transparent 1.2px);
   --ft-grid-size: 28px 28px;
   --ft-grain-opacity: 0.02;
-  --ft-surface: #141C26;
-  --ft-surface-soft: #1A2432;
-  --ft-surface-elevated: #222F40;
-  --ft-surface-hover: #1E2837;
+  --ft-surface: #1B2633;
+  --ft-surface-soft: #223042;
+  --ft-surface-elevated: #273648;
+  --ft-surface-hover: #223042;
   --ft-overlay: rgba(3, 7, 13, 0.78);
 
-  --ft-text-primary: #F1F5F9;
-  --ft-text-secondary: #94A3B8;
-  --ft-text-muted: #64748B;
-  --ft-text-inverse: #090D14;
+  --ft-text-primary: #F5F7FA;
+  --ft-text-secondary: #AAB5C0;
+  --ft-text-muted: #8E9AA6;
+  --ft-text-inverse: #080C12;
 
-  --ft-graphite: #090D14;
-  --ft-border: rgba(255, 255, 255, 0.15);
-  --ft-border-subtle: rgba(255, 255, 255, 0.08);
-  --ft-border-hover: rgba(255, 255, 255, 0.32);
-  --ft-border-header: rgba(255, 255, 255, 0.25);
+  --ft-graphite: #080C12;
+  --ft-border: rgba(255, 255, 255, 0.22);
+  --ft-border-subtle: rgba(255, 255, 255, 0.14);
+  --ft-border-hover: rgba(255, 255, 255, 0.35);
+  --ft-border-header: rgba(255, 255, 255, 0.28);
 
   --ft-emerald: #FBA45C;
   --ft-emerald-hover: #FFB776;
@@ -148,8 +148,8 @@
   --ft-champagne: #94A3B8;
   --ft-champagne-soft: rgba(148, 163, 184, 0.12);
 
-  --ft-male: #94A3B8;
-  --ft-female: #A08B7E;
+  --ft-male: #435568;
+  --ft-female: #5A4A50;
 
   --ft-accent: #E56515;
   --ft-accent-hover: #F0761E;
@@ -158,14 +158,14 @@
   --ft-accent-tint: #FBA45C;
 
   --ft-selected-border: #FBA45C;
-  --ft-selected-bg: #1B232D;
+  --ft-selected-bg: #273648;
   --ft-selected-glow: rgba(251, 164, 92, 0.32);
   --ft-selected-bloom: rgba(251, 164, 92, 0.22);
 
   --ft-related-border: rgba(251, 164, 92, 0.50);
-  --ft-related-bg: #19202A;
+  --ft-related-bg: #1F2D3D;
 
-  --ft-line-color: #5A6878;
+  --ft-line-color: #67778A;
   --ft-line-connected: #78879A;
   --ft-line-spouse: #78879A;
   --ft-line-active-start: #FBA45C;
@@ -184,8 +184,8 @@
   --ft-shadow-lg: 0 24px 52px rgba(0, 0, 0, 0.70);
   --ft-shadow-plaque: 0 4px 18px -2px rgba(0, 0, 0, 0.60), 0 1px 4px rgba(0, 0, 0, 0.40);
   --ft-shadow-plaque-hover: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 4px 12px -2px rgba(0, 0, 0, 0.45);
-  --ft-shadow-card: var(--ft-shadow-plaque);
-  --ft-shadow-card-hover: var(--ft-shadow-plaque-hover);
+  --ft-shadow-card: 0 6px 24px -2px rgba(0, 0, 0, 0.75), 0 3px 8px -1px rgba(0, 0, 0, 0.55);
+  --ft-shadow-card-hover: 0 20px 44px -4px rgba(0, 0, 0, 0.85), 0 6px 16px -2px rgba(0, 0, 0, 0.60);
 }
 
 /* ── Reset & Core ─────────────────────────────────────────── */
@@ -1187,6 +1187,65 @@ button {
   letter-spacing: -0.005em;
 }
 
+/* ── Dark Theme Card Visibility Enhancements ──────────────── */
+[data-theme="dark"] .ft-person-card {
+  border-width: 2px;
+  border-top-width: 4px;
+  background: linear-gradient(180deg, var(--ft-surface) 0%, rgba(27, 38, 51, 0.95) 100%);
+}
+
+[data-theme="dark"] .ft-person-card:hover {
+  box-shadow: 
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    var(--ft-shadow-card-hover);
+  background: var(--ft-surface-hover);
+}
+
+[data-theme="dark"] .ft-person-card--selected {
+  box-shadow: 
+    0 0 0 2px var(--ft-accent-soft),
+    0 0 0 4px rgba(255, 255, 255, 0.04),
+    0 12px 32px -4px rgba(0, 0, 0, 0.70),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10) !important;
+}
+
+[data-theme="dark"] .ft-person-card__name {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  font-weight: 750;
+}
+
+[data-theme="dark"] .ft-person-card--selected .ft-person-card__name {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  font-weight: 800;
+}
+
+[data-theme="dark"] .ft-person-card__avatar {
+  box-shadow: 
+    0 0 0 2px var(--ft-surface), 
+    0 0 0 4.5px var(--ft-border),
+    0 3px 10px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="dark"] .ft-person-card:hover .ft-person-card__avatar {
+  box-shadow: 
+    0 0 0 2px var(--ft-surface-hover), 
+    0 0 0 5px var(--ft-accent),
+    0 3px 12px rgba(0, 0, 0, 0.60);
+}
+
+[data-theme="dark"] .ft-person-card__dates {
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--ft-text-secondary);
+}
+
+[data-theme="dark"] .ft-person-card__occupation {
+  font-weight: 600;
+  color: var(--ft-text-muted);
+}
+
 .ft-person-card__selected-crown {
   position: absolute;
   top: -5px;
@@ -1450,6 +1509,30 @@ button {
 .ft-canvas--compact-zoom .ft-person-card__initials {
   font-size: 1.2rem;
   font-weight: 800;
+}
+
+/* ── Dark Theme Low-Zoom Enhancements ─────────────────────── */
+[data-theme="dark"] .ft-canvas--compact-zoom .ft-person-card {
+  border-width: clamp(2px, calc(1.5px / var(--canvas-scale, 1)), 3.5px);
+  border-top-width: clamp(4px, calc(3px / var(--canvas-scale, 1)), 8px);
+}
+
+[data-theme="dark"] .ft-canvas--compact-zoom .ft-person-card__name {
+  font-weight: 850;
+  letter-spacing: -0.008em;
+}
+
+[data-theme="dark"] .ft-canvas--compact-zoom .ft-person-card__dates {
+  font-size: 0.77rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--ft-text-secondary);
+}
+
+[data-theme="dark"] .ft-canvas--compact-zoom .ft-person-card__initials {
+  font-size: 1.25rem;
+  font-weight: 850;
 }
 
 /* ── Floating Zoom & Reset Tools ─────────────────────────── */
