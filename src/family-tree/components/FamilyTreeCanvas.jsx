@@ -332,7 +332,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
           // Generational entrance delay (Gen I -> Gen II -> Gen III -> Gen IV)
           const genDelay = (node.gen || 0) * 80 + (node.x > 0 ? 30 : 0);
           const isReorderable = isArrangeMode && node.canReorder;
-          const isBeingDragged = draggingInfo?.bloodChildId === node.bloodChildId;
+          const isBeingDragged =
+            draggingInfo?.bloodChildId != null && draggingInfo.bloodChildId === node.bloodChildId;
 
           return (
             <div

@@ -3,7 +3,7 @@
  * Minimal, crisp, photographic profile card with smooth motion feedback and constellation weighting.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { getInitials, getLifespanInfo, getAvatarGradient } from '../utils/familyHelpers.js';
 import SpotlightCard from './react-bits/SpotlightCard.jsx';
 import { useMediaUrl } from '../hooks/useMediaUrl.js';
@@ -25,6 +25,10 @@ export default function PersonCard({
   const rawPhoto = person.photo || person.photoUrl || '';
   const isStoragePath = rawPhoto.startsWith('family/');
   const resolvedPhoto = useMediaUrl(isStoragePath ? rawPhoto : '', rawPhoto);
+  // Fall back to initials when the photo fails to load, instead of showing
+  // the browser's broken-image alt text inside the avatar.
+  const [failedPhoto, setFailedPhoto] = useState(null);
+  const showPhoto = Boolean(resolvedPhoto) && failedPhoto !== resolvedPhoto;
 
   let cardClasses = `ft-person-card ft-person-card--${generationRank} ft-person-card--${person.gender || 'unspecified'}`;
   if (isSelected) cardClasses += ' ft-person-card--selected';
@@ -101,8 +105,13 @@ export default function PersonCard({
       {/* Archival portrait frame */}
       <div className="ft-person-card__avatar-frame">
         <div className="ft-person-card__avatar" style={{ background: avatarBg }}>
-          {resolvedPhoto ? (
-            <img src={resolvedPhoto} alt={person.displayName} className="ft-person-card__photo" />
+          {showPhoto ? (
+            <img
+              src={resolvedPhoto}
+              alt={person.displayName}
+              className="ft-person-card__photo"
+              onError={() => setFailedPhoto(resolvedPhoto)}
+            />
           ) : (
             <span className="ft-person-card__initials">{initials}</span>
           )}

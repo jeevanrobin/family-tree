@@ -50,18 +50,20 @@ export function getLifespanInfo(person) {
 }
 
 export function getAvatarGradient(person) {
+  // Warm-neutral palette shared with the landing page lineage preview:
+  // slate greys for men, clay and terracotta for women.
   const maleGradients = [
-    'linear-gradient(135deg, #334155 0%, #1E293B 60%, #0F172A 100%)',
-    'linear-gradient(135deg, #384A62 0%, #223147 60%, #121D2C 100%)',
-    'linear-gradient(135deg, #2D434E 0%, #1E2E36 60%, #101B20 100%)',
-    'linear-gradient(135deg, #475569 0%, #334155 60%, #1E293B 100%)',
+    'linear-gradient(135deg, #8A9099 0%, #6D747C 100%)',
+    'linear-gradient(135deg, #7C858E 0%, #5E666F 100%)',
+    'linear-gradient(135deg, #737B84 0%, #565D66 100%)',
+    'linear-gradient(135deg, #848B94 0%, #646B74 100%)',
   ];
 
   const femaleGradients = [
-    'linear-gradient(135deg, #784A3B 0%, #543328 60%, #2E1B15 100%)',
-    'linear-gradient(135deg, #6E444E 0%, #4D2D37 60%, #2A171E 100%)',
-    'linear-gradient(135deg, #5C4556 0%, #412E3C 60%, #241821 100%)',
-    'linear-gradient(135deg, #6C3E2F 0%, #4B2A1E 60%, #2B160E 100%)',
+    'linear-gradient(135deg, #D49476 0%, #C98467 100%)',
+    'linear-gradient(135deg, #C4533A 0%, #B4472F 100%)',
+    'linear-gradient(135deg, #C88A6C 0%, #AE6A4E 100%)',
+    'linear-gradient(135deg, #BE6A50 0%, #A4523B 100%)',
   ];
 
   const list = person?.gender === 'female' ? femaleGradients : maleGradients;

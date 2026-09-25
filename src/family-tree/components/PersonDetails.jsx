@@ -40,9 +40,17 @@ function PersonHeroCameo({ person }) {
   const photoSrc = person.photo || person.photoUrl || '';
   const isStoragePath = photoSrc.startsWith('family/');
   const resolvedUrl = useMediaUrl(isStoragePath ? photoSrc : '', photoSrc);
+  const [failedUrl, setFailedUrl] = useState(null);
 
-  if (resolvedUrl) {
-    return <img src={resolvedUrl} alt={person.displayName} className="ft-details__avatar-img" />;
+  if (resolvedUrl && failedUrl !== resolvedUrl) {
+    return (
+      <img
+        src={resolvedUrl}
+        alt={person.displayName}
+        className="ft-details__avatar-img"
+        onError={() => setFailedUrl(resolvedUrl)}
+      />
+    );
   }
   return <span className="ft-details__avatar-initials">{getInitials(person)}</span>;
 }
