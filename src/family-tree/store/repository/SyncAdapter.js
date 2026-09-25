@@ -211,6 +211,16 @@ export class SyncAdapter extends FamilyRepository {
     return this.syncEngine.subscribe(listener);
   }
 
+  /**
+   * FamilyStore hook: called with the reconciled snapshot after each cloud pull
+   * (background sync after hydration, reconnect recovery), so remote edits and
+   * deletions reach the UI without a reload.
+   */
+  onRemoteUpdate(listener) {
+    if (typeof this.syncEngine.onRemoteData !== 'function') return () => {};
+    return this.syncEngine.onRemoteData(listener);
+  }
+
   destroy() {
     this.syncEngine.destroy();
   }

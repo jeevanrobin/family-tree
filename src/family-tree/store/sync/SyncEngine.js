@@ -44,6 +44,7 @@ export class SyncEngine {
 
     this.status = typeof navigator !== 'undefined' && !navigator.onLine ? SYNC_STATUS.OFFLINE : SYNC_STATUS.SYNCED;
     this.listeners = new Set();
+    this.remoteListeners = new Set();
     this.isFlushing = false;
     this.retryTimeout = null;
     this.destroyed = false;
@@ -556,75 +557,52 @@ export class SyncEngine {
   async pullRemoteChanges() {
     if (!this.isOnline() || !this.supabaseAdapter || this.destroyed) return null;
 
-       try {
-         const fid = this.familyId;
-         const remoteData = await this.supabaseAdapter.load();
+    try {
+      const fid = this.familyId;
+      const remoteData = await this.supabaseAdapter.load();
 
-         // Populate ID mappings from remote data
-         await this.populateIdMappings(remoteData.people || []);
-         await this.populateIdMappings(remoteData.relationships || []);
-         await this.populateIdMappings(remoteData.stories || []);
-         await this.populateIdMappings(remoteData.lifeEvents || []);
-         await this.populateIdMappings(remoteData.photos || []);
-         await this.populateIdMappings(remoteData.documents || []);
-
-         const tombstones = await indexedDBManager.getTombstones(fid);
-      const tombstoneSet = new Set(tombstones.map((t) => t.id));
-
-      // Filter out deleted items so cloud doesn't resurrect local tombstones
-      const cleanRemotePeople = filterTombstonedEntities(remoteData.people || [], tombstoneSet);
-      const cleanRemoteStories = filterTombstonedEntities(remoteData.stories || [], tombstoneSet);
-      const cleanRemoteEvents = filterTombstonedEntities(remoteData.lifeEvents || [], tombstoneSet);
-      const cleanRemotePhotos = filterTombstonedEntities(remoteData.photos || [], tombstoneSet);
-      const cleanRemoteDocs = filterTombstonedEntities(remoteData.documents || [], tombstoneSet);
-
-      // Reconcile people with 3-way field-level merge
-      const localPeople = await indexedDBManager.getAllByFamily(STORES.PEOPLE, fid);
-      const localPeopleMap = new Map(localPeople.map((p) => [p.id, p]));
-      const mergedPeople = [];
-
-      for (const remotePerson of cleanRemotePeople) {
-        const local = localPeopleMap.get(remotePerson.id);
-        if (!local) {
-          mergedPeople.push(remotePerson);
-        } else {
-          const { merged } = mergePersonRecords(local, remotePerson);
-          mergedPeople.push(merged);
-        }
+      for (const list of [
+        remoteData.people, remoteData.relationships, remoteData.stories,
+        remoteData.lifeEvents, remoteData.photos, remoteData.documents,
+      ]) {
+        await this.populateIdMappings(list || []);
       }
 
-      // Preserve local-only people that have not yet been synced
-      for (const [id, localPerson] of localPeopleMap.entries()) {
-        if (!cleanRemotePeople.some((p) => p.id === id) && !tombstoneSet.has(id)) {
-          mergedPeople.push(localPerson);
-        }
-      }
+      const tombstones = await indexedDBManager.getTombstones(fid);
+      const tombstoneSet = new Set(tombstones.map((t) => String(t.id)));
 
-      // Validate relationship integrity against merged people
-      const personIdSet = new Set(mergedPeople.map((p) => p.id));
-      const cleanRelationships = (remoteData.relationships || []).filter((r) => {
-        const { valid } = validateRelationshipIntegrity(r, personIdSet, tombstoneSet);
-        return valid;
+      // Entities with a queued (not yet pushed) mutation keep their local state;
+      // everything else follows the cloud, which is authoritative.
+      const pendingQueue = await indexedDBManager.getPendingQueue(fid);
+      const pendingIds = new Set(pendingQueue.map((item) => String(item.entityId)));
+
+      const people = await this._reconcileStore(STORES.PEOPLE, remoteData.people, {
+        tombstoneSet,
+        pendingIds,
+        mergeLocal: (local, remote) => mergePersonRecords(local, remote).merged,
       });
 
-      // Update local IndexedDB with merged state
-      await Promise.all([
-        indexedDBManager.putBatch(STORES.PEOPLE, mergedPeople),
-        indexedDBManager.putBatch(STORES.RELATIONSHIPS, cleanRelationships),
-        indexedDBManager.putBatch(STORES.STORIES, cleanRemoteStories),
-        indexedDBManager.putBatch(STORES.LIFE_EVENTS, cleanRemoteEvents),
-        indexedDBManager.putBatch(STORES.PHOTOS, cleanRemotePhotos),
-        indexedDBManager.putBatch(STORES.DOCUMENTS, cleanRemoteDocs),
-      ]);
+      const personIdSet = new Set(people.map((p) => String(p.id)));
+      const remoteRelationships = (remoteData.relationships || []).filter(
+        (r) => validateRelationshipIntegrity(r, personIdSet, tombstoneSet).valid
+      );
+      const relationships = await this._reconcileStore(STORES.RELATIONSHIPS, remoteRelationships, {
+        tombstoneSet,
+        pendingIds,
+      });
+      const stories = await this._reconcileStore(STORES.STORIES, remoteData.stories, { tombstoneSet, pendingIds });
+      const lifeEvents = await this._reconcileStore(STORES.LIFE_EVENTS, remoteData.lifeEvents, { tombstoneSet, pendingIds });
+      const photos = await this._reconcileStore(STORES.PHOTOS, remoteData.photos, { tombstoneSet, pendingIds });
+      const documents = await this._reconcileStore(STORES.DOCUMENTS, remoteData.documents, { tombstoneSet, pendingIds });
 
       let reconciledOrder = null;
       if (remoteData.siblingOrder) {
         const meta = (await indexedDBManager.get(STORES.SYNC_META, fid)) || { familyId: fid };
-        const pendingQueue = await indexedDBManager.getPendingQueue(fid);
-        const pendingSiblingMutations = pendingQueue.filter(
-          (item) => item.entityType === ENTITY_TYPES.SIBLING_ORDER
+        const pendingCohortKeys = new Set(
+          pendingQueue
+            .filter((item) => item.entityType === ENTITY_TYPES.SIBLING_ORDER)
+            .map((item) => item.entityId)
         );
-        const pendingCohortKeys = new Set(pendingSiblingMutations.map((m) => m.entityId));
 
         reconciledOrder = { ...remoteData.siblingOrder };
         const localOrder = meta.siblingOrder || {};
@@ -651,19 +629,83 @@ export class SyncEngine {
         });
       }
 
-      return {
-        people: mergedPeople,
-        relationships: cleanRelationships,
-        stories: cleanRemoteStories,
-        lifeEvents: cleanRemoteEvents,
-        photos: cleanRemotePhotos,
-        documents: cleanRemoteDocs,
+      const result = {
+        people,
+        relationships,
+        stories,
+        lifeEvents,
+        photos,
+        documents,
         siblingOrder: reconciledOrder || {},
       };
+      this.notifyRemoteData(result);
+      return result;
     } catch (err) {
       console.warn('SyncEngine: Pull remote changes failed:', err.message);
       return null;
     }
+  }
+
+  /**
+   * Replaces the family's cached records in one store with the reconciled set:
+   * - remote records win, unless the entity has a pending local mutation
+   *   (then the local version is kept, merged over remote when mergeLocal is given);
+   * - local-only records survive only while they still have a pending mutation
+   *   (created offline, not yet pushed). Otherwise they were deleted in the
+   *   cloud and are removed here;
+   * - tombstoned (locally deleted) records never come back.
+   */
+  async _reconcileStore(storeName, remoteList, { tombstoneSet, pendingIds, mergeLocal = null }) {
+    const fid = this.familyId;
+    const localList = await indexedDBManager.getAllByFamily(storeName, fid);
+    const localMap = new Map(localList.map((item) => [String(item.id), item]));
+    const reconciled = new Map();
+
+    for (const remote of filterTombstonedEntities(remoteList || [], tombstoneSet)) {
+      const id = String(remote.id);
+      const local = localMap.get(id);
+      if (local && pendingIds.has(id)) {
+        reconciled.set(id, mergeLocal ? mergeLocal(local, remote) : { ...remote, ...local });
+      } else {
+        reconciled.set(id, remote);
+      }
+    }
+
+    for (const [id, local] of localMap) {
+      if (!reconciled.has(id) && pendingIds.has(id) && !tombstoneSet.has(id)) {
+        reconciled.set(id, local);
+      }
+    }
+
+    const staleIds = [...localMap.keys()].filter((id) => !reconciled.has(id));
+    for (const id of staleIds) {
+      await indexedDBManager.delete(storeName, id);
+    }
+
+    const records = [...reconciled.values()].map((item) => ({ ...item, family_id: fid, familyId: fid }));
+    await indexedDBManager.putBatch(storeName, records);
+    return records;
+  }
+
+  // ── Remote Data Observers ──────────────────────────────────
+
+  /**
+   * Subscribe to reconciled snapshots produced by each successful pull, so the
+   * in-memory store can pick up collaborators' changes without a reload.
+   */
+  onRemoteData(listener) {
+    this.remoteListeners.add(listener);
+    return () => this.remoteListeners.delete(listener);
+  }
+
+  notifyRemoteData(data) {
+    this.remoteListeners.forEach((listener) => {
+      try {
+        listener(data);
+      } catch (err) {
+        console.error('Error in sync engine remote data listener:', err);
+      }
+    });
   }
 
   async sync() {
@@ -689,6 +731,7 @@ export class SyncEngine {
       window.removeEventListener('offline', this.handleOffline);
     }
     this.listeners.clear();
+    this.remoteListeners.clear();
   }
 }
 

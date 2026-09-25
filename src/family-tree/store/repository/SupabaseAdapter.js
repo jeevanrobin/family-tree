@@ -39,7 +39,7 @@ function personToRow(person, familyId) {
 
 function rowToPerson(row) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     firstName: row.first_name || '',
     middleName: row.middle_name || '',
@@ -87,7 +87,7 @@ function relationshipToRow(rel, familyId) {
 
 function rowToRelationship(row) {
   const base = {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId1: row.person_id_1,
     personId2: row.person_id_2,
@@ -122,7 +122,7 @@ function storyToRow(story, familyId) {
 
 function rowToStory(row, relatedPersonIds = []) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     title: row.title || 'Untitled Memory',
@@ -151,7 +151,7 @@ function lifeEventToRow(event, familyId) {
 
 function rowToLifeEvent(row, relatedPersonIds = []) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     type: row.type || 'Other',
@@ -182,7 +182,7 @@ function photoToRow(photo, familyId) {
 
 function rowToPhoto(row, relatedPersonIds = []) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     src: row.src || '',
@@ -217,7 +217,7 @@ function documentToRow(doc, familyId) {
 
 function rowToDocument(row) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     name: row.name || 'Archival Document',
@@ -379,7 +379,9 @@ export class SupabaseAdapter extends FamilyRepository {
       }
     }
 
-    return { people, relationships, stories, lifeEvents, photos, documents, siblingOrder };
+    return localizePersonReferences({
+      people, relationships, stories, lifeEvents, photos, documents, siblingOrder,
+    });
   }
 
   async persist() {
@@ -875,6 +877,49 @@ export class SupabaseAdapter extends FamilyRepository {
 }
 
 // ── Junction table helper ─────────────────────────────────────
+
+/**
+ * Rows reference people by their database UUID (person_id, person_id_1, ...),
+ * while the client keys people by their local ID. Rewrite every person
+ * reference in a loaded snapshot to the local ID so relationships, stories,
+ * events, photos and documents line up with the loaded people.
+ */
+export function localizePersonReferences(data) {
+  const uuidToLocal = new Map();
+  for (const person of data.people || []) {
+    if (person.uuid) uuidToLocal.set(String(person.uuid), String(person.id));
+  }
+  const toLocal = (ref) => {
+    if (ref === null || ref === undefined) return ref;
+    return uuidToLocal.get(String(ref)) ?? ref;
+  };
+  const REF_FIELDS = ['personId', 'personId1', 'personId2', 'parentId', 'childId', 'personAId', 'personBId'];
+  const localizeEntity = (entity) => {
+    const out = { ...entity };
+    for (const field of REF_FIELDS) {
+      if (field in out) out[field] = toLocal(out[field]);
+    }
+    if (Array.isArray(out.relatedPersonIds)) {
+      out.relatedPersonIds = out.relatedPersonIds.map(toLocal);
+    }
+    return out;
+  };
+
+  const siblingOrder = {};
+  for (const [cohortKey, ids] of Object.entries(data.siblingOrder || {})) {
+    siblingOrder[cohortKey] = Array.isArray(ids) ? ids.map(toLocal) : ids;
+  }
+
+  return {
+    ...data,
+    siblingOrder,
+    relationships: (data.relationships || []).map(localizeEntity),
+    stories: (data.stories || []).map(localizeEntity),
+    lifeEvents: (data.lifeEvents || []).map(localizeEntity),
+    photos: (data.photos || []).map(localizeEntity),
+    documents: (data.documents || []).map(localizeEntity),
+  };
+}
 
 function buildJunctionMap(rows, parentKey, childKey) {
   const map = new Map();
