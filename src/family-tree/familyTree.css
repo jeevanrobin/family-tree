@@ -10568,3 +10568,32 @@ button {
   border-color: var(--ft-accent);
   color: var(--ft-accent-ink);
 }
+
+/* ── Lazy view loading placeholder ────────────────────────── */
+.ft-view-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 60vh;
+  color: var(--ft-text-secondary);
+  font: 500 0.9rem var(--ft-font-body);
+}
+
+.ft-view-loading__spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--ft-border-subtle);
+  border-top-color: var(--ft-accent);
+  animation: ft-view-spin 0.8s linear infinite;
+}
+
+@keyframes ft-view-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-view-loading__spinner { animation: none; }
+}

@@ -1,14 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, Link } from 'react-router-dom';
-import FamilyTreeApp from './family-tree/components/FamilyTreeApp.jsx';
-import LandingPage from './family-tree/components/landing/LandingPage.jsx';
-import SignInPage from './family-tree/components/auth/SignInPage.jsx';
-import SignUpPage from './family-tree/components/auth/SignUpPage.jsx';
-import CreateFamilyPage from './family-tree/components/auth/CreateFamilyPage.jsx';
-import FamilySelectorView from './family-tree/components/auth/FamilySelectorView.jsx';
-import OnboardingFlow from './family-tree/components/auth/OnboardingFlow.jsx';
-import ResetPasswordPage from './family-tree/components/auth/ResetPasswordPage.jsx';
-import AcceptInvitationPage from './family-tree/components/auth/AcceptInvitationPage.jsx';
+// Route-level code splitting: each page downloads only when first visited,
+// so the landing page doesn't ship the whole tree app.
+const FamilyTreeApp = lazy(() => import('./family-tree/components/FamilyTreeApp.jsx'));
+const LandingPage = lazy(() => import('./family-tree/components/landing/LandingPage.jsx'));
+const SignInPage = lazy(() => import('./family-tree/components/auth/SignInPage.jsx'));
+const SignUpPage = lazy(() => import('./family-tree/components/auth/SignUpPage.jsx'));
+const CreateFamilyPage = lazy(() => import('./family-tree/components/auth/CreateFamilyPage.jsx'));
+const FamilySelectorView = lazy(() => import('./family-tree/components/auth/FamilySelectorView.jsx'));
+const OnboardingFlow = lazy(() => import('./family-tree/components/auth/OnboardingFlow.jsx'));
+const ResetPasswordPage = lazy(() => import('./family-tree/components/auth/ResetPasswordPage.jsx'));
+const AcceptInvitationPage = lazy(() => import('./family-tree/components/auth/AcceptInvitationPage.jsx'));
 import { useAuth } from './family-tree/hooks/useAuth.js';
 import { FamilyProvider, useFamily } from './family-tree/auth/FamilyContext.jsx';
 import { isSupabaseConfigured } from './family-tree/lib/supabaseClient.js';
@@ -180,6 +182,7 @@ export default function App() {
 
     return (
       <BrowserRouter>
+        <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/signin" element={<SignInPage />} />
@@ -213,6 +216,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     );
   }
@@ -221,6 +225,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <FamilyProvider>
+        <Suspense fallback={<LoadingScreen />}>
         <Routes>
           {/* Public Landing Page at '/' */}
           <Route path="/" element={<LandingPage />} />
@@ -269,6 +274,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
+        </Suspense>
       </FamilyProvider>
     </BrowserRouter>
   );

@@ -5,7 +5,7 @@
  * and responsive spatial lineage canvas.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useFamilyTree } from '../hooks/useFamilyTree.js';
 import TreeHeader from './TreeHeader.jsx';
@@ -30,14 +30,25 @@ import DocumentModal from './modals/DocumentModal.jsx';
 import PhotoLightbox from './modals/PhotoLightbox.jsx';
 import DocumentViewerModal from './modals/DocumentViewerModal.jsx';
 import GlobalSearchModal from './GlobalSearchModal.jsx';
-import FamilyTimelineView from './timeline/FamilyTimelineView.jsx';
-import FamilyMemoriesView from './memories/FamilyMemoriesView.jsx';
-import FamilyArchiveView from './archive/FamilyArchiveView.jsx';
-import FamilyInsightsView from './insights/FamilyInsightsView.jsx';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
 import { indexedDBManager } from '../store/local/indexedDBManager.js';
 import { FAMILY_ID_KEY } from '../store/repository/index.js';
+
+// Secondary views load on demand; the tree view ships with the app.
+const FamilyTimelineView = lazy(() => import('./timeline/FamilyTimelineView.jsx'));
+const FamilyMemoriesView = lazy(() => import('./memories/FamilyMemoriesView.jsx'));
+const FamilyArchiveView = lazy(() => import('./archive/FamilyArchiveView.jsx'));
+const FamilyInsightsView = lazy(() => import('./insights/FamilyInsightsView.jsx'));
+
+function ViewLoading() {
+  return (
+    <div className="ft-view-loading" role="status" aria-live="polite">
+      <span className="ft-view-loading__spinner" aria-hidden="true" />
+      <span className="ft-view-loading__label">Loading…</span>
+    </div>
+  );
+}
 
 export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree', activeFamily: activeFamilyProp = null }) {
   const {
@@ -622,6 +633,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           isReducedMotion={isReducedMotion}
         />
       )}
+      <Suspense fallback={<ViewLoading />}>
       {viewMode === 'insights' ? (
         <FamilyInsightsView
           store={familyStore}
@@ -877,6 +889,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           </main>
         </>
       )}
+      </Suspense>
 
         {/* Explore Family Guided Tour Journey */}
         <GuidedTourModal
