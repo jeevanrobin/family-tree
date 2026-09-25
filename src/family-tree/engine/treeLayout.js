@@ -46,10 +46,45 @@ function resolveRank(gen, minGen, maxGen) {
   return 'child';
 }
 
+const LAYOUT_OPTION_KEYS = ['collapsedUnits', 'focusPersonId', 'focusMode', 'customSiblingOrders'];
+
 /**
- * Computes a completely data-driven spatial tree layout with subtree geometry
+ * The third argument is either a layout options object or (legacy) a plain
+ * sibling-order map { cohortKey: [personId, ...] }.
  */
-export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
+function normalizeLayoutOptions(arg) {
+  const value = arg || {};
+  const isOptions = LAYOUT_OPTION_KEYS.some((key) => key in value);
+  if (!isOptions) {
+    return { collapsedUnits: new Set(), focusPersonId: null, focusMode: 'all', siblingOrders: value };
+  }
+  return {
+    collapsedUnits: value.collapsedUnits instanceof Set ? value.collapsedUnits : new Set(value.collapsedUnits || []),
+    focusPersonId: value.focusPersonId != null ? String(value.focusPersonId) : null,
+    focusMode: value.focusMode || 'all',
+    siblingOrders: value.customSiblingOrders || {},
+  };
+}
+
+/** Collapse key for a family unit, as used by the UI (`unit-<personId>`). */
+export function getUnitKey(personId) {
+  return `unit-${personId}`;
+}
+
+/**
+ * Computes a completely data-driven spatial tree layout with subtree geometry.
+ *
+ * @param {Array} persons
+ * @param {Array} relationships
+ * @param {Object} [options]
+ * @param {Set<string>} [options.collapsedUnits] unit keys (`unit-<personId>`) whose descendants are hidden
+ * @param {string} [options.focusPersonId] selected person
+ * @param {'all'|'person'|'family'} [options.focusMode] 'person' keeps the person's ancestors and all
+ *   descendants expanded; 'family' keeps their ancestors and their own children. Other branches collapse.
+ * @param {Object} [options.customSiblingOrders] { cohortKey: [bloodChildId, ...] }
+ */
+export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
+  const { collapsedUnits, focusPersonId, focusMode, siblingOrders } = normalizeLayoutOptions(layoutOptions);
   if (!persons || persons.length === 0) {
     return {
       nodes: new Map(),
@@ -158,14 +193,124 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
     layerUnits.set(g, units);
   }
 
+  // ── Collapse & focus ─────────────────────────────────────────
+  const focusActive =
+    focusMode !== 'all' && focusPersonId !== null && personMap.has(focusPersonId);
+  const constrained = focusActive || collapsedUnits.size > 0;
+
+  const collectRelatives = (startId, edges) => {
+    const found = new Set();
+    const stack = [...(edges.get(startId) || [])];
+    while (stack.length > 0) {
+      const id = String(stack.pop());
+      if (found.has(id)) continue;
+      found.add(id);
+      stack.push(...(edges.get(id) || []));
+    }
+    return found;
+  };
+  const focusAncestors = focusActive ? collectRelatives(focusPersonId, childToParents) : new Set();
+  const focusDescendants = focusActive ? collectRelatives(focusPersonId, parentToChildren) : new Set();
+
+  const unitMemberIds = (unit) => (unit.spouse ? [unit.primary.id, unit.spouse.id] : [unit.primary.id]).map(String);
+
+  function isUnitCollapsed(unit) {
+    const members = unitMemberIds(unit);
+    if (collapsedUnits.has(unit.id) || members.some((id) => collapsedUnits.has(getUnitKey(id)))) {
+      return true;
+    }
+    if (!focusActive) return false;
+    if (members.includes(focusPersonId)) return false;
+    if (members.some((id) => focusAncestors.has(id))) return false;
+    if (focusMode === 'person' && members.some((id) => focusDescendants.has(id))) return false;
+    return true;
+  }
+
+  // Child family units of a unit, in display order, with the blood child of each.
+  const childUnitCache = new Map();
+  function getChildUnits(unit) {
+    if (childUnitCache.has(unit.id)) return childUnitCache.get(unit.id);
+
+    const childIds = unit.childrenIds || [];
+    const childUnits = layerUnits.get(unit.gen + 1) || [];
+    const result = [];
+    const seen = new Set();
+
+    childIds.forEach((childId) => {
+      if (seen.has(childId)) return;
+      seen.add(childId);
+
+      const childUnit = childUnits.find((u) => u.primary.id === childId || u.spouse?.id === childId);
+      if (childUnit) {
+        if (childUnit.spouse) {
+          seen.add(childUnit.spouse.id);
+        }
+        result.push({ unit: childUnit, bloodChildId: String(childId) });
+      }
+    });
+
+    // Apply sibling ordering if available
+    const cohortKey = `${unit.primary.id}-children`;
+    const order = siblingOrders[cohortKey];
+    if (Array.isArray(order)) {
+      const orderIds = order.map(String);
+      result.sort((a, b) => {
+        const aIdx = orderIds.indexOf(a.bloodChildId);
+        const bIdx = orderIds.indexOf(b.bloodChildId);
+        if (aIdx === -1 && bIdx === -1) return 0;
+        if (aIdx === -1) return 1;
+        if (bIdx === -1) return -1;
+        return aIdx - bIdx;
+      });
+    }
+
+    const entry = { cohortKey, children: result };
+    childUnitCache.set(unit.id, entry);
+    return entry;
+  }
+
+  // Horizontal space a unit reserves for itself and its visible descendants.
+  // Without collapse/focus this is the M5C.2 subtree geometry width.
+  const measureCache = new Map();
+  function measureUnit(unit) {
+    if (!constrained) {
+      const subtree = subtreeMap.get(unit.primary.id);
+      return subtree ? subtree.width : unit.width;
+    }
+    if (measureCache.has(unit.id)) return measureCache.get(unit.id);
+    measureCache.set(unit.id, unit.width); // guards against malformed cyclic data
+
+    const children = isUnitCollapsed(unit) ? [] : getChildUnits(unit).children;
+    let width = unit.width;
+    if (children.length > 0) {
+      const childrenWidth = children.reduce((sum, c) => sum + measureUnit(c.unit), 0)
+        + SUBTREE_GAP * (children.length - 1);
+      width = Math.max(unit.width, childrenWidth);
+    }
+    measureCache.set(unit.id, width);
+    return width;
+  }
+
   // M5C.3: Position using subtree widths
   const calculatedPositions = new Map();
-  
+  const cohortMeta = new Map(); // personId -> sibling cohort info for Arrange mode
+  const hiddenIds = new Set();
+  // Keyed by unit: a couple reachable through both spouses' parents is placed
+  // twice and the later placement wins, so its badge must follow the same rule.
+  const branchBadges = new Map();
+
+  function hideDescendants(unit) {
+    getChildUnits(unit).children.forEach(({ unit: child }) => {
+      const members = unitMemberIds(child);
+      if (members.every((id) => hiddenIds.has(id))) return;
+      members.forEach((id) => hiddenIds.add(id));
+      hideDescendants(child);
+    });
+  }
+
   // Position recursively - top-down with width-based centering
   function positionUnitAndDescendants(unit, startX, y) {
-    // Get subtree for this unit
-    const subtree = subtreeMap.get(unit.primary.id);
-    const reservedWidth = subtree ? subtree.width : unit.width;
+    const reservedWidth = measureUnit(unit);
     
     // Center the unit within its reserved subtree width
     const unitCenterX = startX + reservedWidth / 2;
@@ -180,68 +325,64 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
       });
     }
     
-    // Position children using their subtree widths
-    const childIds = unit.childrenIds || [];
-    if (childIds.length === 0) return;
-    
-    const childGen = unit.gen + 1;
-    const childY = (childGen - minGen) * GENERATION_HEIGHT;
-    const childUnits = layerUnits.get(childGen) || [];
-    
-    // Find child units (avoid duplicates for couples)
-    const myChildUnits = [];
-    const seen = new Set();
-    
-    childIds.forEach(childId => {
-      if (seen.has(childId)) return;
-      seen.add(childId);
-      
-      const childUnit = childUnits.find(u => 
-        u.primary.id === childId || u.spouse?.id === childId
-      );
-      
-      if (childUnit) {
-        if (childUnit.spouse) {
-          seen.add(childUnit.spouse.id);
-        }
-        myChildUnits.push(childUnit);
-      }
-    });
-    
-    // Apply sibling ordering if available
-    const cohortKey = `${unit.primary.id}-children`;
-    if (siblingOrders[cohortKey]) {
-      const order = siblingOrders[cohortKey];
-      myChildUnits.sort((a, b) => {
-        const aIdx = order.indexOf(a.primary.id);
-        const bIdx = order.indexOf(b.primary.id);
-        if (aIdx === -1 && bIdx === -1) return 0;
-        if (aIdx === -1) return 1;
-        if (bIdx === -1) return -1;
-        return aIdx - bIdx;
+    const { cohortKey, children } = getChildUnits(unit);
+    if (children.length === 0) return;
+
+    const collapsed = isUnitCollapsed(unit);
+    const showBadge = collapsed || unitMemberIds(unit).includes(focusPersonId);
+    if (showBadge) {
+      const name = unit.primary.displayName || unit.primary.firstName || 'this family';
+      branchBadges.set(unit.id, {
+        id: `badge-${unit.id}`,
+        unitKey: getUnitKey(unit.primary.id),
+        // Either spouse's key collapses the couple; toggling must handle both.
+        unitKeys: unitMemberIds(unit).map(getUnitKey),
+        x: unitCenterX,
+        y: y + NODE_HEIGHT + 10,
+        isCollapsed: collapsed,
+        childCount: children.length,
+        title: collapsed
+          ? `Show ${children.length} ${children.length === 1 ? 'child' : 'children'} of ${name}`
+          : `Collapse ${name}'s branch`,
       });
     }
-    
-    // Calculate total width needed for all children
-    let totalChildWidth = 0;
-    myChildUnits.forEach((cu, idx) => {
-      const childSubtree = subtreeMap.get(cu.primary.id);
-      totalChildWidth += childSubtree ? childSubtree.width : cu.width;
-      if (idx < myChildUnits.length - 1) {
-        totalChildWidth += SUBTREE_GAP;
-      }
+
+    if (collapsed) {
+      hideDescendants(unit);
+      return;
+    }
+
+    // Sibling cohort metadata for drag-to-reorder (Arrange Family mode)
+    const cohortSiblingIds = children.map((c) => c.bloodChildId);
+    children.forEach(({ unit: child, bloodChildId }, index) => {
+      unitMemberIds(child).forEach((memberId) => {
+        cohortMeta.set(memberId, {
+          cohortKey,
+          bloodChildId,
+          cohortSiblingIds,
+          siblingIndex: index,
+          siblingCount: children.length,
+          canReorder: children.length > 1,
+        });
+      });
     });
-    
+
+    const childGen = unit.gen + 1;
+    const childY = (childGen - minGen) * GENERATION_HEIGHT;
+
+    // Calculate total width needed for all children
+    const totalChildWidth = children.reduce((sum, c) => sum + measureUnit(c.unit), 0)
+      + SUBTREE_GAP * (children.length - 1);
+
     // Position children sequentially within the parent's reserved width
     let childX = unitCenterX - totalChildWidth / 2;
-    
-    myChildUnits.forEach((child, idx) => {
-      const childSubtree = subtreeMap.get(child.primary.id);
-      const childWidth = childSubtree ? childSubtree.width : child.width;
-      
+
+    children.forEach(({ unit: child }, idx) => {
+      const childWidth = measureUnit(child);
+
       positionUnitAndDescendants(child, childX, childY);
-      
-      childX += childWidth + (idx < myChildUnits.length - 1 ? SUBTREE_GAP : 0);
+
+      childX += childWidth + (idx < children.length - 1 ? SUBTREE_GAP : 0);
     });
   }
 
@@ -251,8 +392,7 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
     // Calculate total width needed
     let totalWidth = 0;
     rootUnits.forEach((unit, idx) => {
-      const subtree = subtreeMap.get(unit.primary.id);
-      totalWidth += subtree ? subtree.width : unit.width;
+      totalWidth += measureUnit(unit);
       if (idx < rootUnits.length - 1) {
         totalWidth += SUBTREE_GAP;
       }
@@ -262,8 +402,7 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
     let currentX = -totalWidth / 2;
     
     rootUnits.forEach((unit, idx) => {
-      const subtree = subtreeMap.get(unit.primary.id);
-      const width = subtree ? subtree.width : unit.width;
+      const width = measureUnit(unit);
       
       positionUnitAndDescendants(unit, currentX, rootY);
       
@@ -288,10 +427,16 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
       y: pos.y,
     });
   });
+  const badges = [...branchBadges.values()];
+  badges.forEach((badge) => {
+    badge.x -= centerShift;
+  });
 
   // 4. Construct Nodes Map
   const nodes = new Map();
   persons.forEach((person) => {
+    // Hidden behind a collapsed branch (unless also placed through another line)
+    if (hiddenIds.has(String(person.id)) && !calculatedPositions.has(person.id)) return;
     const pos = calculatedPositions.get(person.id) || { x: 0, y: 0 };
     const gen = genMap.get(person.id) ?? 0;
     nodes.set(person.id, {
@@ -303,6 +448,7 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
       height: NODE_HEIGHT,
       centerX: pos.x + NODE_WIDTH / 2,
       centerY: pos.y + NODE_HEIGHT / 2,
+      ...(cohortMeta.get(String(person.id)) || {}),
     });
   });
 
@@ -525,11 +671,23 @@ export function computeTreeLayout(persons, relationships, siblingOrders = {}) {
     });
   }
 
+  // Full (uncollapsed) layout for the minimap overview.
+  let allNodes = nodes;
+  let fullBounds = bounds;
+  if (constrained) {
+    const full = computeTreeLayout(persons, relationships, { customSiblingOrders: siblingOrders });
+    allNodes = full.nodes;
+    fullBounds = full.bounds;
+  }
+
   return {
     nodes,
+    allNodes,
     lines,
     generationTracks,
     bounds,
+    fullBounds,
+    branchBadges: badges,
     nodeWidth: NODE_WIDTH,
     nodeHeight: NODE_HEIGHT,
   };

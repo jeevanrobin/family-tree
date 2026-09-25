@@ -400,3 +400,127 @@ describe('computeTreeLayout', () => {
     });
   });
 });
+
+describe('computeTreeLayout options: collapse, focus and sibling order', () => {
+  // root ─┬─ a (+ spouse as) ── a1
+  //       └─ b ── b1
+  const persons = [
+    { id: 'root', displayName: 'Root' },
+    { id: 'a', displayName: 'A' },
+    { id: 'as', displayName: 'A Spouse' },
+    { id: 'b', displayName: 'B' },
+    { id: 'a1', displayName: 'A Child' },
+    { id: 'b1', displayName: 'B Child' },
+  ];
+  const relationships = [
+    { id: 'r1', type: 'parent-child', parentId: 'root', childId: 'a' },
+    { id: 'r2', type: 'parent-child', parentId: 'root', childId: 'b' },
+    { id: 'r3', type: 'spouse', personAId: 'a', personBId: 'as' },
+    { id: 'r4', type: 'parent-child', parentId: 'a', childId: 'a1' },
+    { id: 'r5', type: 'parent-child', parentId: 'b', childId: 'b1' },
+  ];
+
+  it('hides the descendants of a collapsed unit and reports a badge', () => {
+    const layout = computeTreeLayout(persons, relationships, { collapsedUnits: new Set(['unit-b']) });
+
+    expect(layout.nodes.has('b')).toBe(true);
+    expect(layout.nodes.has('b1')).toBe(false);
+    expect(layout.nodes.has('a1')).toBe(true);
+    expect(layout.allNodes.has('b1')).toBe(true);
+    const badge = layout.branchBadges.find((x) => x.unitKey === 'unit-b');
+    expect(badge).toMatchObject({ isCollapsed: true, childCount: 1 });
+    expect(layout.lines.some((l) => l.childId === 'b1')).toBe(false);
+  });
+
+  it('collapsing a couple by either spouse hides their children', () => {
+    const layout = computeTreeLayout(persons, relationships, { collapsedUnits: new Set(['unit-as']) });
+    expect(layout.nodes.has('a1')).toBe(false);
+  });
+
+  it('collapse all keeps only the root unit', () => {
+    const layout = computeTreeLayout(persons, relationships, {
+      collapsedUnits: new Set(['unit-root', 'unit-a', 'unit-b']),
+    });
+    expect([...layout.nodes.keys()]).toEqual(['root']);
+  });
+
+  it('packs the remaining branches closer together when a branch is collapsed', () => {
+    const wide = [...persons, { id: 'b2', displayName: 'B Child 2' }, { id: 'b3', displayName: 'B Child 3' }];
+    const wideRels = [
+      ...relationships,
+      { id: 'r6', type: 'parent-child', parentId: 'b', childId: 'b2' },
+      { id: 'r7', type: 'parent-child', parentId: 'b', childId: 'b3' },
+    ];
+    const expanded = computeTreeLayout(wide, wideRels);
+    const collapsed = computeTreeLayout(wide, wideRels, { collapsedUnits: new Set(['unit-b']) });
+
+    const gap = (layout) => layout.nodes.get('b').x - layout.nodes.get('a').x;
+    expect(gap(collapsed)).toBeLessThan(gap(expanded));
+  });
+
+  it("focus 'person' keeps the person's line and descendants, collapsing other branches", () => {
+    const layout = computeTreeLayout(persons, relationships, { focusPersonId: 'a', focusMode: 'person' });
+
+    expect(layout.nodes.has('a1')).toBe(true);
+    expect(layout.nodes.has('b')).toBe(true);
+    expect(layout.nodes.has('b1')).toBe(false);
+  });
+
+  it("focus 'family' keeps the person's own children but collapses grandchildren", () => {
+    const deeper = [...persons, { id: 'a1c', displayName: 'Grandchild' }];
+    const deeperRels = [...relationships, { id: 'r8', type: 'parent-child', parentId: 'a1', childId: 'a1c' }];
+
+    const family = computeTreeLayout(deeper, deeperRels, { focusPersonId: 'a', focusMode: 'family' });
+    expect(family.nodes.has('a1')).toBe(true);
+    expect(family.nodes.has('a1c')).toBe(false);
+
+    const person = computeTreeLayout(deeper, deeperRels, { focusPersonId: 'a', focusMode: 'person' });
+    expect(person.nodes.has('a1c')).toBe(true);
+  });
+
+  it('shows a collapse badge on the selected person when not collapsed', () => {
+    const layout = computeTreeLayout(persons, relationships, { focusPersonId: 'b', focusMode: 'all' });
+    const badge = layout.branchBadges.find((x) => x.unitKey === 'unit-b');
+    expect(badge).toMatchObject({ isCollapsed: false });
+    expect(layout.nodes.has('b1')).toBe(true);
+  });
+
+  it('adds sibling cohort metadata used by Arrange Family', () => {
+    const layout = computeTreeLayout(persons, relationships);
+    const a = layout.nodes.get('a');
+    const spouse = layout.nodes.get('as');
+
+    expect(a.cohortKey).toBe('root-children');
+    expect(a.bloodChildId).toBe('a');
+    expect(spouse.bloodChildId).toBe('a');
+    expect(a.cohortSiblingIds).toEqual(['a', 'b']);
+    expect(a.canReorder).toBe(true);
+    expect(layout.nodes.get('a1').canReorder).toBe(false);
+  });
+
+  it('applies custom sibling order passed as options', () => {
+    const layout = computeTreeLayout(persons, relationships, {
+      customSiblingOrders: { 'root-children': ['b', 'a'] },
+    });
+    expect(layout.nodes.get('b').x).toBeLessThan(layout.nodes.get('a').x);
+    expect(layout.nodes.get('a').cohortSiblingIds).toEqual(['b', 'a']);
+  });
+
+  it('orders by the blood child even when they are the spouse in their unit', () => {
+    // 'as' is the blood child of root2 but is the spouse in the a+as unit.
+    const p = [...persons, { id: 'root2', displayName: 'Root 2' }, { id: 'c', displayName: 'C' }];
+    const r = [
+      ...relationships,
+      { id: 'r9', type: 'parent-child', parentId: 'root2', childId: 'as' },
+      { id: 'r10', type: 'parent-child', parentId: 'root2', childId: 'c' },
+    ];
+    const layout = computeTreeLayout(p, r, { customSiblingOrders: { 'root2-children': ['c', 'as'] } });
+    const cohort = layout.nodes.get('c').cohortSiblingIds;
+    expect(cohort).toEqual(['c', 'as']);
+  });
+
+  it('keeps accepting a plain sibling-order map as the third argument', () => {
+    const layout = computeTreeLayout(persons, relationships, { 'root-children': ['b', 'a'] });
+    expect(layout.nodes.get('b').x).toBeLessThan(layout.nodes.get('a').x);
+  });
+});

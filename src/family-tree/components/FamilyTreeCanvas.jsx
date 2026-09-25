@@ -428,7 +428,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
             }}
             onClick={(e) => {
               e.stopPropagation();
-              onToggleBranch?.(badge.unitKey);
+              onToggleBranch?.(badge.unitKeys || badge.unitKey);
             }}
             title={badge.title}
             aria-label={badge.title}

@@ -123,14 +123,17 @@ export function useFamilyTree() {
     setSelectedId(null);
   }, []);
 
-  const toggleBranch = useCallback((unitKey) => {
-    if (!unitKey) return;
+  // Accepts one unit key or all keys of a couple's unit (either spouse's key
+  // collapses the couple, so expanding must clear every one of them).
+  const toggleBranch = useCallback((unitKeyOrKeys) => {
+    const keys = (Array.isArray(unitKeyOrKeys) ? unitKeyOrKeys : [unitKeyOrKeys]).filter(Boolean);
+    if (keys.length === 0) return;
     setCollapsedUnitKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(unitKey)) {
-        next.delete(unitKey);
+      if (keys.some((key) => next.has(key))) {
+        keys.forEach((key) => next.delete(key));
       } else {
-        next.add(unitKey);
+        next.add(keys[0]);
       }
       return next;
     });
