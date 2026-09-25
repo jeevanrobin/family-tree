@@ -293,6 +293,29 @@ export class SupabaseAdapter extends FamilyRepository {
    * Prevents cross-family relationship or artifact creation.
    * @private
    */
+  /**
+   * Insert a new entity row exactly once. If a row with the same local_id
+   * already exists in this family (an earlier attempt succeeded but its
+   * response was lost, so the queue retried the create), update that row
+   * instead of inserting a duplicate. Returns a { data, error } result.
+   */
+  async _insertOnce(table, row) {
+    if (row.local_id) {
+      const existing = await supabase
+        .from(table)
+        .select('id')
+        .eq('family_id', this.familyId)
+        .eq('local_id', row.local_id)
+        .limit(1);
+      if (existing.error) return existing;
+      const existingId = existing.data?.[0]?.id;
+      if (existingId) {
+        return supabase.from(table).update(row).eq('id', existingId).select().single();
+      }
+    }
+    return supabase.from(table).insert(row).select().single();
+  }
+
   async _verifyPersonsBelongToFamily(personIds) {
     const validIds = (personIds || []).filter(Boolean).map(String);
     if (validIds.length === 0) return true;
@@ -488,7 +511,7 @@ export class SupabaseAdapter extends FamilyRepository {
 
     if (person._isNew) {
       const data = throwIfError(
-        await supabase.from('family_members').insert(row).select().single(),
+        await this._insertOnce('family_members', row),
         'insert person'
       );
       return rowToPerson(data);
@@ -540,7 +563,7 @@ export class SupabaseAdapter extends FamilyRepository {
 
     const row = relationshipToRow(rel, this.familyId);
     const data = throwIfError(
-      await supabase.from('relationships').insert(row).select().single(),
+      await this._insertOnce('relationships', row),
       'insert relationship'
     );
     return rowToRelationship(data);
@@ -572,7 +595,7 @@ export class SupabaseAdapter extends FamilyRepository {
     let savedRow;
     if (story._isNew) {
       savedRow = throwIfError(
-        await supabase.from('stories').insert(row).select().single(),
+        await this._insertOnce('stories', row),
         'insert story'
       );
      } else {
@@ -586,11 +609,12 @@ export class SupabaseAdapter extends FamilyRepository {
            .single(),
          'update story'
        );
-       await supabase.from('story_persons').delete().eq('story_id', story.id);
-     }
+    }
+    // Replace person links by the row UUID (also makes retried creates idempotent).
+    await supabase.from('story_persons').delete().eq('story_id', savedRow.id);
 
     if (story.relatedPersonIds?.length > 0) {
-      const junctionRows = story.relatedPersonIds.map((pid) => ({
+      const junctionRows = [...new Set(story.relatedPersonIds.map(String))].map((pid) => ({
         story_id: savedRow.id,
         person_id: pid,
       }));
@@ -628,7 +652,7 @@ export class SupabaseAdapter extends FamilyRepository {
     let savedRow;
     if (event._isNew) {
       savedRow = throwIfError(
-        await supabase.from('life_events').insert(row).select().single(),
+        await this._insertOnce('life_events', row),
         'insert life_event'
       );
     } else {
@@ -642,11 +666,12 @@ export class SupabaseAdapter extends FamilyRepository {
            .single(),
          'update life_event'
        );
-       await supabase.from('life_event_persons').delete().eq('life_event_id', event.id);
     }
+    // Replace person links by the row UUID (also makes retried creates idempotent).
+    await supabase.from('life_event_persons').delete().eq('life_event_id', savedRow.id);
 
     if (event.relatedPersonIds?.length > 0) {
-      const junctionRows = event.relatedPersonIds.map((pid) => ({
+      const junctionRows = [...new Set(event.relatedPersonIds.map(String))].map((pid) => ({
         life_event_id: savedRow.id,
         person_id: pid,
       }));
@@ -695,7 +720,7 @@ export class SupabaseAdapter extends FamilyRepository {
     let savedRow;
     if (photo._isNew) {
       savedRow = throwIfError(
-        await supabase.from('media').insert(row).select().single(),
+        await this._insertOnce('media', row),
         'insert media'
       );
     } else {
@@ -709,11 +734,12 @@ export class SupabaseAdapter extends FamilyRepository {
            .single(),
          'update media'
        );
-       await supabase.from('media_persons').delete().eq('media_id', photo.id);
     }
+    // Replace person links by the row UUID (also makes retried creates idempotent).
+    await supabase.from('media_persons').delete().eq('media_id', savedRow.id);
 
     if (photo.relatedPersonIds?.length > 0) {
-      const junctionRows = photo.relatedPersonIds.map((pid) => ({
+      const junctionRows = [...new Set(photo.relatedPersonIds.map(String))].map((pid) => ({
         media_id: savedRow.id,
         person_id: pid,
       }));
@@ -762,7 +788,7 @@ export class SupabaseAdapter extends FamilyRepository {
 
     if (doc._isNew) {
       const data = throwIfError(
-        await supabase.from('documents').insert(row).select().single(),
+        await this._insertOnce('documents', row),
         'insert document'
       );
       return rowToDocument(data);
