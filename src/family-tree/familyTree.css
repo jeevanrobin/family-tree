@@ -11945,3 +11945,75 @@ button {
   background: var(--ft-accent);
   color: #fff;
 }
+
+/* ── Cross-family tags (replace long "married into" lines) ────── */
+.ft-crossfamily-tags {
+  position: absolute;
+  left: -40%;
+  right: -40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.ft-crossfamily-tag {
+  pointer-events: auto;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--ft-accent) 60%, var(--ft-border));
+  background: color-mix(in srgb, var(--ft-surface) 92%, transparent);
+  color: var(--ft-accent);
+  font-size: clamp(0.68rem, calc(0.68rem / var(--canvas-scale, 1)), 1.35rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ft-crossfamily-tag:hover {
+  background: color-mix(in srgb, var(--ft-accent) 14%, var(--ft-surface));
+}
+
+/* ── Far zoom (< 50%): name-only cards that stay readable ────────
+   Names are sized against the zoom so they stay ~13px on screen. */
+.ft-canvas--far-zoom .ft-person-card__avatar-frame,
+.ft-canvas--far-zoom .ft-person-card__dates,
+.ft-canvas--far-zoom .ft-person-card__occupation,
+.ft-canvas--far-zoom .ft-person-card__selected-crown {
+  display: none !important;
+}
+
+.ft-canvas--far-zoom .ft-person-card {
+  justify-content: center;
+}
+
+.ft-canvas--far-zoom .ft-person-card__info {
+  margin: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.ft-canvas--far-zoom .ft-person-card__name {
+  font-size: calc(min(calc(12px / var(--canvas-scale, 1)), 42px) * var(--name-fit, 1));
+  line-height: 1.12;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: manual;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  letter-spacing: -0.01em;
+}
+
+/* Gender cue replaces the hidden photo circle */
+.ft-canvas--far-zoom .ft-person-card--male {
+  box-shadow: inset 0 calc(6px / var(--canvas-scale, 1)) 0 0 color-mix(in srgb, #64748b 55%, transparent);
+}
+
+.ft-canvas--far-zoom .ft-person-card--female {
+  box-shadow: inset 0 calc(6px / var(--canvas-scale, 1)) 0 0 color-mix(in srgb, #c2410c 55%, transparent);
+}
