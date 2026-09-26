@@ -10586,6 +10586,30 @@ button {
   color: var(--ft-text-secondary);
 }
 
+.ft-error-screen__details {
+  margin: 0 0 18px;
+  font-size: 13px;
+  color: var(--ft-text-secondary, #5b6475);
+}
+
+.ft-error-screen__details summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.ft-error-screen__details pre {
+  max-height: 200px;
+  overflow: auto;
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .ft-error-screen__actions {
   display: flex;
   flex-wrap: wrap;
