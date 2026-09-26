@@ -250,6 +250,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 <g key={line.id} className="ft-canvas__spouse-group">
                   <path
                     d={line.path}
+                    pathLength={isLineActive ? 1 : undefined}
                     className={`ft-canvas__line ft-canvas__line--spouse ${
                       isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
                     } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
@@ -282,6 +283,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 <g key={line.id} className="ft-canvas__sibling-group">
                   <path
                     d={line.path}
+                    pathLength={isLineActive ? 1 : undefined}
                     className={`ft-canvas__line ft-canvas__line--sibling ${
                       isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
                     } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
@@ -294,10 +296,12 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
               <path
                 key={line.id}
                 d={line.path}
+                pathLength={isLineActive && !line.crossFamily ? 1 : undefined}
                 className={`ft-canvas__line ft-canvas__line--parent ${
                   line.crossFamily ? 'ft-canvas__line--cross-family' : ''
                 } ${
-                  isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
+                  // Cross-family links keep their dashes (no draw-in animation).
+                  isLineActive ? `ft-canvas__line--active${line.crossFamily ? '' : ' ft-canvas__line--animated'}` : ''
                 } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
               />
             );

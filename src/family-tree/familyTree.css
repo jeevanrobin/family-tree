@@ -1091,9 +1091,11 @@ button {
   opacity: 0.45 !important;
 }
 
+/* Draw-in animation. The path has pathLength="1", so the dash covers the
+   whole line however long it is (long family buses exceed any fixed px). */
 .ft-canvas__line--animated {
-  stroke-dasharray: 900;
-  stroke-dashoffset: 900;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   animation: ftLineDraw 0.72s var(--ft-ease) forwards;
 }
 
