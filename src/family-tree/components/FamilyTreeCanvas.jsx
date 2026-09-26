@@ -16,6 +16,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     immediateFamilyMap,
     constellationMap,
     relatedIds,
+    kinshipMap,
+    labelLanguage = 'te',
     onSelectPerson,
     onDeselect,
     onScaleChange,
@@ -313,6 +315,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
             immediateFamilyMap?.get(id)?.role ||
             constellationMap?.get(id)?.role ||
             null;
+          const kinship = selectedId && id !== selectedId ? kinshipMap?.get(String(id)) : null;
+          const teluguRole = labelLanguage === 'te' && kinship?.telugu?.length ? kinship : null;
 
           // Generational entrance delay (Gen I -> Gen II -> Gen III -> Gen IV)
           const genDelay = (node.gen || 0) * 80 + (node.x > 0 ? 30 : 0);
@@ -347,6 +351,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 isRelated={isRelated}
                 constellationTier={constellationTier}
                 relationshipRole={relationRole}
+                teluguRole={teluguRole}
                 onClick={onSelectPerson}
                 animationDelay={genDelay}
               />

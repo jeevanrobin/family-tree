@@ -67,6 +67,9 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     immediateFamilyMap,
     constellationMap,
     ancestryLineage,
+    kinshipMap,
+    labelLanguage,
+    setLabelLanguage,
     relatedIds,
     selectPerson,
     deselectPerson,
@@ -826,6 +829,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
               constellationMap={constellationMap}
               ancestryLineage={ancestryLineage}
               relatedIds={relatedIds}
+              kinshipMap={kinshipMap}
+              labelLanguage={labelLanguage}
               onSelectPerson={handleSelectPerson}
               onDeselect={handleDeselect}
               onScaleChange={setCanvasScale}
@@ -881,6 +886,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                 onExpandAll={expandAll}
                 onCollapseAll={collapseAll}
                 hasSelection={Boolean(selectedId)}
+                labelLanguage={labelLanguage}
+                onSetLabelLanguage={setLabelLanguage}
                 scale={canvasScale}
                 isReducedMotion={isReducedMotion}
               />

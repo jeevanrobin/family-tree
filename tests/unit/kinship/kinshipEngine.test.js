@@ -128,3 +128,21 @@ describe('kinship engine', () => {
     expect(rel('cousinCross').path.map((s) => s.id)).toEqual(['me', 'nanna', 'atta', 'cousinCross']);
   });
 });
+
+import { describeRelationshipsFrom } from '../../../src/family-tree/kinship/kinshipEngine.js';
+
+describe('describeRelationshipsFrom', () => {
+  it('matches the one-to-one finder for everyone, from a single search', () => {
+    const all = describeRelationshipsFrom(persons, relationships, 'me');
+    expect(all.has('me')).toBe(false);
+    for (const id of ['nanna', 'pedananna', 'mamayya', 'cousinCross', 'bil', 'kid', 'unknown']) {
+      const single = describeRelationship(persons, relationships, 'me', id);
+      expect(all.get(id)).toEqual(single);
+    }
+    expect(all.get('amma').telugu.map((t) => t.term.roman)).toEqual(['Amma']);
+  });
+
+  it('returns nothing for an unknown person', () => {
+    expect(describeRelationshipsFrom(persons, relationships, 'nobody').size).toBe(0);
+  });
+});

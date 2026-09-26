@@ -84,13 +84,8 @@ function buildGraph(persons, relationships) {
  * Shortest connection from one person to another.
  * @returns {Array<{type: 'P'|'C'|'S', id: string}>|null} steps (each step's id is the person reached)
  */
-export function findRelationshipPath(persons, relationships, fromId, toId) {
-  const { people, edges } = buildGraph(persons, relationships);
-  const from = String(fromId);
-  const to = String(toId);
-  if (!people.has(from) || !people.has(to)) return null;
-  if (from === to) return [];
-
+/** Shortest connections from one person to everyone (Dijkstra). */
+function shortestPathTree(edges, from) {
   const dist = new Map([[from, 0]]);
   const prev = new Map();
   const queue = [[0, from]];
@@ -100,7 +95,6 @@ export function findRelationshipPath(persons, relationships, fromId, toId) {
     const [d, node] = queue.shift();
     if (done.has(node)) continue;
     done.add(node);
-    if (node === to) break;
     for (const { to: next, type } of edges.get(node) || []) {
       const nd = d + STEP_WEIGHT[type];
       if (nd < (dist.get(next) ?? Infinity)) {
@@ -110,13 +104,25 @@ export function findRelationshipPath(persons, relationships, fromId, toId) {
       }
     }
   }
-  if (!prev.has(to)) return null;
+  return prev;
+}
 
+function stepsTo(prev, from, to) {
+  if (from === to) return [];
+  if (!prev.has(to)) return null;
   const steps = [];
   for (let node = to; node !== from; node = prev.get(node).node) {
     steps.unshift({ type: prev.get(node).type, id: node });
   }
   return steps;
+}
+
+export function findRelationshipPath(persons, relationships, fromId, toId) {
+  const { people, edges } = buildGraph(persons, relationships);
+  const from = String(fromId);
+  const to = String(toId);
+  if (!people.has(from) || !people.has(to)) return null;
+  return stepsTo(shortestPathTree(edges, from), from, to);
 }
 
 /** Collapse "up to a parent, down to another child" into a sibling step B. */
@@ -413,6 +419,28 @@ export function describeRelationship(persons, relationships, fromId, toId) {
   const people = new Map(persons.map((p) => [String(p.id), p]));
   const ego = people.get(String(fromId));
   const steps = findRelationshipPath(persons, relationships, fromId, toId);
+  return describeSteps(steps, ego, people, fromId, toId);
+}
+
+/**
+ * How everyone is related to one person, from a single search: for each
+ * other connected person, what `fromId` calls them.
+ * @returns {Map<string, ReturnType<typeof describeRelationship>>}
+ */
+export function describeRelationshipsFrom(persons, relationships, fromId) {
+  const { people, edges } = buildGraph(persons, relationships);
+  const from = String(fromId);
+  const out = new Map();
+  const ego = people.get(from);
+  if (!ego) return out;
+  const prev = shortestPathTree(edges, from);
+  prev.forEach((_, id) => {
+    out.set(id, describeSteps(stepsTo(prev, from, id), ego, people, from, id));
+  });
+  return out;
+}
+
+function describeSteps(steps, ego, people, fromId, toId) {
   if (!ego || steps === null) {
     return { found: false, path: [], english: null, description: '', telugu: [], missing: [] };
   }

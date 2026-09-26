@@ -19,6 +19,7 @@ import {
   getDocumentsForPerson,
 } from '../data/familyDataService.js';
 import { computeTreeLayout } from '../engine/treeLayout.js';
+import { describeRelationshipsFrom } from '../kinship/kinshipEngine.js';
 
 export function useFamilyTree() {
   const [snapshot, setSnapshot] = useState(() => familyStore.getSnapshot());
@@ -75,6 +76,29 @@ export function useFamilyTree() {
   }, [selectedId, relationships, persons]);
 
   // Complete ancestral lineage tracing (Grandparents -> Parents -> Selected Child)
+  // What the selected person calls each relative (Telugu + English), from one search.
+  const kinshipMap = useMemo(
+    () => (selectedId ? describeRelationshipsFrom(persons, relationships, selectedId) : new Map()),
+    [selectedId, persons, relationships]
+  );
+
+  // Relationship labels on cards: Telugu kinship terms or English roles.
+  const [labelLanguage, setLabelLanguageState] = useState(() => {
+    try {
+      return localStorage.getItem('family-tree-label-language') || 'te';
+    } catch {
+      return 'te';
+    }
+  });
+  const setLabelLanguage = useCallback((lang) => {
+    setLabelLanguageState(lang);
+    try {
+      localStorage.setItem('family-tree-label-language', lang);
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
   const ancestryLineage = useMemo(() => {
     return selectedId
       ? getAncestryLineage(selectedId)
@@ -310,6 +334,9 @@ export function useFamilyTree() {
     constellationMap,
     ancestryLineage,
     relatedIds,
+    kinshipMap,
+    labelLanguage,
+    setLabelLanguage,
     selectedPersonStories,
     selectedPersonEvents,
     selectedPersonPhotos,

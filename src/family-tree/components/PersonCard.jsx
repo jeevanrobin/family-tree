@@ -13,6 +13,7 @@ export default function PersonCard({
   isSelected,
   isRelated,
   relationshipRole,
+  teluguRole = null,
   constellationTier = 'default',
   generationRank = 'current',
   onClick,
@@ -89,7 +90,24 @@ export default function PersonCard({
       }}
     >
       {/* Contextual Relationship Role Badge */}
-      {relationshipRole && (
+      {teluguRole ? (
+        <span
+          className={`ft-person-card__relation-pill ft-person-card__relation-pill--te ${
+            constellationTier === 'extended' || constellationTier === 'unrelated' ? 'ft-person-card__relation-pill--soft' : ''
+          }`}
+          title={`${teluguRole.telugu.map((t) => t.term.roman + (t.when ? ` (${t.when})` : '')).join(' / ')}${
+            teluguRole.english ? ` · ${teluguRole.english}` : ''
+          }${teluguRole.description ? ` · ${teluguRole.description}` : ''}`}
+          aria-label={`Relationship: ${teluguRole.telugu.map((t) => t.term.roman).join(' or ')}`}
+        >
+          <span lang="te" className="ft-person-card__relation-script">
+            {teluguRole.telugu.map((t) => t.term.script).join(' / ')}
+          </span>
+          <span className="ft-person-card__relation-roman">
+            {teluguRole.telugu.map((t) => t.term.roman).join(' / ')}
+          </span>
+        </span>
+      ) : relationshipRole && (
         <span
           className={`ft-person-card__relation-pill ${
             constellationTier === 'extended' ? 'ft-person-card__relation-pill--soft' : ''
