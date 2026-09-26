@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import familyStore from '../../store/FamilyStore.js';
+import { suggestSurname } from '../../utils/suggestSurname.js';
 import { getAllPersons } from '../../data/familyDataService.js';
 import { mediaStorageService } from '../../media/mediaStorageService.js';
 import { useFamily } from '../../auth/FamilyContext.jsx';
@@ -64,6 +65,8 @@ export default function AddPersonModal({
 
   const [errorMsg, setErrorMsg] = useState('');
   const firstNameInputRef = useRef(null);
+  // Once the user types a surname, stop pre-filling it.
+  const lastNameEditedRef = useRef(false);
 
   // Safe family context consumption
   let familyId = 'local-family';
@@ -107,6 +110,7 @@ export default function AddPersonModal({
       setErrorMsg('');
       setFirstName('');
       setLastName('');
+      lastNameEditedRef.current = false;
       setMiddleName('');
       if (photoPreviewUrl && photoPreviewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(photoPreviewUrl);
@@ -153,6 +157,17 @@ export default function AddPersonModal({
       }, 60);
     }
   }, [isOpen, initialRelativeId, initialRelType, peopleList]);
+
+  // Pre-fill the surname from the father (for a child) or husband (for a wife).
+  const surnameSuggestion = useMemo(() => {
+    if (!isOpen || creationMode !== 'create' || !connectRelativeId) return null;
+    return suggestSurname(relOption, familyStore.getPersonById(connectRelativeId), familyStore, gender);
+  }, [isOpen, creationMode, connectRelativeId, relOption, gender]);
+
+  useEffect(() => {
+    if (!isOpen || lastNameEditedRef.current) return;
+    setLastName(surnameSuggestion?.surname || '');
+  }, [isOpen, surnameSuggestion]);
 
   // Handle escape key to close
   useEffect(() => {
@@ -881,9 +896,15 @@ export default function AddPersonModal({
                       type="text"
                       placeholder="e.g. Medida"
                       value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      onChange={(e) => {
+                        lastNameEditedRef.current = true;
+                        setLastName(e.target.value);
+                      }}
                       autoComplete="off"
                     />
+                    {surnameSuggestion && lastName === surnameSuggestion.surname && (
+                      <span className="ft-quickadd-hint">From {surnameSuggestion.fromName}</span>
+                    )}
                   </div>
                 </div>
               </div>

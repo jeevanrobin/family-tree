@@ -11834,3 +11834,10 @@ button {
 .ft-complete .ft-form-field {
   margin-bottom: 14px;
 }
+
+.ft-quickadd-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--ft-text-secondary);
+}
