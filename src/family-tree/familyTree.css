@@ -11533,3 +11533,105 @@ button {
   text-overflow: ellipsis;
   max-width: 180px;
 }
+
+/* ── Phone header: two rows, every control reachable ─────────── */
+@media (max-width: 720px) {
+  .ft-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 6px 8px;
+    row-gap: 8px;
+  }
+  .ft-header .ft-header__brand-group {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+  }
+  .ft-header .ft-header__crest-wrap {
+    width: 32px;
+    height: 32px;
+    flex: none;
+  }
+  .ft-header .ft-header__titles {
+    min-width: 0;
+  }
+  .ft-header .ft-header__product-brand,
+  .ft-header .ft-header__subtitle {
+    display: none;
+  }
+  .ft-header .ft-header__title {
+    font-size: 0.95rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ft-header .ft-header__actions {
+    flex: none;
+    gap: 4px;
+  }
+  /* Icon-only buttons */
+  .ft-header .ft-search__placeholder,
+  .ft-header .ft-search__shortcut-hint,
+  .ft-header .ft-header__arrange-btn span,
+  .ft-header .ft-header__add-btn span,
+  .ft-header .ft-header__profile-name,
+  .ft-header .ft-header__clear-sel-btn {
+    display: none;
+  }
+  .ft-header .ft-header__search-wrap .ft-search {
+    width: auto;
+  }
+  .ft-header .ft-search__trigger-btn,
+  .ft-header .ft-header__arrange-btn,
+  .ft-header .ft-header__add-btn,
+  .ft-header .ft-header__icon-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  /* Generation filters: their own full-width scrollable row */
+  .ft-header .ft-header__gen-filters {
+    order: 3;
+    flex: 1 1 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    justify-content: flex-start;
+  }
+  .ft-header .ft-header__gen-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .ft-header .ft-gen-filter-btn {
+    flex: 1 0 auto;
+    min-height: 32px;
+  }
+}
+
+@media (max-width: 380px) {
+  .ft-header .ft-header__title {
+    font-size: 0.85rem;
+  }
+  .ft-header .ft-header__actions {
+    gap: 2px;
+  }
+  .ft-header .ft-search__trigger-btn,
+  .ft-header .ft-header__arrange-btn,
+  .ft-header .ft-header__add-btn,
+  .ft-header .ft-header__icon-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Keep the folded overview above the zoom toolbar */
+  .ft-minimap {
+    bottom: 96px;
+    right: 12px;
+  }
+}

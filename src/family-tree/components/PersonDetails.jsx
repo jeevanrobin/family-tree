@@ -209,7 +209,6 @@ export default function PersonDetails({
           <span className="ft-details__gen-badge" style={{ color: genMeta.color, borderColor: `${genMeta.color}40` }}>
             {genMeta.title.toUpperCase()}
           </span>
-          <span className="ft-details__id-pill">ID: {person.id.split('-').slice(0, 2).join('-')}</span>
         </div>
 
         <div className="ft-details__header-actions">
