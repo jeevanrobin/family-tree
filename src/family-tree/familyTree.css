@@ -1077,11 +1077,18 @@ button {
   transition: all 0.3s ease;
 }
 
-/* Active Highlighted Connections — subtle orange accent, restrained prominence */
+/* Highlighted connections of the selected (or hovered) person:
+   strong = own parents / spouses / children / siblings,
+   soft   = the rest of the direct line and in-laws. */
 .ft-canvas__line--active {
   stroke: var(--ft-accent) !important;
-  stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4px) !important;
-  opacity: 0.85 !important;
+  stroke-width: clamp(2.6px, calc(2.4px / var(--canvas-scale, 1)), 5.5px) !important;
+  opacity: 1 !important;
+}
+
+.ft-canvas__line--soft {
+  stroke: var(--ft-accent) !important;
+  opacity: 0.45 !important;
 }
 
 .ft-canvas__line--animated {
@@ -1101,9 +1108,37 @@ button {
   filter: drop-shadow(0 0 6px var(--ft-accent)) !important;
 }
 
-/* Muted connector state: remains clearly visible and continuous */
+/* Unrelated connectors recede so the selected family stands out */
 .ft-canvas__line--dimmed {
-  opacity: 0.60 !important;
+  opacity: 0.14 !important;
+}
+
+.ft-canvas__line--dimmed.ft-canvas__line--faint {
+  opacity: 0.35 !important;
+}
+
+/* Card emphasis states (see engine/treeHighlight.js) */
+.ft-canvas__node-wrapper--hl-focus {
+  z-index: 20;
+}
+
+.ft-canvas__node-wrapper--hl-soft {
+  opacity: 0.85;
+}
+
+.ft-canvas__node-wrapper--hl-dim {
+  opacity: 0.28;
+  filter: saturate(0.35);
+}
+
+.ft-canvas__node-wrapper--hl-faint {
+  opacity: 0.6;
+}
+
+.ft-canvas__node-wrapper--hl-dim:hover,
+.ft-canvas__node-wrapper--hl-faint:hover {
+  opacity: 1;
+  filter: none;
 }
 
 /* ── Modern Profile Object Cards ──────────────────────────── */

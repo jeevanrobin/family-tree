@@ -167,6 +167,45 @@ export function useTreeInteraction({
     [layout, containerRef, transform.scale, animateCameraTo]
   );
 
+  // Frame a person's immediate family (parents, spouses, children) so the
+  // highlighted relationships are visible on selection. On desktop the right
+  // side is covered by the profile drawer, so fit into the remaining width.
+  const focusOnFamily = useCallback(
+    (personId, duration = 480) => {
+      if (!layout || !containerRef.current || !personId) return;
+      const id = String(personId);
+      const selfNode = layout.nodes.get(id);
+      if (!selfNode) return;
+
+      const familyIds = new Set([id]);
+      layout.lines.forEach((l) => {
+        if (l.type === 'parent-child') {
+          const parents = (l.allParentIds || l.parentIds || []).map(String);
+          if (String(l.childId) === id) parents.forEach((p) => familyIds.add(p));
+          if (parents.includes(id)) familyIds.add(String(l.childId));
+        } else if (l.type === 'spouse' && (String(l.personId1) === id || String(l.personId2) === id)) {
+          familyIds.add(String(l.personId1));
+          familyIds.add(String(l.personId2));
+        }
+      });
+      const familyNodes = [...familyIds].map((fid) => layout.nodes.get(fid)).filter(Boolean);
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const drawerWidth = rect.width > 900 ? 420 : 0;
+      const target = calculateFitToBranch(familyNodes, rect.width - drawerWidth, rect.height, 70, 70);
+      // Stay readable: never zoom in past 110% or out below 55% for a family.
+      const scale = Math.min(Math.max(target.scale, 0.55), 1.1);
+      const minX = Math.min(...familyNodes.map((n) => n.x));
+      const maxX = Math.max(...familyNodes.map((n) => n.x + (n.width || 230)));
+      const minY = Math.min(...familyNodes.map((n) => n.y));
+      const maxY = Math.max(...familyNodes.map((n) => n.y + (n.height || 160)));
+      const x = (rect.width - drawerWidth) / 2 - ((minX + maxX) / 2) * scale;
+      const y = rect.height / 2 - ((minY + maxY) / 2) * scale;
+      animateCameraTo(x, y, scale, duration);
+    },
+    [layout, containerRef, animateCameraTo]
+  );
+
   // Focus on generation row
   const focusOnGeneration = useCallback(
     (genNumber, duration = 450) => {
@@ -366,6 +405,7 @@ export function useTreeInteraction({
     zoomOut,
     fitTreeToBounds,
     focusOnPerson,
+    focusOnFamily,
     focusOnGeneration,
     fitBranch,
     panToCoordinate,

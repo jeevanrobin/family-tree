@@ -180,55 +180,82 @@ export function getFamilyConstellationMap(selectedId) {
   // 1. Selected Person
   map.set(selectedId, { tier: 'selected', role: 'Self' });
 
-  // 2. Immediate Family
-  const spouse = getSpouse(selectedId);
-  if (spouse) {
-    map.set(spouse.id, { tier: 'immediate', role: 'Spouse' });
-  }
+  const byGender = (person, female, male, neutral) =>
+    person.gender === 'female' ? female : person.gender === 'male' ? male : neutral;
+
+  // 2. Immediate Family (every spouse, parents, children)
+  const spouses = getSpouses(selectedId);
+  spouses.forEach((spouse) => {
+    map.set(spouse.id, { tier: 'immediate', role: byGender(spouse, 'Wife', 'Husband', 'Spouse') });
+  });
 
   const parents = getParents(selectedId);
   parents.forEach((p) => {
-    const role = p.gender === 'female' ? 'Mother' : p.gender === 'male' ? 'Father' : 'Parent';
-    map.set(p.id, { tier: 'immediate', role });
+    map.set(p.id, { tier: 'immediate', role: byGender(p, 'Mother', 'Father', 'Parent') });
   });
 
   const children = getChildren(selectedId);
   children.forEach((c) => {
-    const role = c.gender === 'female' ? 'Daughter' : c.gender === 'male' ? 'Son' : 'Child';
-    map.set(c.id, { tier: 'immediate', role });
+    map.set(c.id, { tier: 'immediate', role: byGender(c, 'Daughter', 'Son', 'Child') });
   });
 
   // 3. Siblings
   const siblings = getSiblings(selectedId);
   siblings.forEach((s) => {
+    if (map.has(s.id)) return;
     const role = getSiblingDisplayLabel(s);
     map.set(s.id, { tier: 'sibling', role });
   });
 
-  // 4. Extended Family (Grandparents & Grandchildren)
-  parents.forEach((p) => {
-    const grandparents = getParents(p.id);
-    grandparents.forEach((gp) => {
-      if (!map.has(gp.id)) {
-        const role = gp.gender === 'female' ? 'Grandmother' : gp.gender === 'male' ? 'Grandfather' : 'Grandparent';
-        map.set(gp.id, { tier: 'extended', role });
-      }
-      const greatGrandparents = getParents(gp.id);
-      greatGrandparents.forEach((ggp) => {
-        if (!map.has(ggp.id)) {
-          const role = ggp.gender === 'female' ? 'Great-Grandmother' : ggp.gender === 'male' ? 'Great-Grandfather' : 'Ancestor';
-          map.set(ggp.id, { tier: 'extended', role });
-        }
+  // 4. Extended Family: the whole direct line up and down, plus in-laws
+  const ancestorRole = (person, depth) => {
+    if (depth === 2) return byGender(person, 'Grandmother', 'Grandfather', 'Grandparent');
+    if (depth === 3) return byGender(person, 'Great-Grandmother', 'Great-Grandfather', 'Great-Grandparent');
+    return 'Ancestor';
+  };
+  let frontier = parents;
+  for (let depth = 2; frontier.length > 0 && depth < 50; depth++) {
+    const next = [];
+    frontier.forEach((p) => {
+      getParents(p.id).forEach((gp) => {
+        if (map.has(gp.id)) return;
+        map.set(gp.id, { tier: 'extended', role: ancestorRole(gp, depth) });
+        next.push(gp);
       });
     });
-  });
+    frontier = next;
+  }
 
+  const descendantRole = (person, depth) => {
+    if (depth === 2) return byGender(person, 'Granddaughter', 'Grandson', 'Grandchild');
+    if (depth === 3) return byGender(person, 'Great-Granddaughter', 'Great-Grandson', 'Great-Grandchild');
+    return 'Descendant';
+  };
+  frontier = children;
+  for (let depth = 2; frontier.length > 0 && depth < 50; depth++) {
+    const next = [];
+    frontier.forEach((c) => {
+      getChildren(c.id).forEach((gc) => {
+        if (map.has(gc.id)) return;
+        map.set(gc.id, { tier: 'extended', role: descendantRole(gc, depth) });
+        next.push(gc);
+      });
+    });
+    frontier = next;
+  }
+
+  // In-laws: spouse's parents and children's spouses
+  spouses.forEach((spouse) => {
+    getParents(spouse.id).forEach((p) => {
+      if (!map.has(p.id)) {
+        map.set(p.id, { tier: 'extended', role: byGender(p, 'Mother-in-law', 'Father-in-law', 'Parent-in-law') });
+      }
+    });
+  });
   children.forEach((c) => {
-    const grandchildren = getChildren(c.id);
-    grandchildren.forEach((gc) => {
-      if (!map.has(gc.id)) {
-        const role = gc.gender === 'female' ? 'Granddaughter' : gc.gender === 'male' ? 'Grandson' : 'Grandchild';
-        map.set(gc.id, { tier: 'extended', role });
+    getSpouses(c.id).forEach((sp) => {
+      if (!map.has(sp.id)) {
+        map.set(sp.id, { tier: 'extended', role: byGender(sp, 'Daughter-in-law', 'Son-in-law', 'Child-in-law') });
       }
     });
   });

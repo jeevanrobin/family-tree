@@ -312,7 +312,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
       setDetailsInitialSection(section);
       setDetailsOpen(true);
       setTimeout(() => {
-        canvasRef.current?.focusOn(personId);
+        canvasRef.current?.focusFamily(personId);
       }, 40);
     },
     [selectPerson]
