@@ -104,6 +104,7 @@ export default function PersonDetails({
   onEditPerson,
   onDeletePerson,
   onAddRelative,
+  onFindRelationship,
   // M2B Reactive Collections (from hook, via props)
   stories: storiesProp,
   lifeEvents: lifeEventsProp,
@@ -378,6 +379,16 @@ export default function PersonDetails({
                     + Add Sibling
                   </button>
                 </div>
+              )}
+
+              {onFindRelationship && (
+                <button
+                  type="button"
+                  className="ft-details__kin-btn"
+                  onClick={() => onFindRelationship(person.id)}
+                >
+                  <span lang="te">బంధుత్వం</span> How are we related?
+                </button>
               )}
             </div>
 

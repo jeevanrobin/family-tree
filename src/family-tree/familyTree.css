@@ -10639,3 +10639,261 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .ft-view-loading__spinner { animation: none; }
 }
+
+/* ── Relationship finder ("How are we related?") ─────────── */
+.ft-kin-pickers {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.ft-kin-picker {
+  position: relative;
+}
+
+.ft-kin-picker__list {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--ft-surface-elevated);
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  box-shadow: var(--ft-shadow-lg);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.ft-kin-picker__list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ft-text-primary);
+  font: 500 0.88rem var(--ft-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ft-kin-picker__list button:hover,
+.ft-kin-picker__list button[aria-selected='true'] {
+  background: var(--ft-surface-hover);
+}
+
+.ft-kin-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ft-kin-swap {
+  height: 40px;
+  width: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--ft-border);
+  background: var(--ft-surface-soft);
+  color: var(--ft-text-primary);
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.ft-kin-swap:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ft-kin-hint {
+  margin: 18px 0 4px;
+  color: var(--ft-text-secondary);
+  font-size: 0.9rem;
+}
+
+.ft-kin-result {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--ft-surface-soft);
+  border: 1px solid var(--ft-border-subtle);
+}
+
+.ft-kin-sentence {
+  margin: 0 0 12px;
+  color: var(--ft-text-secondary);
+  font-size: 0.92rem;
+}
+
+.ft-kin-sentence strong {
+  color: var(--ft-text-primary);
+}
+
+.ft-kin-terms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ft-kin-term {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--ft-surface);
+  border: 1px solid var(--ft-emerald-border);
+  min-width: 110px;
+}
+
+.ft-kin-term__script {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ft-accent);
+  line-height: 1.3;
+}
+
+.ft-kin-term__roman {
+  font-family: var(--ft-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ft-text-primary);
+}
+
+.ft-kin-term__when {
+  font-size: 0.72rem;
+  color: var(--ft-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ft-kin-english {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.ft-kin-english__term {
+  font-family: var(--ft-font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ft-text-primary);
+}
+
+.ft-kin-english__chain {
+  font-size: 0.88rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-kin-missing {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--ft-text-secondary);
+  font-style: italic;
+}
+
+.ft-kin-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ft-kin-path li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ft-kin-path__via {
+  font-size: 0.7rem;
+  color: var(--ft-text-muted);
+}
+
+.ft-kin-path__via::before {
+  content: '→ ';
+}
+
+.ft-kin-path__name {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--ft-border);
+  background: var(--ft-surface);
+  color: var(--ft-text-primary);
+  font: 600 0.8rem var(--ft-font-body);
+  cursor: pointer;
+}
+
+.ft-kin-path__name:hover {
+  border-color: var(--ft-accent);
+}
+
+@media (max-width: 520px) {
+  .ft-kin-pickers {
+    grid-template-columns: 1fr;
+  }
+  .ft-kin-swap {
+    justify-self: center;
+  }
+}
+
+.ft-details__kin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--ft-emerald-border);
+  background: var(--ft-emerald-soft);
+  color: var(--ft-text-primary);
+  font: 600 0.84rem var(--ft-font-body);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.ft-details__kin-btn span {
+  color: var(--ft-accent);
+  font-weight: 700;
+}
+
+.ft-details__kin-btn:hover {
+  border-color: var(--ft-accent);
+}
+
+.ft-kin-picker__name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.ft-kin-picker__name small {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ft-text-muted);
+}
+
+/* Telugu kinship terms render with a proper Telugu face on every platform */
+[lang='te'] {
+  font-family: 'Noto Sans Telugu', 'Nirmala UI', 'Gautami', var(--ft-font-body);
+}

@@ -30,6 +30,7 @@ import DocumentModal from './modals/DocumentModal.jsx';
 import PhotoLightbox from './modals/PhotoLightbox.jsx';
 import DocumentViewerModal from './modals/DocumentViewerModal.jsx';
 import GlobalSearchModal from './GlobalSearchModal.jsx';
+import RelationshipFinderModal from './modals/RelationshipFinderModal.jsx';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
 import { indexedDBManager } from '../store/local/indexedDBManager.js';
@@ -101,6 +102,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   const [canvasScale, setCanvasScale] = useState(1);
   const [activeGenFilter, setActiveGenFilter] = useState(null);
   const [isTourOpen, setIsTourOpen] = useState(false);
+  // Person the "How are we related?" finder starts from (null = closed)
+  const [relFinderFrom, setRelFinderFrom] = useState(null);
   const [isArrangeMode, setIsArrangeMode] = useState(false);
 
   const handleToggleArrangeMode = useCallback(() => {
@@ -865,6 +868,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             {detailsOpen && selectedPerson && (
               <PersonDetails
                 person={selectedPerson}
+                onFindRelationship={(id) => setRelFinderFrom(id)}
                 relationships={relationships}
                 stories={selectedPersonStories}
                 lifeEvents={selectedPersonEvents}
@@ -892,6 +896,16 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
         </>
       )}
       </Suspense>
+
+        <RelationshipFinderModal
+          isOpen={relFinderFrom !== null}
+          fromPersonId={relFinderFrom}
+          onClose={() => setRelFinderFrom(null)}
+          onSelectPerson={(id) => {
+            setRelFinderFrom(null);
+            handleSelectPerson(id);
+          }}
+        />
 
         {/* Explore Family Guided Tour Journey */}
         <GuidedTourModal

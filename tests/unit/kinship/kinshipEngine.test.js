@@ -1,0 +1,130 @@
+import { describe, it, expect } from 'vitest';
+import { describeRelationship, findRelationshipPath } from '../../../src/family-tree/kinship/kinshipEngine.js';
+
+//                 thatha ═ nanamma                       ammamma-side: tata2 ═ ammamma
+//        ┌──────────┬─────────┴───────┐                        ┌──────────┴─────────┐
+//  pedananna(1955) nanna(1960) chinnanna(1965) atta(1962)   amma(1965)       mamayya(1968) pinni(1970)
+//     ═ peddamma      ═ amma      ═ pinni2       ═ mamaByMarriage              ═ attaByMarriage
+//        │              │                          │                            │
+//   cousinPar(1990)  me(1992), anna(1988), chelli(1995)   cousinCross(1993)   mamaKid(1991)
+//                    me ═ wife → kid; wife's parents mamagaru ═ attagaru; wife's brother bil(1994)
+const P = (id, gender, dateOfBirth = null) => ({ id, displayName: id, gender, dateOfBirth });
+const persons = [
+  P('thatha', 'male'), P('nanamma', 'female'), P('tata2', 'male'), P('ammamma', 'female'),
+  P('pedananna', 'male', '1955-01-01'), P('peddamma', 'female'),
+  P('nanna', 'male', '1960-01-01'), P('amma', 'female', '1965-01-01'),
+  P('chinnanna', 'male', '1965-06-01'), P('pinni2', 'female'),
+  P('atta', 'female', '1962-01-01'), P('mamaByMarriage', 'male'),
+  P('mamayya', 'male', '1968-01-01'), P('attaByMarriage', 'female'),
+  P('pinni', 'female', '1970-01-01'),
+  P('me', 'male', '1992-01-01'), P('anna', 'male', '1988-01-01'), P('chelli', 'female', '1995-01-01'),
+  P('cousinPar', 'male', '1990-01-01'), P('cousinCross', 'female', '1993-01-01'), P('mamaKid', 'male', '1991-01-01'),
+  P('wife', 'female', '1994-06-01'), P('kid', 'male', '2020-01-01'),
+  P('mamagaru', 'male'), P('attagaru', 'female'), P('bil', 'male', '1996-01-01'),
+  P('unknown', 'unspecified'),
+];
+const pc = (parentId, childId) => ({ id: `${parentId}>${childId}`, type: 'parent-child', parentId, childId });
+const sp = (a, b) => ({ id: `${a}=${b}`, type: 'spouse', personAId: a, personBId: b });
+const relationships = [
+  sp('thatha', 'nanamma'), sp('tata2', 'ammamma'),
+  ...['pedananna', 'nanna', 'chinnanna', 'atta'].flatMap((c) => [pc('thatha', c), pc('nanamma', c)]),
+  ...['amma', 'mamayya', 'pinni'].flatMap((c) => [pc('tata2', c), pc('ammamma', c)]),
+  sp('pedananna', 'peddamma'), sp('nanna', 'amma'), sp('chinnanna', 'pinni2'), sp('atta', 'mamaByMarriage'),
+  sp('mamayya', 'attaByMarriage'),
+  ...['me', 'anna', 'chelli'].flatMap((c) => [pc('nanna', c), pc('amma', c)]),
+  pc('pedananna', 'cousinPar'), pc('atta', 'cousinCross'), pc('mamayya', 'mamaKid'),
+  sp('me', 'wife'), pc('me', 'kid'), pc('wife', 'kid'),
+  sp('mamagaru', 'attagaru'), pc('mamagaru', 'wife'), pc('attagaru', 'wife'), pc('mamagaru', 'bil'), pc('attagaru', 'bil'),
+  pc('nanna', 'unknown'),
+];
+
+const rel = (to, from = 'me') => describeRelationship(persons, relationships, from, to);
+const romans = (r) => r.telugu.map((t) => t.term.roman);
+
+describe('kinship engine', () => {
+  it('finds a path and returns null when unconnected', () => {
+    expect(findRelationshipPath(persons, relationships, 'me', 'nanna')).toEqual([{ type: 'P', id: 'nanna' }]);
+    expect(findRelationshipPath([...persons, P('island', 'male')], relationships, 'me', 'island')).toBeNull();
+  });
+
+  it('names parents, children and spouse', () => {
+    expect(romans(rel('nanna'))).toEqual(['Nanna']);
+    expect(romans(rel('amma'))).toEqual(['Amma']);
+    expect(romans(rel('kid'))).toEqual(['Koduku']);
+    expect(romans(rel('wife'))).toEqual(['Bharya']);
+    expect(rel('wife').english).toBe('Wife');
+  });
+
+  it('distinguishes elder and younger siblings', () => {
+    expect(romans(rel('anna'))).toEqual(['Annayya']);
+    expect(romans(rel('chelli'))).toEqual(['Chelli']);
+    expect(rel('anna').description).toBe('elder brother');
+  });
+
+  it('distinguishes paternal and maternal grandmothers', () => {
+    expect(romans(rel('nanamma'))).toEqual(['Nanamma']);
+    expect(romans(rel('ammamma'))).toEqual(['Ammamma']);
+    expect(romans(rel('thatha'))).toEqual(['Thatha']);
+    expect(rel('thatha').english).toBe('Grandfather');
+  });
+
+  it("names the father's and mother's siblings by side and age", () => {
+    expect(romans(rel('pedananna'))).toEqual(['Pedananna']);
+    expect(romans(rel('chinnanna'))).toEqual(['Chinnanna / Babai']);
+    expect(romans(rel('atta'))).toEqual(['Atta']);
+    expect(romans(rel('mamayya'))).toEqual(['Mamayya']);
+    expect(romans(rel('pinni'))).toEqual(['Pinni']);
+    expect(rel('pedananna').english).toBe('Uncle');
+    expect(rel('pedananna').description).toBe("father's elder brother");
+  });
+
+  it("names parents' siblings' spouses", () => {
+    expect(romans(rel('peddamma'))).toEqual(['Peddamma']);
+    expect(romans(rel('pinni2'))).toEqual(['Pinni']);
+    expect(romans(rel('mamaByMarriage'))).toEqual(['Mamayya']);
+    expect(romans(rel('attaByMarriage'))).toEqual(['Atta']);
+  });
+
+  it('calls parallel cousins brother/sister and cross cousins Bava/Maradalu', () => {
+    expect(romans(rel('cousinPar'))).toEqual(['Annayya']); // father's brother's son, elder
+    expect(romans(rel('cousinCross'))).toEqual(['Maradalu']); // father's sister's daughter, younger
+    expect(romans(rel('mamaKid'))).toEqual(['Bava']); // mother's brother's son, elder
+    expect(rel('cousinPar').english).toBe('First cousin');
+  });
+
+  it('names in-laws', () => {
+    expect(romans(rel('mamagaru'))).toEqual(['Mamagaru']);
+    expect(romans(rel('attagaru'))).toEqual(['Attagaru']);
+    expect(romans(rel('bil'))).toEqual(['Bavamaridi']); // wife's younger brother
+    expect(romans(rel('me', 'mamagaru'))).toEqual(['Alludu']);
+    expect(romans(rel('wife', 'nanna'))).toEqual(['Kodalu']);
+    expect(romans(rel('wife', 'anna'))).toEqual(['Maradalu']); // younger brother's wife
+  });
+
+  it("names a sibling's children by the sibling's gender", () => {
+    // From atta (female): her brother's son is Menalludu.
+    expect(romans(rel('me', 'atta'))).toEqual(['Menalludu']);
+    // From pedananna (male): his brother's son is called son.
+    expect(romans(rel('me', 'pedananna'))).toEqual(['Koduku']);
+  });
+
+  it('lists every possible term and what is missing when data is incomplete', () => {
+    const r = rel('unknown');
+    expect(romans(r)).toEqual(['Annayya', 'Thammudu', 'Akka', 'Chelli']);
+    expect(r.missing.join()).toMatch(/gender of unknown/);
+
+    const noDates = persons.map((p) => (p.id === 'chinnanna' ? { ...p, dateOfBirth: null } : p));
+    const r2 = describeRelationship(noDates, relationships, 'me', 'chinnanna');
+    expect(r2.telugu.map((t) => t.when)).toEqual(['if elder', 'if younger']);
+    expect(r2.missing.join()).toMatch(/birth dates/);
+  });
+
+  it('describes deep blood relations in English', () => {
+    expect(rel('kid', 'thatha').english).toBe('Great-grandson');
+    expect(rel('cousinPar', 'kid').english).toBe('First cousin, once removed');
+  });
+
+  it('returns the path for display', () => {
+    expect(rel('cousinCross').path.map((s) => s.id)).toEqual(['me', 'nanna', 'atta', 'cousinCross']);
+  });
+});
