@@ -210,6 +210,11 @@ export class SyncAdapter extends FamilyRepository {
     return this.syncEngine.getStatus();
   }
 
+  async loadChangeLog(options) {
+    if (!this.supabaseAdapter || typeof this.supabaseAdapter.loadChangeLog !== 'function') return [];
+    return this.supabaseAdapter.loadChangeLog(options);
+  }
+
   async getFailedMutations() {
     return this.syncEngine.getFailedMutations();
   }

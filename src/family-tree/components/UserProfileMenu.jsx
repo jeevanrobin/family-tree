@@ -14,6 +14,7 @@ export default function UserProfileMenu({
   onOpenSettings,
   onOpenDataModal,
   onOpenPoster,
+  onOpenHistory,
   onStartTour,
   isReducedMotion = false,
   onToggleReducedMotion,
@@ -215,6 +216,25 @@ export default function UserProfileMenu({
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <span>Explore the family story</span>
+            </button>
+          )}
+
+          {onOpenHistory && (
+            <button
+              type="button"
+              className="ft-header__menu-item"
+              role="menuitem"
+              onClick={() => {
+                closeMenu();
+                onOpenHistory();
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              <span>Change history</span>
             </button>
           )}
 

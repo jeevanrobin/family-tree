@@ -28,6 +28,7 @@ export default function TreeHeader({
   onOpenAddModal,
   onOpenDataModal,
   onOpenPoster,
+  onOpenHistory,
   onStartTour,
   theme,
   onToggleTheme,
@@ -498,6 +499,7 @@ export default function TreeHeader({
           onOpenSettings={() => setSettingsModalOpen(true)}
           onOpenDataModal={onOpenDataModal}
           onOpenPoster={onOpenPoster}
+          onOpenHistory={onOpenHistory}
           onStartTour={onStartTour}
           isReducedMotion={isReducedMotion}
           onToggleReducedMotion={onToggleReducedMotion}

@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const db = {};
 
 function makeQuery(table) {
-  const state = { table, filters: [], op: 'select', payload: null, limit: null };
+  const state = { table, filters: [], op: 'select', payload: null, limit: null, order: null };
   const rows = () => (db[table] ||= []);
   const matches = (row) => state.filters.every(([col, val]) => String(row[col]) === String(val));
 
@@ -38,6 +38,10 @@ function makeQuery(table) {
       return { data: null, error: null };
     }
     const found = rows().filter(matches);
+    if (state.order) {
+      const { col, ascending } = state.order;
+      found.sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (ascending ? 1 : -1));
+    }
     return { data: state.limit ? found.slice(0, state.limit) : found, error: null };
   };
 
@@ -48,6 +52,7 @@ function makeQuery(table) {
     delete: () => { state.op = 'delete'; return q; },
     eq: (col, val) => { state.filters.push([col, val]); return q; },
     limit: (n) => { state.limit = n; return q; },
+    order: (col, opts = {}) => { state.order = { col, ascending: opts.ascending !== false }; return q; },
     single: async () => {
       const res = run();
       return res.error ? res : { data: res.data[0] ?? null, error: null };
@@ -204,5 +209,27 @@ describe('SupabaseAdapter relationship loading', () => {
     expect(saved.type).toBe('spouse');
     const child = await adapter.saveRelationship({ id: 'rel-2', type: 'parent-child', parentId: 'uuid-a', childId: 'uuid-c', _isNew: true });
     expect(child).toMatchObject({ type: 'parent-child', parentId: 'uuid-a', childId: 'uuid-c' });
+  });
+});
+
+describe('SupabaseAdapter change log', () => {
+  it('converts server log rows into history entries with local ids', async () => {
+    for (const key of Object.keys(db)) delete db[key];
+    const adapter = new SupabaseAdapter(FID);
+    adapter._validateSessionAndScope = vi.fn().mockResolvedValue({ userId: 'u1', role: 'owner' });
+    db.family_members = [{ id: 'uuid-a', local_id: 'person-a', family_id: FID }];
+    const person = (extra) => ({ id: 'uuid-a', local_id: 'person-a', family_id: FID, first_name: 'Ravi', display_name: 'Ravi', occupation: 'Farmer', ...extra });
+    db.family_change_log = [
+      { id: 1, family_id: FID, table_name: 'family_members', action: 'INSERT', row_id: 'uuid-a', old_data: null, new_data: person(), changed_by_name: 'Lakshmi', changed_at: '2026-09-01T10:00:00Z' },
+      { id: 2, family_id: FID, table_name: 'family_members', action: 'UPDATE', row_id: 'uuid-a', old_data: person(), new_data: person({ occupation: 'Teacher' }), changed_by_name: 'Suresh', changed_at: '2026-09-02T10:00:00Z' },
+      { id: 3, family_id: FID, table_name: 'relationships', action: 'DELETE', row_id: 'uuid-r', old_data: { id: 'uuid-r', local_id: 'rel-1', family_id: FID, type: 'spouse', person_id_1: 'uuid-a', person_id_2: 'uuid-gone' }, new_data: null, changed_by_name: null, changed_at: '2026-09-03T10:00:00Z' },
+    ];
+
+    const entries = await adapter.loadChangeLog();
+    expect(entries.map((e) => e.id)).toEqual(['srv-3', 'srv-2', 'srv-1']); // newest first
+    expect(entries[1]).toMatchObject({ action: 'update', entityType: 'person', entityId: 'person-a', actor: 'Suresh', fields: ['occupation'] });
+    expect(entries[1].before.occupation).toBe('Farmer');
+    expect(entries[0]).toMatchObject({ action: 'delete', entityType: 'relationship', actor: 'A family member' });
+    expect(entries[0].before).toMatchObject({ type: 'spouse', personAId: 'person-a' });
   });
 });

@@ -11202,3 +11202,91 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Change history ──────────────────────────────────────── */
+.ft-history {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ft-history__day {
+  position: sticky;
+  top: 0;
+  padding: 8px 0 4px;
+  background: var(--ft-surface);
+  font-family: var(--ft-font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ft-text-muted);
+}
+
+.ft-history__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ft-border-subtle);
+}
+
+.ft-history__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ft-history__summary {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ft-text-primary);
+}
+
+.ft-history__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ft-history__link:hover {
+  color: var(--ft-accent);
+}
+
+.ft-history__detail {
+  font-size: 0.8rem;
+  color: var(--ft-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.ft-history__time {
+  font-size: 0.72rem;
+  color: var(--ft-text-muted);
+}
+
+.ft-history__restore {
+  flex-shrink: 0;
+  padding: 6px 12px !important;
+  font-size: 0.78rem !important;
+}
+
+.ft-history__msg {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
+}
+
+.ft-history__msg--success {
+  color: var(--ft-status-alive);
+}
+
+.ft-history__msg--error {
+  color: var(--ft-coral);
+}

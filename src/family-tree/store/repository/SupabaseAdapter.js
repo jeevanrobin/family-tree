@@ -462,6 +462,92 @@ export class SupabaseAdapter extends FamilyRepository {
     // Cloud adapter mutations are executed via granular methods.
   }
 
+  /**
+   * Server-side change history (migration 011), newest first, in the same
+   * shape as FamilyStore's on-device log. Returns [] if the log table does
+   * not exist yet.
+   */
+  async loadChangeLog({ limit = 300 } = {}) {
+    await this._validateSessionAndScope();
+    const fid = this.familyId;
+    const [logRes, membersRes] = await Promise.all([
+      supabase
+        .from('family_change_log')
+        .select('*')
+        .eq('family_id', fid)
+        .order('changed_at', { ascending: false })
+        .limit(limit),
+      supabase.from('family_members').select('id, local_id').eq('family_id', fid),
+    ]);
+    if (logRes.error) {
+      console.warn('SupabaseAdapter: change log unavailable:', logRes.error.message);
+      return [];
+    }
+    const rows = logRes.data || [];
+
+    // UUID -> local id, including people who have since been deleted.
+    const uuidToLocal = new Map((membersRes.data || []).map((m) => [String(m.id), String(m.local_id || m.id)]));
+    rows
+      .filter((r) => r.table_name === 'family_members')
+      .forEach((r) => {
+        const d = r.old_data || r.new_data;
+        if (d && !uuidToLocal.has(String(d.id))) uuidToLocal.set(String(d.id), String(d.local_id || d.id));
+      });
+    const localize = (rel) => {
+      if (!rel) return rel;
+      const out = { ...rel };
+      ['personId1', 'personId2', 'parentId', 'childId', 'personAId', 'personBId'].forEach((k) => {
+        if (k in out && out[k] != null) out[k] = uuidToLocal.get(String(out[k])) ?? out[k];
+      });
+      return out;
+    };
+    const ACTION = { INSERT: 'create', UPDATE: 'update', DELETE: 'delete' };
+    const IGNORED = new Set(['uuid', 'updatedAt', 'createdAt']);
+
+    const entries = rows.map((r) => {
+      const isPerson = r.table_name === 'family_members';
+      const convert = (d) => (d ? (isPerson ? rowToPerson(d) : localize(rowToRelationship(d))) : null);
+      const before = convert(r.old_data);
+      const after = convert(r.new_data);
+      const entry = {
+        id: `srv-${r.id}`,
+        at: r.changed_at,
+        actor: r.changed_by_name || 'A family member',
+        source: 'cloud',
+        action: ACTION[r.action],
+        entityType: isPerson ? 'person' : 'relationship',
+        entityId: String((after || before)?.id),
+        before,
+        after,
+      };
+      if (entry.action === 'update' && before && after) {
+        entry.fields = Object.keys(after).filter(
+          (k) => !IGNORED.has(k) && JSON.stringify(after[k]) !== JSON.stringify(before[k])
+        );
+      }
+      return entry;
+    });
+
+    // Attach relationships removed together with a deleted person so that
+    // restoring the person brings them back as well.
+    entries
+      .filter((e) => e.entityType === 'person' && e.action === 'delete')
+      .forEach((personEntry) => {
+        const t = new Date(personEntry.at).getTime();
+        personEntry.related = entries
+          .filter(
+            (e) =>
+              e.entityType === 'relationship' &&
+              e.action === 'delete' &&
+              Math.abs(new Date(e.at).getTime() - t) < 5000 &&
+              Object.values(e.before || {}).includes(personEntry.entityId)
+          )
+          .map((e) => e.before);
+      });
+
+    return entries.filter((e) => e.entityType !== 'person' || e.action !== 'update' || e.fields?.length);
+  }
+
   // ── Sibling Cohort Ordering ────────────────────────
 
   async getSiblingOrders(familyId = this.familyId) {

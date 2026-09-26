@@ -32,6 +32,8 @@ import DocumentViewerModal from './modals/DocumentViewerModal.jsx';
 import GlobalSearchModal from './GlobalSearchModal.jsx';
 import RelationshipFinderModal from './modals/RelationshipFinderModal.jsx';
 import TreePosterModal from './modals/TreePosterModal.jsx';
+import ChangeHistoryModal from './modals/ChangeHistoryModal.jsx';
+import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
 import { indexedDBManager } from '../store/local/indexedDBManager.js';
@@ -106,6 +108,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   // Person the "How are we related?" finder starts from (null = closed)
   const [relFinderFrom, setRelFinderFrom] = useState(null);
   const [posterOpen, setPosterOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [isArrangeMode, setIsArrangeMode] = useState(false);
 
   const handleToggleArrangeMode = useCallback(() => {
@@ -151,6 +154,15 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   // Safe consumption of active family for family-scoped search history
   const familyContext = useOptionalFamily();
   const activeFamily = activeFamilyProp || familyContext?.activeFamily;
+
+  // Name shown as the author of this device's changes in the change history.
+  const currentUser = familyContext?.user;
+  useEffect(() => {
+    const meta = currentUser?.user_metadata || {};
+    familyStore.setHistoryActor(
+      meta.display_name || meta.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'You')
+    );
+  }, [currentUser]);
   const activeFamilyId = activeFamily?.id || (isLocalMode ? 'local' : 'default');
 
   const [showIntro, setShowIntro] = useState(() => {
@@ -763,6 +775,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             onOpenAddModal={() => handleOpenAddModal(null, null)}
             onOpenDataModal={() => setDataModalOpen(true)}
             onOpenPoster={() => setPosterOpen(true)}
+            onOpenHistory={() => setHistoryOpen(true)}
             onStartTour={handleStartTour}
             theme={theme}
             onToggleTheme={handleToggleTheme}
@@ -899,6 +912,16 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
         </>
       )}
       </Suspense>
+
+        <ChangeHistoryModal
+          isOpen={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          canRestore={isLocalMode || canEditPerson(familyContext?.currentRole)}
+          onSelectPerson={(id) => {
+            setHistoryOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
 
         <TreePosterModal
           isOpen={posterOpen}
