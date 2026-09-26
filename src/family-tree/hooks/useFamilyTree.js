@@ -20,6 +20,7 @@ import {
 } from '../data/familyDataService.js';
 import { computeTreeLayout } from '../engine/treeLayout.js';
 import { describeRelationshipsFrom, siblingOrderFromLayout } from '../kinship/kinshipEngine.js';
+import { findRelationshipConflicts } from '../data/relationshipConflicts.js';
 
 export function useFamilyTree() {
   const [snapshot, setSnapshot] = useState(() => familyStore.getSnapshot());
@@ -59,6 +60,21 @@ export function useFamilyTree() {
       customSiblingOrders: siblingOrder,
     });
   }, [persons, relationships, collapsedUnitKeys, selectedId, focusMode, siblingOrder]);
+
+  // Contradictory records (e.g. spouses also saved as parent/child) are drawn
+  // safely but should be fixed; list them so they can be found.
+  const relationshipConflicts = useMemo(
+    () => findRelationshipConflicts(persons, relationships),
+    [persons, relationships]
+  );
+  useEffect(() => {
+    if (relationshipConflicts.length > 0) {
+      console.warn(
+        'Family tree: some relationships contradict each other and were skipped in the layout:\n' +
+          relationshipConflicts.map((c) => `• ${c.message}`).join('\n')
+      );
+    }
+  }, [relationshipConflicts]);
 
   // Selected person entity
   const selectedPerson = useMemo(() => {
@@ -326,6 +342,7 @@ export function useFamilyTree() {
   }, []);
 
   return {
+    relationshipConflicts,
     persons,
     relationships,
     stories,

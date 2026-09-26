@@ -104,7 +104,9 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     clearAllData,
     exportData,
     importData,
+    relationshipConflicts,
   } = useFamilyTree();
+  const [conflictsDismissed, setConflictsDismissed] = useState(false);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [canvasScale, setCanvasScale] = useState(1);
@@ -817,6 +819,28 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                   title="Save and exit arrange mode"
                 >
                   Done
+                </button>
+              </div>
+            )}
+
+            {!isArrangeMode && !conflictsDismissed && relationshipConflicts?.length > 0 && (
+              <div className="ft-arrange-banner ft-arrange-banner--warning" role="alert">
+                <div className="ft-arrange-banner__info">
+                  <span className="ft-arrange-banner__dot" />
+                  <span className="ft-arrange-banner__text">
+                    <strong>Please check these relationships:</strong>{' '}
+                    {relationshipConflicts.slice(0, 3).map((c) => c.message).join('; ')}
+                    {relationshipConflicts.length > 3 && ` (and ${relationshipConflicts.length - 3} more)`}. Open a
+                    person and remove the wrong link.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="ft-arrange-banner__done-btn"
+                  onClick={() => setConflictsDismissed(true)}
+                  title="Hide this message"
+                >
+                  Hide
                 </button>
               </div>
             )}

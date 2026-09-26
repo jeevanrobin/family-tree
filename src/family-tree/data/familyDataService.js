@@ -383,8 +383,12 @@ export function computeGenerations(people = getAllPersons(), relationships = get
 
   // If entire component has loops or no clean root, take any node
   const processed = new Set();
+  // People on the current descent path: a loop in the data (someone recorded
+  // as their own ancestor) must not recurse forever.
+  const onPath = new Set();
 
   function assignGen(personId, currentGen) {
+    if (onPath.has(personId)) return;
     if (processed.has(personId)) {
       if (currentGen > (genMap.get(personId) ?? 0)) {
         genMap.set(personId, currentGen);
@@ -416,9 +420,11 @@ export function computeGenerations(people = getAllPersons(), relationships = get
 
     // Propagate to children (must be gen + 1)
     const children = parentToChildren.get(personId) || [];
+    onPath.add(personId);
     children.forEach((cId) => {
       assignGen(cId, currentGen + 1);
     });
+    onPath.delete(personId);
   }
 
   roots.forEach((root) => {

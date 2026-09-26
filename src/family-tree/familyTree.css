@@ -10387,6 +10387,18 @@ button {
   animation: ftFadeDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.ft-arrange-banner--warning {
+  max-width: min(760px, calc(100% - 32px));
+  border-radius: 14px;
+  border-color: color-mix(in srgb, #d97706 55%, var(--ft-border));
+}
+
+.ft-arrange-banner--warning .ft-arrange-banner__dot {
+  flex: none;
+  background: #d97706;
+  box-shadow: 0 0 8px #d97706;
+}
+
 @keyframes ftFadeDown {
   from { opacity: 0; transform: translate(-50%, -10px); }
   to { opacity: 1; transform: translate(-50%, 0); }

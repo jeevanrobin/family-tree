@@ -238,13 +238,21 @@ function buildSubtree(
   parentToChildren,
   childToParents,
   genMap,
-  processedUnits
+  processedUnits,
+  ancestry = new Set()
 ) {
   // Mark as processed
   processedUnits.add(personId);
   if (spouseId) {
     processedUnits.add(spouseId);
   }
+
+  // People on the path from the root down to this unit. Bad data (someone
+  // recorded as their own ancestor, or a spouse also recorded as a parent)
+  // would otherwise recurse forever.
+  const path = new Set(ancestry);
+  path.add(personId);
+  if (spouseId) path.add(spouseId);
   
   const gen = genMap.get(personId) ?? 0;
   const hasSpouse = spouseId !== null && spouseId !== undefined;
@@ -259,6 +267,7 @@ function buildSubtree(
   
   // Filter out children that have other recorded parents (already processed)
   const directChildren = Array.from(childrenIds).filter(childId => {
+    if (path.has(childId)) return false;
     const parents = childToParents.get(childId) || [];
     // Include if this is one of their parents
     return parents.includes(personId) || (hasSpouse && parents.includes(spouseId));
@@ -285,7 +294,8 @@ function buildSubtree(
           parentToChildren,
           childToParents,
           genMap,
-          processedUnits
+          processedUnits,
+          path
         );
         
         childSubtrees.push(childSubtree);
@@ -296,12 +306,13 @@ function buildSubtree(
       
       const childSubtree = buildSubtree(
         childId,
-        childSpouseId,
+        path.has(childSpouseId) ? null : childSpouseId,
         spouseMap,
         parentToChildren,
         childToParents,
         genMap,
-        processedUnits
+        processedUnits,
+        path
       );
       
       childSubtrees.push(childSubtree);
