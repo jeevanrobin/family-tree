@@ -148,7 +148,18 @@ export default function PersonCard({
 
       {/* Plaque metadata */}
       <div className="ft-person-card__info">
-        <div className="ft-person-card__name" title={person.displayName}>
+        <div
+          className="ft-person-card__name"
+          title={person.displayName}
+          // Zoomed-out cards show large names; shrink ones with a very long
+          // word (e.g. "Venkatanarsamma") so they never overflow the card.
+          style={{
+            '--name-fit': Math.min(
+              1,
+              10 / Math.max(1, ...String(person.displayName || '').split(/\s+/).map((w) => w.length))
+            ),
+          }}
+        >
           {person.displayName}
         </div>
 

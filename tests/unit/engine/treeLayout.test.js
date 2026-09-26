@@ -703,9 +703,11 @@ describe('computeTreeLayout with marriages between two families in the tree', ()
   });
 
   it('never lets two connector buses in the same gap overlap at the same height', () => {
+    // Always-drawn family buses; cross-family links are only drawn while one
+    // of their ends is selected (see the next test).
     const buses = new Map();
     layout.lines
-      .filter((l) => l.type === 'parent-child' && Math.abs(l.sourceX - l.targetX) >= 2)
+      .filter((l) => l.type === 'parent-child' && !l.crossFamily && Math.abs(l.sourceX - l.targetX) >= 2)
       .forEach((l) => {
         const key = `${l.allParentIds.join('+')}:${l.crossFamily}`;
         const bus = buses.get(key) || { y: l.junctionY, left: l.sourceX, right: l.sourceX };
@@ -723,5 +725,11 @@ describe('computeTreeLayout with marriages between two families in the tree', ()
         expect(overlap).toBe(false);
       }
     }
+  });
+
+  it('keeps cross-family links (drawn on selection) just above the child row', () => {
+    const cross = layout.lines.filter((l) => l.crossFamily);
+    expect(cross.length).toBeGreaterThan(0);
+    cross.forEach((l) => expect(l.junctionY).toBe(l.targetY - 10));
   });
 });

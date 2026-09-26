@@ -1091,9 +1091,11 @@ button {
   opacity: 0.45 !important;
 }
 
+/* Draw-in animation. The path has pathLength="1", so the dash covers the
+   whole line however long it is (long family buses exceed any fixed px). */
 .ft-canvas__line--animated {
-  stroke-dasharray: 900;
-  stroke-dashoffset: 900;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
   animation: ftLineDraw 0.72s var(--ft-ease) forwards;
 }
 
@@ -11846,4 +11848,172 @@ button {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dashed var(--ft-border);
+}
+
+/* ── Unlink a relative (Family tab) ───────────────────────── */
+.ft-details__rel-chip-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.ft-details__rel-chip-wrap .ft-details__rel-chip {
+  padding-right: 28px;
+}
+
+.ft-details__unlink-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--ft-text-secondary);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.ft-details__unlink-btn:hover,
+.ft-details__unlink-btn:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, #dc2626 14%, transparent);
+  color: #dc2626;
+}
+
+.ft-details__unlink-confirm {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #dc2626 40%, var(--ft-border));
+  background: color-mix(in srgb, #dc2626 6%, var(--ft-surface));
+  font-size: 0.85rem;
+  color: var(--ft-text-primary);
+}
+
+.ft-details__unlink-confirm p {
+  margin: 0 0 6px;
+}
+
+.ft-details__unlink-note {
+  font-size: 0.78rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-details__unlink-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ft-form-btn--danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.ft-form-btn--danger:hover {
+  background: #b91c1c;
+}
+
+/* A parent shown only because they're married to the linked parent */
+.ft-details__rel-chip-wrap--inferred .ft-details__rel-chip {
+  border-style: dashed;
+  padding-right: 58px;
+}
+
+.ft-details__link-btn {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ft-accent);
+  background: color-mix(in srgb, var(--ft-accent) 12%, transparent);
+  color: var(--ft-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ft-details__link-btn:hover {
+  background: var(--ft-accent);
+  color: #fff;
+}
+
+/* ── Cross-family tags (replace long "married into" lines) ────── */
+.ft-crossfamily-tags {
+  position: absolute;
+  left: -40%;
+  right: -40%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.ft-crossfamily-tag {
+  pointer-events: auto;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--ft-accent) 60%, var(--ft-border));
+  background: color-mix(in srgb, var(--ft-surface) 92%, transparent);
+  color: var(--ft-accent);
+  font-size: clamp(0.68rem, calc(0.68rem / var(--canvas-scale, 1)), 1.35rem);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ft-crossfamily-tag:hover {
+  background: color-mix(in srgb, var(--ft-accent) 14%, var(--ft-surface));
+}
+
+/* ── Far zoom (< 50%): name-only cards that stay readable ────────
+   Names are sized against the zoom so they stay ~13px on screen. */
+.ft-canvas--far-zoom .ft-person-card__avatar-frame,
+.ft-canvas--far-zoom .ft-person-card__dates,
+.ft-canvas--far-zoom .ft-person-card__occupation,
+.ft-canvas--far-zoom .ft-person-card__selected-crown {
+  display: none !important;
+}
+
+.ft-canvas--far-zoom .ft-person-card {
+  justify-content: center;
+}
+
+.ft-canvas--far-zoom .ft-person-card__info {
+  margin: 0;
+  padding: 0 10px;
+  width: 100%;
+}
+
+.ft-canvas--far-zoom .ft-person-card__name {
+  font-size: calc(min(calc(12px / var(--canvas-scale, 1)), 42px) * var(--name-fit, 1));
+  line-height: 1.12;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: manual;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  letter-spacing: -0.01em;
+}
+
+/* Gender cue replaces the hidden photo circle */
+.ft-canvas--far-zoom .ft-person-card--male {
+  box-shadow: inset 0 calc(6px / var(--canvas-scale, 1)) 0 0 color-mix(in srgb, #64748b 55%, transparent);
+}
+
+.ft-canvas--far-zoom .ft-person-card--female {
+  box-shadow: inset 0 calc(6px / var(--canvas-scale, 1)) 0 0 color-mix(in srgb, #c2410c 55%, transparent);
 }

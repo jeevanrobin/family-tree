@@ -649,7 +649,7 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
   // so connectors of neighbouring families never merge into one line.
   const LANE_STEP = 12;
   const LANE_OFFSETS = [0, -LANE_STEP, LANE_STEP, -2 * LANE_STEP, 2 * LANE_STEP];
-  const LANE_MARGIN = 16;
+  const LANE_MARGIN = 40; // neighbouring families' buses must be clearly apart
   const buses = [];
   parentUnitChildren.forEach((group) => {
     const { p1, p2, children } = group;
@@ -679,6 +679,9 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
   const lanesByBand = new Map(); // parentBottomY -> [[{left, right}], ...] per lane index
   buses
     .slice()
+    // Cross-family links span far across the tree; they are drawn only while
+    // one end is selected, so they must not push other families into lanes.
+    .filter((bus) => !bus.crossFamily)
     .sort((a, b) => a.left - b.left || a.right - b.right)
     .forEach((bus) => {
       if (!lanesByBand.has(bus.parentBottomY)) lanesByBand.set(bus.parentBottomY, []);
@@ -696,8 +699,10 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
 
   buses.forEach(({ p1, p2, children, crossFamily, sourceX, sourceY, parentBottomY, minChildY, lane }) => {
     // Junction bar runs through the vertical generation gap below parent cards
-    const baseJunctionY = parentBottomY + Math.max((minChildY - parentBottomY) * 0.5, 20);
-    const offset = LANE_OFFSETS[lane % LANE_OFFSETS.length];
+    const baseJunctionY = crossFamily
+      ? minChildY - 10 // just above the child's row, clear of the family buses
+      : parentBottomY + Math.max((minChildY - parentBottomY) * 0.5, 20);
+    const offset = crossFamily ? 0 : LANE_OFFSETS[lane % LANE_OFFSETS.length];
     const junctionY = Math.min(
       Math.max(baseJunctionY + offset, parentBottomY + 8),
       Math.max(minChildY - 8, parentBottomY + 8)

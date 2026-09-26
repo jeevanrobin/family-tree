@@ -149,6 +149,36 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     [interaction]
   );
 
+  // Short "married into" tags replace the long cross-family lines:
+  // under the child ("Daughter of …") and under the parent ("Name → Family").
+  const crossFamilyTags = useMemo(() => {
+    const tags = new Map(); // personId -> [{ targetId, text }]
+    const all = layout?.allNodes || layout?.nodes;
+    if (!layout || !all) return tags;
+    const personOf = (id) => all.get(String(id))?.person;
+    const add = (id, tag) => {
+      const key = String(id);
+      if (!tags.has(key)) tags.set(key, []);
+      if (!tags.get(key).some((t) => t.targetId === tag.targetId)) tags.get(key).push(tag);
+    };
+    layout.lines
+      .filter((l) => l.crossFamily)
+      .forEach((l) => {
+        const child = personOf(l.childId);
+        if (!child) return;
+        const parents = (l.parentIds || []).map(personOf).filter(Boolean);
+        const lead = parents.find((p) => p.gender === 'male') || parents[0];
+        if (!lead) return;
+        const word = child.gender === 'female' ? 'Daughter' : child.gender === 'male' ? 'Son' : 'Child';
+        add(child.id, { targetId: lead.id, text: `↑ ${word} of ${lead.displayName}` });
+        const family = (child.lastName || '').trim();
+        const childName = child.firstName || child.displayName;
+        // One tag, under the father (or the only parent), not under both.
+        add(lead.id, { targetId: child.id, text: family ? `${childName} → ${family} family` : `${childName} →` });
+      });
+    return tags;
+  }, [layout]);
+
   if (!layout) return null;
   const { nodes, allNodes, lines, generationTracks, nodeWidth, nodeHeight, bounds, fullBounds, branchBadges } = layout;
   const { transform, isPanning } = interaction;
@@ -156,7 +186,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   return (
     <div
       ref={containerRef}
-      className={`ft-canvas ${isPanning ? 'ft-canvas--panning' : ''} ${transform?.scale < 0.55 ? 'ft-canvas--compact-zoom' : ''}`}
+      className={`ft-canvas ${isPanning ? 'ft-canvas--panning' : ''} ${transform?.scale < 0.55 ? 'ft-canvas--compact-zoom' : ''} ${transform?.scale < 0.5 ? 'ft-canvas--far-zoom' : ''}`}
       style={{ '--canvas-scale': transform?.scale || 1 }}
       onMouseDown={interaction.handleMouseDown}
       onMouseMove={interaction.handleMouseMove}
@@ -250,6 +280,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 <g key={line.id} className="ft-canvas__spouse-group">
                   <path
                     d={line.path}
+                    pathLength={isLineActive ? 1 : undefined}
                     className={`ft-canvas__line ft-canvas__line--spouse ${
                       isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
                     } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
@@ -282,6 +313,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 <g key={line.id} className="ft-canvas__sibling-group">
                   <path
                     d={line.path}
+                    pathLength={isLineActive ? 1 : undefined}
                     className={`ft-canvas__line ft-canvas__line--sibling ${
                       isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
                     } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
@@ -290,14 +322,20 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
               );
             }
 
+            // Cross-family links run far across the tree: shown only while
+            // one of their ends is selected or hovered; tags mark them otherwise.
+            if (line.crossFamily && !isLineActive && !isLineSoft) return null;
+
             return (
               <path
                 key={line.id}
                 d={line.path}
+                pathLength={isLineActive && !line.crossFamily ? 1 : undefined}
                 className={`ft-canvas__line ft-canvas__line--parent ${
                   line.crossFamily ? 'ft-canvas__line--cross-family' : ''
                 } ${
-                  isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
+                  // Cross-family links keep their dashes (no draw-in animation).
+                  isLineActive ? `ft-canvas__line--active${line.crossFamily ? '' : ' ft-canvas__line--animated'}` : ''
                 } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
               />
             );
@@ -355,6 +393,25 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 onClick={onSelectPerson}
                 animationDelay={genDelay}
               />
+
+              {crossFamilyTags.has(String(id)) && (
+                <div className="ft-crossfamily-tags" style={{ top: nodeHeight + 6 }}>
+                  {crossFamilyTags.get(String(id)).map((tag) => (
+                    <button
+                      key={tag.targetId}
+                      type="button"
+                      className="ft-crossfamily-tag"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectPerson?.(tag.targetId);
+                      }}
+                      title="Show on the tree"
+                    >
+                      {tag.text}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Arrange Mode Reordering Micro-Controls */}
               {isReorderable && (
