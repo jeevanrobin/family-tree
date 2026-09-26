@@ -11290,3 +11290,76 @@ button {
 .ft-history__msg--error {
   color: var(--ft-coral);
 }
+
+/* ── Duplicates ──────────────────────────────────────────── */
+.ft-dups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 64vh;
+  overflow-y: auto;
+}
+
+.ft-dups__pair {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--ft-border-subtle);
+  background: var(--ft-surface-soft);
+}
+
+.ft-dups__reasons {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ft-accent);
+}
+
+.ft-dups__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.ft-dups__table th,
+.ft-dups__table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--ft-border-subtle);
+  color: var(--ft-text-primary);
+  vertical-align: top;
+}
+
+.ft-dups__table tbody th {
+  color: var(--ft-text-secondary);
+  font-weight: 500;
+  width: 110px;
+}
+
+.ft-dups__row--differs td {
+  background: var(--ft-coral-soft);
+}
+
+.ft-dups__keep {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.ft-dups__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ft-dups__note {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: var(--ft-text-muted);
+  text-align: right;
+}

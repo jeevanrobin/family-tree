@@ -29,14 +29,19 @@ export default function TreePosterModal({ isOpen, onClose, familyName = '' }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
+  // Reset only when the dialog opens (onClose changes identity on every parent render).
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen) return;
     setTitle(familyName ? `${familyName} Family Tree` : 'Our Family Tree');
     setError('');
+  }, [isOpen, familyName]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, familyName, onClose]);
+  }, [isOpen, onClose]);
 
   const poster = useMemo(() => {
     if (!isOpen) return null;

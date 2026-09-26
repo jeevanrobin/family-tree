@@ -15,6 +15,7 @@ export default function UserProfileMenu({
   onOpenDataModal,
   onOpenPoster,
   onOpenHistory,
+  onOpenDuplicates,
   onStartTour,
   isReducedMotion = false,
   onToggleReducedMotion,
@@ -216,6 +217,25 @@ export default function UserProfileMenu({
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <span>Explore the family story</span>
+            </button>
+          )}
+
+          {onOpenDuplicates && (
+            <button
+              type="button"
+              className="ft-header__menu-item"
+              role="menuitem"
+              onClick={() => {
+                closeMenu();
+                onOpenDuplicates();
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="8" cy="8" r="4" />
+                <circle cx="16" cy="16" r="4" />
+                <path d="M11 11l2 2" />
+              </svg>
+              <span>Find duplicates</span>
             </button>
           )}
 

@@ -33,6 +33,7 @@ import GlobalSearchModal from './GlobalSearchModal.jsx';
 import RelationshipFinderModal from './modals/RelationshipFinderModal.jsx';
 import TreePosterModal from './modals/TreePosterModal.jsx';
 import ChangeHistoryModal from './modals/ChangeHistoryModal.jsx';
+import DuplicatesModal from './modals/DuplicatesModal.jsx';
 import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
@@ -109,6 +110,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   const [relFinderFrom, setRelFinderFrom] = useState(null);
   const [posterOpen, setPosterOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
   const [isArrangeMode, setIsArrangeMode] = useState(false);
 
   const handleToggleArrangeMode = useCallback(() => {
@@ -776,6 +778,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             onOpenDataModal={() => setDataModalOpen(true)}
             onOpenPoster={() => setPosterOpen(true)}
             onOpenHistory={() => setHistoryOpen(true)}
+            onOpenDuplicates={() => setDuplicatesOpen(true)}
             onStartTour={handleStartTour}
             theme={theme}
             onToggleTheme={handleToggleTheme}
@@ -912,6 +915,16 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
         </>
       )}
       </Suspense>
+
+        <DuplicatesModal
+          isOpen={duplicatesOpen}
+          onClose={() => setDuplicatesOpen(false)}
+          canMerge={isLocalMode || canEditPerson(familyContext?.currentRole)}
+          onSelectPerson={(id) => {
+            setDuplicatesOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
 
         <ChangeHistoryModal
           isOpen={historyOpen}

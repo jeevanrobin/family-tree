@@ -33,14 +33,19 @@ export default function ChangeHistoryModal({ isOpen, onClose, canRestore = true,
     }
   }, []);
 
+  // Reset only when the dialog opens (onClose changes identity on every parent render).
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen) return;
     setMessage(null);
     refresh();
+  }, [isOpen, refresh]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose, refresh]);
+  }, [isOpen, onClose]);
 
   const nameOf = useCallback((id) => familyStore.getPersonById(id)?.displayName || 'a removed person', []);
 

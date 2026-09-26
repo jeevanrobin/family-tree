@@ -879,6 +879,85 @@ export class FamilyStore {
     throw new Error('This change cannot be restored automatically.');
   }
 
+  /**
+   * Merge a duplicate into the person to keep.
+   * - Empty details of the kept person are filled from the duplicate
+   *   (`fieldChoices` can pick the duplicate's value for specific fields).
+   * - Relationships, stories, events, photos and documents are moved over;
+   *   links that would duplicate an existing one, or point a person at
+   *   themselves, are dropped, and at most two parents are kept.
+   * - The duplicate is then deleted. Every step is a normal, synced and
+   *   logged change.
+   * @returns {object} the kept person
+   */
+  mergePeople(keepId, removeId, { fieldChoices = {} } = {}) {
+    const keep = this.getPersonById(keepId);
+    const dup = this.getPersonById(removeId);
+    if (!keep || !dup) throw new Error('Both people must exist to merge.');
+    if (String(keepId) === String(removeId)) throw new Error('Cannot merge a person with themselves.');
+    const K = String(keepId);
+    const R = String(removeId);
+
+    const MERGE_FIELDS = [
+      'firstName', 'middleName', 'lastName', 'gender', 'livingStatus', 'dateOfBirth', 'dateOfDeath',
+      'placeOfBirth', 'hometown', 'currentLocation', 'occupation', 'photo', 'photoUrl', 'biography', 'notes',
+    ];
+    const isEmpty = (v) => v === null || v === undefined || v === '' || v === 'unknown' || v === 'unspecified';
+    const updates = {};
+    MERGE_FIELDS.forEach((f) => {
+      if (fieldChoices[f] === 'duplicate' || (fieldChoices[f] !== 'keep' && isEmpty(keep[f]) && !isEmpty(dup[f]))) {
+        if (dup[f] !== keep[f]) updates[f] = dup[f];
+      }
+    });
+    if (!isEmpty(keep.notes) && !isEmpty(dup.notes) && keep.notes !== dup.notes && fieldChoices.notes !== 'keep') {
+      updates.notes = `${keep.notes}\n${dup.notes}`;
+    }
+    if (updates.firstName || updates.middleName || updates.lastName) {
+      updates.displayName = [updates.firstName ?? keep.firstName, updates.middleName ?? keep.middleName, updates.lastName ?? keep.lastName]
+        .filter(Boolean)
+        .join(' ');
+    }
+    if (Object.keys(updates).length) this.updatePerson(K, updates);
+
+    // Move relationships.
+    const swap = (id) => (String(id) === R ? K : String(id));
+    const involving = this.relationships.filter((r) =>
+      r.type === 'parent-child' ? r.parentId === R || r.childId === R : r.personAId === R || r.personBId === R
+    );
+    involving.forEach((rel) => {
+      this.removeRelationship(rel.id);
+      const moved =
+        rel.type === 'parent-child'
+          ? { ...rel, id: undefined, parentId: swap(rel.parentId), childId: swap(rel.childId), personId1: undefined, personId2: undefined }
+          : { ...rel, id: undefined, personAId: swap(rel.personAId), personBId: swap(rel.personBId), personId1: undefined, personId2: undefined };
+      const ends = rel.type === 'parent-child' ? [moved.parentId, moved.childId] : [moved.personAId, moved.personBId];
+      if (ends[0] === ends[1]) return;
+      if (rel.type === 'parent-child' && this.getParents(moved.childId).length >= 2) return;
+      try {
+        this.addRelationship(moved);
+      } catch {
+        // Already linked this way: nothing to move.
+      }
+    });
+
+    // Move attached records.
+    const repoint = (item) => ({
+      ...(String(item.personId) === R ? { personId: K } : {}),
+      ...(Array.isArray(item.relatedPersonIds) && item.relatedPersonIds.map(String).includes(R)
+        ? { relatedPersonIds: [...new Set(item.relatedPersonIds.map(swap))] }
+        : {}),
+    });
+    const touches = (item) =>
+      String(item.personId) === R || (Array.isArray(item.relatedPersonIds) && item.relatedPersonIds.map(String).includes(R));
+    this.stories.filter(touches).forEach((s) => this.updateStory(s.id, repoint(s)));
+    this.lifeEvents.filter(touches).forEach((e) => this.updateLifeEvent(e.id, repoint(e)));
+    this.photos.filter(touches).forEach((p) => this.updatePhoto(p.id, { ...repoint(p), isPrimary: false }));
+    this.documents.filter(touches).forEach((d) => this.updateDocument(d.id, repoint(d)));
+
+    this.deletePerson(R);
+    return this.getPersonById(K);
+  }
+
   addPerson(personData) {
     const person = this.normalizePerson(personData);
     if (!person.firstName.trim()) {

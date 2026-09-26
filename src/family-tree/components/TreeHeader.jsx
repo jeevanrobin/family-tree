@@ -29,6 +29,7 @@ export default function TreeHeader({
   onOpenDataModal,
   onOpenPoster,
   onOpenHistory,
+  onOpenDuplicates,
   onStartTour,
   theme,
   onToggleTheme,
@@ -500,6 +501,7 @@ export default function TreeHeader({
           onOpenDataModal={onOpenDataModal}
           onOpenPoster={onOpenPoster}
           onOpenHistory={onOpenHistory}
+          onOpenDuplicates={onOpenDuplicates}
           onStartTour={onStartTour}
           isReducedMotion={isReducedMotion}
           onToggleReducedMotion={onToggleReducedMotion}
