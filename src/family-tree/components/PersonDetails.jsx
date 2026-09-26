@@ -411,7 +411,11 @@ export default function PersonDetails({
                 ) : (
                   <div className="ft-details__item">
                     <span className="ft-details__label">Status</span>
-                    <span className="ft-details__val" style={{ color: 'var(--ft-emerald)' }}>Living Family Member</span>
+                    {person.livingStatus === 'deceased' ? (
+                      <span className="ft-details__val">Passed away (date not recorded)</span>
+                    ) : (
+                      <span className="ft-details__val" style={{ color: 'var(--ft-emerald)' }}>Living Family Member</span>
+                    )}
                   </div>
                 )}
 
