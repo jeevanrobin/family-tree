@@ -16,6 +16,7 @@ import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
 import UserProfileMenu from './UserProfileMenu.jsx';
 import NotificationBell from './rare-ui/NotificationBell.jsx';
+import RemindersPanel, { useUpcomingOccasions, countSoonOccasions } from './RemindersPanel.jsx';
 
 
 export default function TreeHeader({
@@ -42,6 +43,9 @@ export default function TreeHeader({
 }) {
   const [familySelectorOpen, setFamilySelectorOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const occasions = useUpcomingOccasions();
+  const soonCount = countSoonOccasions(occasions);
   const selectorRef = useRef(null);
   const navigate = useNavigate();
 
@@ -466,14 +470,24 @@ export default function TreeHeader({
           </button>
         </Magnet>
 
-        {/* Rare UI Notification Bell for Collaboration & Settings */}
-        <Magnet strength={3} active={!isReducedMotion}>
-          <NotificationBell
-            count={syncStatus === 'pending' || syncStatus === 'offline' ? 1 : 0}
-            onClick={() => setSettingsModalOpen(true)}
-            title="Family Archive Collaboration & Settings"
-          />
-        </Magnet>
+        {/* Reminders bell: birthdays, anniversaries and death anniversaries */}
+        <div className="ft-reminders-anchor">
+          <Magnet strength={3} active={!isReducedMotion}>
+            <NotificationBell
+              count={soonCount}
+              onClick={() => setRemindersOpen((open) => !open)}
+              title={soonCount ? `${soonCount} family occasion${soonCount === 1 ? '' : 's'} this week` : 'Upcoming family occasions'}
+              aria-expanded={remindersOpen}
+            />
+          </Magnet>
+          {remindersOpen && (
+            <RemindersPanel
+              occasions={occasions}
+              onClose={() => setRemindersOpen(false)}
+              onSelectPerson={onSelectPerson}
+            />
+          )}
+        </div>
 
 
         {/* Profile & Settings Menu with Destination Navigation */}

@@ -888,6 +888,38 @@ export class FamilyStore {
     return this.getPersonById(spouseId);
   }
 
+  /** The spouse relationship between two people, if recorded. */
+  getMarriage(personAId, personBId) {
+    const a = String(personAId);
+    const b = String(personBId);
+    return (
+      this.relationships.find(
+        (r) =>
+          r.type === 'spouse' &&
+          ((r.personAId === a && r.personBId === b) || (r.personAId === b && r.personBId === a))
+      ) || null
+    );
+  }
+
+  /** Record (or clear, with null) the marriage date of a couple; synced like other edits. */
+  setMarriageDate(personAId, personBId, startDate) {
+    const rel = this.getMarriage(personAId, personBId);
+    if (!rel) throw new Error('These two people are not recorded as spouses.');
+    if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      throw new Error('Marriage date must be a full date (YYYY-MM-DD).');
+    }
+    rel.startDate = startDate || null;
+    rel.updatedAt = new Date().toISOString();
+    this.notify();
+
+    if (this.repository && typeof this.repository.saveRelationship === 'function') {
+      Promise.resolve(this.repository.saveRelationship({ ...rel }, { operation: 'update' })).catch((err) => {
+        console.warn('FamilyStore: repository.saveRelationship (marriage date) failed:', err);
+      });
+    }
+    return rel;
+  }
+
   /** Every spouse of a person, earliest marriage first. */
   getSpouses(personId) {
     if (!personId) return [];

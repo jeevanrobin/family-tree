@@ -33,6 +33,7 @@ import {
   canUploadMedia as checkCanUploadMedia,
   canUploadDocument as checkCanUploadDocument,
 } from '../auth/roles.js';
+import familyStore from '../store/FamilyStore.js';
 import DeleteButton from './rare-ui/DeleteButton.jsx';
 
 
@@ -743,6 +744,37 @@ export default function PersonDetails({
                     </div>
                   </button>
                   ))}
+                </div>
+                {/* Marriage dates power anniversary reminders */}
+                <div className="ft-details__marriages">
+                  {spouses.map((spouse) => {
+                    const marriage = familyStore.getMarriage(person.id, spouse.id);
+                    const date = marriage?.startDate || '';
+                    return (
+                      <label key={spouse.id} className="ft-details__marriage">
+                        <span>
+                          Married{spouses.length > 1 ? ` (${spouse.firstName || spouse.displayName})` : ''}
+                        </span>
+                        {canEdit ? (
+                          <input
+                            type="date"
+                            value={date}
+                            max={new Date().toISOString().slice(0, 10)}
+                            onChange={(e) => {
+                              try {
+                                familyStore.setMarriageDate(person.id, spouse.id, e.target.value || null);
+                              } catch (err) {
+                                console.warn(err.message);
+                              }
+                            }}
+                            aria-label={`Marriage date with ${spouse.displayName}`}
+                          />
+                        ) : (
+                          <strong>{date ? formatDate(date) : 'Not recorded'}</strong>
+                        )}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}

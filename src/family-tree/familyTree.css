@@ -10897,3 +10897,128 @@ button {
 [lang='te'] {
   font-family: 'Noto Sans Telugu', 'Nirmala UI', 'Gautami', var(--ft-font-body);
 }
+
+/* ── Reminders (header bell) ─────────────────────────────── */
+.ft-reminders-anchor {
+  position: relative;
+}
+
+.ft-reminders {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--ft-surface-elevated);
+  border: 1px solid var(--ft-border);
+  box-shadow: var(--ft-shadow-lg);
+}
+
+.ft-reminders__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+.ft-reminders__title {
+  font-family: var(--ft-font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ft-text-primary);
+}
+
+.ft-reminders__sub,
+.ft-reminders__empty {
+  font-size: 0.78rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-reminders__empty {
+  margin: 8px 0 4px;
+  line-height: 1.5;
+}
+
+.ft-reminders__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.ft-reminders__item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ft-text-primary);
+}
+
+.ft-reminders__item:hover {
+  background: var(--ft-surface-hover);
+}
+
+.ft-reminders__item--today {
+  background: var(--ft-emerald-soft);
+}
+
+.ft-reminders__icon {
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.ft-reminders__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ft-reminders__what {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ft-reminders__when {
+  font-size: 0.75rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-details__marriages {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ft-details__marriage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-details__marriage input {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--ft-border);
+  background: var(--ft-surface);
+  color: var(--ft-text-primary);
+  font: 500 0.8rem var(--ft-font-body);
+  color-scheme: light dark;
+}
+
+.ft-details__marriage strong {
+  color: var(--ft-text-primary);
+  font-weight: 600;
+}
