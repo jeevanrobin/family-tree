@@ -16,6 +16,7 @@ export default function UserProfileMenu({
   onOpenPoster,
   onOpenHistory,
   onOpenDuplicates,
+  onOpenPlaces,
   onStartTour,
   isReducedMotion = false,
   onToggleReducedMotion,
@@ -217,6 +218,24 @@ export default function UserProfileMenu({
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <span>Explore the family story</span>
+            </button>
+          )}
+
+          {onOpenPlaces && (
+            <button
+              type="button"
+              className="ft-header__menu-item"
+              role="menuitem"
+              onClick={() => {
+                closeMenu();
+                onOpenPlaces();
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+                <circle cx="12" cy="10" r="2.5" />
+              </svg>
+              <span>Family places &amp; migrations</span>
             </button>
           )}
 
