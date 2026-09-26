@@ -156,6 +156,46 @@ export default function PersonDetails({
   const children = useMemo(() => getChildren(person?.id), [person?.id, relationships]);
   const spouses = useMemo(() => getSpouses(person?.id), [person?.id, relationships]);
   const siblings = useMemo(() => getSiblings(person?.id), [person?.id, relationships]);
+
+  // Unlink a relative (asks first). Only this link is removed; both people
+  // stay in the tree, and Change history can undo it.
+  const [pendingUnlink, setPendingUnlink] = useState(null);
+  const askUnlink = (other, kind) => {
+    const me = person.displayName;
+    const them = other.displayName;
+    const g = other.gender;
+    let message;
+    let blocked = false;
+    if (kind === 'parent') {
+      message = `Remove ${them} as ${me}'s ${g === 'female' ? 'mother' : g === 'male' ? 'father' : 'parent'}?`;
+    } else if (kind === 'child') {
+      message = `Remove ${them} as ${me}'s ${g === 'female' ? 'daughter' : g === 'male' ? 'son' : 'child'}?`;
+    } else if (kind === 'spouse') {
+      message = `Remove the marriage between ${me} and ${them}?`;
+    } else if (familyStore.findLinksBetween(person.id, other.id, 'sibling').length > 0) {
+      message = `Remove the sibling link between ${me} and ${them}?`;
+    } else {
+      blocked = true;
+      message = `${me} and ${them} are siblings because they share a parent. To change this, unlink the parent instead.`;
+    }
+    setPendingUnlink({ personId: person.id, otherId: other.id, kind, message, blocked });
+  };
+  // Parents actually saved (the list above also shows a linked parent's spouse).
+  const directParentIds = useMemo(
+    () => new Set(familyStore.getParents(person?.id).map((x) => String(x.id))),
+    [person?.id, relationships]
+  );
+  const linkAsParent = (other) => {
+    try {
+      familyStore.addRelationship({ type: 'parent-child', parentId: other.id, childId: person.id });
+    } catch (err) {
+      console.warn(err.message);
+    }
+  };
+  const confirmUnlink = () => {
+    familyStore.unlinkPeople(pendingUnlink.personId, pendingUnlink.otherId, pendingUnlink.kind);
+    setPendingUnlink(null);
+  };
   const lifespan = useMemo(() => getLifespanInfo(person), [person]);
   const avatarBg = useMemo(() => getAvatarGradient(person), [person]);
   const genNum = useMemo(() => getGeneration(person?.id), [person?.id]);
@@ -701,27 +741,75 @@ export default function PersonDetails({
           <div className="ft-details__section">
             <h3 className="ft-details__section-title">Immediate Lineage</h3>
 
+            {pendingUnlink && pendingUnlink.personId === person.id && (
+              <div className="ft-details__unlink-confirm" role="alertdialog" aria-label="Confirm unlink">
+                <p>{pendingUnlink.message}</p>
+                {!pendingUnlink.blocked && (
+                  <p className="ft-details__unlink-note">
+                    Both people stay in the tree. You can undo this from Change history.
+                  </p>
+                )}
+                <div className="ft-details__unlink-actions">
+                  <button type="button" className="ft-form-btn" onClick={() => setPendingUnlink(null)}>
+                    {pendingUnlink.blocked ? 'OK' : 'Cancel'}
+                  </button>
+                  {!pendingUnlink.blocked && (
+                    <button type="button" className="ft-form-btn ft-form-btn--danger" onClick={confirmUnlink}>
+                      Unlink
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Parents */}
             {parents.length > 0 && (
                <div className="ft-details__rel-group">
                 <span className="ft-details__rel-role">Parents ({parents.length})</span>
                 <div className="ft-details__rel-chips">
                   {parents.map((p) => (
-                    <button
-                      key={p.id}
-                      className="ft-details__rel-chip"
-                      onClick={() => onSelectPerson?.(p.id)}
-                    >
-                      {p.photo || p.photoUrl ? (
-                        <img src={p.photo || p.photoUrl} alt={p.displayName} className="ft-details__rel-avatar" />
-                      ) : (
-                        <span className="ft-details__rel-avatar">{getInitials(p)}</span>
-                      )}
-                      <div className="ft-details__rel-chip-info">
-                        <span className="ft-details__rel-chip-role">{p.gender === 'female' ? 'Mother' : p.gender === 'male' ? 'Father' : 'Parent'}</span>
-                        <span className="ft-details__rel-chip-name">{p.displayName}</span>
-                      </div>
-                    </button>
+                    <div
+                    key={p.id}
+                    className={`ft-details__rel-chip-wrap ${directParentIds.has(String(p.id)) ? '' : 'ft-details__rel-chip-wrap--inferred'}`}
+                  >
+                      <button
+                                              className="ft-details__rel-chip"
+                        onClick={() => onSelectPerson?.(p.id)}
+                      >
+                        {p.photo || p.photoUrl ? (
+                          <img src={p.photo || p.photoUrl} alt={p.displayName} className="ft-details__rel-avatar" />
+                        ) : (
+                          <span className="ft-details__rel-avatar">{getInitials(p)}</span>
+                        )}
+                        <div className="ft-details__rel-chip-info">
+                          <span className="ft-details__rel-chip-role">{p.gender === 'female' ? 'Mother' : p.gender === 'male' ? 'Father' : 'Parent'}</span>
+                          <span className="ft-details__rel-chip-name">{p.displayName}</span>
+                        </div>
+                      </button>
+                      {canEdit &&
+                        (directParentIds.has(String(p.id)) ? (
+                          <button
+                            type="button"
+                            className="ft-details__unlink-btn"
+                            onClick={() => askUnlink(p, 'parent')}
+                            title={`Unlink ${p.displayName}`}
+                            aria-label={`Unlink ${p.displayName}`}
+                          >
+                            ×
+                          </button>
+                        ) : (
+                          // Shown because they're married to the linked parent but not saved
+                          // as a parent, so the tree treats them as a step-parent.
+                          <button
+                            type="button"
+                            className="ft-details__link-btn"
+                            onClick={() => linkAsParent(p)}
+                            title={`Save ${p.displayName} as ${person.displayName}'s ${p.gender === 'female' ? 'mother' : p.gender === 'male' ? 'father' : 'parent'}`}
+                          >
+                            Link
+                          </button>
+                        ))}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -733,21 +821,33 @@ export default function PersonDetails({
                 <span className="ft-details__rel-role">{spouses.length === 1 ? 'Spouse' : `Spouses (${spouses.length})`}</span>
                 <div className="ft-details__rel-chips">
                   {spouses.map((spouse) => (
-                  <button
-                    key={spouse.id}
-                    className="ft-details__rel-chip"
-                    onClick={() => onSelectPerson?.(spouse.id)}
-                  >
-                    {spouse.photo || spouse.photoUrl ? (
-                      <img src={spouse.photo || spouse.photoUrl} alt={spouse.displayName} className="ft-details__rel-avatar" />
-                    ) : (
-                      <span className="ft-details__rel-avatar">{getInitials(spouse)}</span>
+                  <div key={spouse.id} className="ft-details__rel-chip-wrap">
+                    <button
+                                          className="ft-details__rel-chip"
+                      onClick={() => onSelectPerson?.(spouse.id)}
+                    >
+                      {spouse.photo || spouse.photoUrl ? (
+                        <img src={spouse.photo || spouse.photoUrl} alt={spouse.displayName} className="ft-details__rel-avatar" />
+                      ) : (
+                        <span className="ft-details__rel-avatar">{getInitials(spouse)}</span>
+                      )}
+                      <div className="ft-details__rel-chip-info">
+                        <span className="ft-details__rel-chip-role">{spouse.gender === 'female' ? 'Wife' : spouse.gender === 'male' ? 'Husband' : 'Spouse'}</span>
+                        <span className="ft-details__rel-chip-name">{spouse.displayName}</span>
+                      </div>
+                    </button>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        className="ft-details__unlink-btn"
+                        onClick={() => askUnlink(spouse, 'spouse')}
+                        title={`Unlink ${spouse.displayName}`}
+                        aria-label={`Unlink ${spouse.displayName}`}
+                      >
+                        ×
+                      </button>
                     )}
-                    <div className="ft-details__rel-chip-info">
-                      <span className="ft-details__rel-chip-role">{spouse.gender === 'female' ? 'Wife' : spouse.gender === 'male' ? 'Husband' : 'Spouse'}</span>
-                      <span className="ft-details__rel-chip-name">{spouse.displayName}</span>
-                    </div>
-                  </button>
+                  </div>
                   ))}
                 </div>
                 {/* Marriage dates power anniversary reminders */}
@@ -790,21 +890,33 @@ export default function PersonDetails({
                 <span className="ft-details__rel-role">Children ({children.length})</span>
                 <div className="ft-details__rel-chips">
                   {children.map((c) => (
-                    <button
-                      key={c.id}
-                      className="ft-details__rel-chip"
-                      onClick={() => onSelectPerson?.(c.id)}
-                    >
-                      {c.photo || c.photoUrl ? (
-                        <img src={c.photo || c.photoUrl} alt={c.displayName} className="ft-details__rel-avatar" />
-                      ) : (
-                        <span className="ft-details__rel-avatar">{getInitials(c)}</span>
+                    <div key={c.id} className="ft-details__rel-chip-wrap">
+                      <button
+                                              className="ft-details__rel-chip"
+                        onClick={() => onSelectPerson?.(c.id)}
+                      >
+                        {c.photo || c.photoUrl ? (
+                          <img src={c.photo || c.photoUrl} alt={c.displayName} className="ft-details__rel-avatar" />
+                        ) : (
+                          <span className="ft-details__rel-avatar">{getInitials(c)}</span>
+                        )}
+                        <div className="ft-details__rel-chip-info">
+                          <span className="ft-details__rel-chip-role">{c.gender === 'female' ? 'Daughter' : c.gender === 'male' ? 'Son' : 'Child'}</span>
+                          <span className="ft-details__rel-chip-name">{c.displayName}</span>
+                        </div>
+                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="ft-details__unlink-btn"
+                          onClick={() => askUnlink(c, 'child')}
+                          title={`Unlink ${c.displayName}`}
+                          aria-label={`Unlink ${c.displayName}`}
+                        >
+                          ×
+                        </button>
                       )}
-                      <div className="ft-details__rel-chip-info">
-                        <span className="ft-details__rel-chip-role">{c.gender === 'female' ? 'Daughter' : c.gender === 'male' ? 'Son' : 'Child'}</span>
-                        <span className="ft-details__rel-chip-name">{c.displayName}</span>
-                      </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -816,21 +928,33 @@ export default function PersonDetails({
                 <span className="ft-details__rel-role">Siblings ({siblings.length})</span>
                 <div className="ft-details__rel-chips">
                   {siblings.map((s) => (
-                    <button
-                      key={s.id}
-                      className="ft-details__rel-chip"
-                      onClick={() => onSelectPerson?.(s.id)}
-                    >
-                      {s.photo || s.photoUrl ? (
-                        <img src={s.photo || s.photoUrl} alt={s.displayName} className="ft-details__rel-avatar" />
-                      ) : (
-                        <span className="ft-details__rel-avatar">{getInitials(s)}</span>
+                    <div key={s.id} className="ft-details__rel-chip-wrap">
+                      <button
+                                              className="ft-details__rel-chip"
+                        onClick={() => onSelectPerson?.(s.id)}
+                      >
+                        {s.photo || s.photoUrl ? (
+                          <img src={s.photo || s.photoUrl} alt={s.displayName} className="ft-details__rel-avatar" />
+                        ) : (
+                          <span className="ft-details__rel-avatar">{getInitials(s)}</span>
+                        )}
+                        <div className="ft-details__rel-chip-info">
+                          <span className="ft-details__rel-chip-role">{getSiblingDisplayLabel(s)}</span>
+                          <span className="ft-details__rel-chip-name">{s.displayName}</span>
+                        </div>
+                      </button>
+                      {canEdit && (
+                        <button
+                          type="button"
+                          className="ft-details__unlink-btn"
+                          onClick={() => askUnlink(s, 'sibling')}
+                          title={`Unlink ${s.displayName}`}
+                          aria-label={`Unlink ${s.displayName}`}
+                        >
+                          ×
+                        </button>
                       )}
-                      <div className="ft-details__rel-chip-info">
-                        <span className="ft-details__rel-chip-role">{getSiblingDisplayLabel(s)}</span>
-                        <span className="ft-details__rel-chip-name">{s.displayName}</span>
-                      </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

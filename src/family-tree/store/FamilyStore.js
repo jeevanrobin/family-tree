@@ -1314,6 +1314,36 @@ export class FamilyStore {
     return norm;
   }
 
+  /**
+   * Relationship ids linking two people in one way:
+   *   'parent'  — otherId is a parent of personId
+   *   'child'   — otherId is a child of personId
+   *   'spouse' / 'sibling' — a direct spouse / sibling record
+   */
+  findLinksBetween(personId, otherId, kind) {
+    const a = String(personId);
+    const b = String(otherId);
+    const pair = (r) =>
+      (String(r.personAId) === a && String(r.personBId) === b) ||
+      (String(r.personAId) === b && String(r.personBId) === a);
+    return this.relationships
+      .filter((r) => {
+        if (kind === 'parent') return r.type === 'parent-child' && String(r.parentId) === b && String(r.childId) === a;
+        if (kind === 'child') return r.type === 'parent-child' && String(r.parentId) === a && String(r.childId) === b;
+        if (kind === 'spouse') return r.type === 'spouse' && pair(r);
+        if (kind === 'sibling') return r.type === 'sibling' && pair(r);
+        return false;
+      })
+      .map((r) => r.id);
+  }
+
+  /** Remove the link(s) of one kind between two people; both people stay. */
+  unlinkPeople(personId, otherId, kind) {
+    const ids = this.findLinksBetween(personId, otherId, kind);
+    ids.forEach((id) => this.removeRelationship(id));
+    return ids.length;
+  }
+
   removeRelationship(relId) {
     const id = String(relId);
     const removed = this.relationships.find((r) => r.id === id) || null;
