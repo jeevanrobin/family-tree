@@ -11841,3 +11841,9 @@ button {
   font-size: 0.72rem;
   color: var(--ft-text-secondary);
 }
+
+.ft-quickadd-other-parent {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ft-border);
+}
