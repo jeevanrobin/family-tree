@@ -11726,3 +11726,15 @@ button {
     white-space: nowrap;
   }
 }
+
+@media (max-width: 1100px) and (min-width: 901px) {
+  .ft-header .ft-header__add-btn span {
+    display: none;
+  }
+  .ft-header .ft-header__add-btn {
+    width: 38px;
+    min-width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+}
