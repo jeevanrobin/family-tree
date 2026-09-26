@@ -36,6 +36,8 @@ export const ALLOWED_DOCUMENT_MIME_TYPES = Object.freeze([
   'image/webp',
 ]);
 
+export const MAX_AUDIO_SIZE_BYTES = 20 * 1024 * 1024; // 20MB (about an hour of speech at recorder bitrates)
+export const ALLOWED_AUDIO_MIME_TYPES = Object.freeze(['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav']);
 export const ALLOWED_PHOTO_EXTENSIONS = Object.freeze(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif']);
 export const ALLOWED_DOCUMENT_EXTENSIONS = Object.freeze(['.pdf', '.jpg', '.jpeg', '.png', '.webp']);
 
@@ -399,6 +401,41 @@ class MediaStorageService {
       storagePath,
       metadata,
     });
+  }
+
+  // ── Voice Recordings ────────────────────────────────────────
+
+  /**
+   * Upload a recorded voice story to the family's private documents bucket
+   * (family/{familyId}/audio/{recordingId}.{ext}). Requires a connection;
+   * callers keep the recording on the device when this throws.
+   * @returns {Promise<{ storagePath: string, mimeType: string, size: number }>}
+   */
+  async uploadAudio({ familyId, blob, mimeType }) {
+    if (!familyId) throw new Error('familyId is required to upload a recording.');
+    if (!blob || !blob.size) throw new Error('The recording is empty.');
+    const type = (mimeType || blob.type || '').split(';')[0];
+    if (!ALLOWED_AUDIO_MIME_TYPES.includes(type)) {
+      throw new Error(`Unsupported recording format (${type || 'unknown'}).`);
+    }
+    if (blob.size > MAX_AUDIO_SIZE_BYTES) {
+      throw new Error('Recording is too large (max 20 MB).');
+    }
+    if (!isSupabaseConfigured || !supabase) throw new Error('Cloud storage is not configured.');
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      throw new Error('You are offline. Connect to the internet to save this recording.');
+    }
+
+    const ext = { 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/wav': 'wav' }[type];
+    const recordingId = `voice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const storagePath = `family/${familyId}/audio/${recordingId}.${ext}`;
+
+    const { error } = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, blob, {
+      contentType: type,
+      upsert: false,
+    });
+    if (error) throw new Error(`Could not upload the recording: ${error.message}`);
+    return { storagePath, mimeType: type, size: blob.size };
   }
 
   // ── Offline Binary Queueing Helper ─────────────────────────

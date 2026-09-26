@@ -10,6 +10,7 @@ import { useMediaUrl } from '../../hooks/useMediaUrl.js';
 import { PHOTO_BUCKET } from '../../media/mediaStorageService.js';
 import { getRelatedStories } from '../../memories/familyStoryEngine.js';
 import DeleteButton from '../rare-ui/DeleteButton.jsx';
+import StoryAudio from '../StoryAudio.jsx';
 
 // Lazy-loaded story hero image with private signed URL support
 function StoryHeroImage({ photo, onOpenLightbox }) {
@@ -285,6 +286,7 @@ export default function StoryReaderView({
 
           {/* Story Title */}
           <h1 className="ft-story-reader__title">{story.title}</h1>
+          <StoryAudio story={story} />
 
           {/* Story Attribution Subtitle */}
           <div className="ft-story-reader__byline">

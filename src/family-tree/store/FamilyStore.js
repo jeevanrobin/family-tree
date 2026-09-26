@@ -421,6 +421,12 @@ export class FamilyStore {
       photoId: s.photoId ? String(s.photoId) : null,
       documentId: s.documentId ? String(s.documentId) : null,
       tags: Array.isArray(s.tags) ? s.tags : [],
+      // Voice story: cloud storage path, or a data URL kept in the browser (local mode)
+      audioPath: s.audioPath || null,
+      audioSrc: s.audioSrc || null,
+      audioMimeType: s.audioMimeType || null,
+      audioDurationSec: Number.isFinite(s.audioDurationSec) ? s.audioDurationSec : null,
+      transcriptLanguage: s.transcriptLanguage || null,
       createdAt: s.createdAt || new Date().toISOString(),
       updatedAt: s.updatedAt || new Date().toISOString(),
     };

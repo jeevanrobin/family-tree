@@ -7,6 +7,20 @@ import React, { useState } from 'react';
 import { getAllPersons } from '../../data/familyDataService.js';
 import FamilyDatePicker from '../ui/FamilyDatePicker.jsx';
 import { LocationCombobox } from '../ui/FamilyCombobox.jsx';
+import VoiceRecorder from '../VoiceRecorder.jsx';
+import { useMediaUrl } from '../../hooks/useMediaUrl.js';
+import { mediaStorageService, DOCUMENT_BUCKET } from '../../media/mediaStorageService.js';
+
+// Local-mode recordings live in the browser with the rest of the tree.
+const MAX_LOCAL_AUDIO_BYTES = 3 * 1024 * 1024;
+
+const blobToDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 
 export default function StoryModal({
   isOpen,
@@ -14,6 +28,8 @@ export default function StoryModal({
   story = null,
   onClose,
   onSaveStory,
+  isLocalMode = true,
+  cloudFamilyId = null,
 }) {
   const [title, setTitle] = useState(story?.title || '');
   const [content, setContent] = useState(story?.content || '');
@@ -22,6 +38,10 @@ export default function StoryModal({
   const [narrator, setNarrator] = useState(story?.narrator || (person?.displayName || ''));
   const [relatedPersonIds, setRelatedPersonIds] = useState(story?.relatedPersonIds || []);
   const [errorMsg, setErrorMsg] = useState('');
+  const [recording, setRecording] = useState(null); // new, unsaved recording
+  const [saving, setSaving] = useState(false);
+  const existingAudioUrl = useMediaUrl(story?.audioPath || '', story?.audioSrc || '', DOCUMENT_BUCKET);
+  const hasSavedAudio = Boolean(story?.audioPath || story?.audioSrc);
 
   const familyId = person?.family_id || person?.familyId || null;
 
@@ -29,21 +49,56 @@ export default function StoryModal({
 
   if (!isOpen || !person) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!content.trim()) {
-      setErrorMsg('Story content is required.');
+    if (!content.trim() && !recording && !hasSavedAudio) {
+      setErrorMsg('Write the story or record it.');
       return;
+    }
+
+    // Store a new recording: in the cloud for synced families, in the browser otherwise.
+    let audio = {
+      audioPath: story?.audioPath || null,
+      audioSrc: story?.audioSrc || null,
+      audioMimeType: story?.audioMimeType || null,
+      audioDurationSec: story?.audioDurationSec || null,
+      transcriptLanguage: story?.transcriptLanguage || null,
+    };
+    if (recording) {
+      setSaving(true);
+      try {
+        if (!isLocalMode && cloudFamilyId) {
+          const uploaded = await mediaStorageService.uploadAudio({
+            familyId: cloudFamilyId,
+            blob: recording.blob,
+            mimeType: recording.mimeType,
+          });
+          audio = { ...audio, audioPath: uploaded.storagePath, audioSrc: null, audioMimeType: uploaded.mimeType };
+        } else {
+          if (recording.blob.size > MAX_LOCAL_AUDIO_BYTES) {
+            throw new Error('This recording is too long to keep in the browser (about 10 minutes max). Record a shorter one.');
+          }
+          audio = { ...audio, audioPath: null, audioSrc: await blobToDataUrl(recording.blob), audioMimeType: recording.mimeType };
+        }
+        audio.audioDurationSec = recording.durationSec;
+        audio.transcriptLanguage = recording.language;
+      } catch (err) {
+        setSaving(false);
+        setErrorMsg(err.message || 'Could not save the recording.');
+        return;
+      }
+      setSaving(false);
     }
 
     try {
       onSaveStory({
+        ...audio,
         id: story?.id,
         personId: person.id,
         title: title.trim() || 'Family Memory',
-        content: content.trim(),
+        content: content.trim() || (recording || hasSavedAudio ? '(Voice recording)' : ''),
         date: date || null,
         location: location.trim(),
         narrator: narrator.trim(),
@@ -134,10 +189,18 @@ export default function StoryModal({
             </div>
 
             <div className="ft-form-field">
-              <label>Story &amp; Recollection *</label>
+              <label>Voice recording</label>
+              <VoiceRecorder
+                existingUrl={existingAudioUrl}
+                onChange={setRecording}
+                onTranscript={(text) => setContent((prev) => (prev ? `${prev.trimEnd()} ${text}` : text))}
+              />
+            </div>
+
+            <div className="ft-form-field">
+              <label>Story &amp; Recollection</label>
               <textarea
                 rows="5"
-                required
                 placeholder="Every summer, the entire family would convene at the lakeside home in Hyderabad..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -182,8 +245,9 @@ export default function StoryModal({
             <button
               type="submit"
               className="ft-form-btn ft-form-btn--primary"
+              disabled={saving}
             >
-              {story ? 'Update Story' : 'Save Story'}
+              {saving ? 'Saving recording…' : story ? 'Update Story' : 'Save Story'}
             </button>
           </div>
         </form>

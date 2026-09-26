@@ -167,3 +167,29 @@ describe('SupabaseAdapter partial person updates', () => {
     expect(saved.firstName).toBe('Ravi');
   });
 });
+
+describe('SupabaseAdapter voice stories', () => {
+  let adapter;
+
+  beforeEach(() => {
+    for (const key of Object.keys(db)) delete db[key];
+    adapter = new SupabaseAdapter(FID);
+    adapter._validateSessionAndScope = vi.fn().mockResolvedValue({ userId: 'u1', role: 'owner' });
+    adapter._verifyPersonsBelongToFamily = vi.fn().mockResolvedValue(true);
+  });
+
+  it('saves and reads back the recording fields', async () => {
+    const saved = await adapter.saveStory({
+      id: 'story-v', personId: 'uuid-p1', title: 'Floods', content: '(Voice recording)', relatedPersonIds: [],
+      audioPath: `family/${FID}/audio/voice-1.webm`, audioMimeType: 'audio/webm', audioDurationSec: 95, transcriptLanguage: 'te-IN',
+      _isNew: true,
+    });
+    expect(db.stories[0]).toMatchObject({ audio_path: `family/${FID}/audio/voice-1.webm`, audio_duration_sec: 95 });
+    expect(saved).toMatchObject({ audioPath: `family/${FID}/audio/voice-1.webm`, audioDurationSec: 95, transcriptLanguage: 'te-IN' });
+  });
+
+  it('does not send audio columns for text stories (works before migration 010)', async () => {
+    await adapter.saveStory({ id: 'story-t', personId: 'uuid-p1', title: 'Text', content: 'Hello', relatedPersonIds: [], _isNew: true });
+    expect(Object.keys(db.stories[0]).some((k) => k.startsWith('audio_') || k === 'transcript_language')).toBe(false);
+  });
+});

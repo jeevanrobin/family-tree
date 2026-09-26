@@ -35,6 +35,7 @@ import {
 } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import DeleteButton from './rare-ui/DeleteButton.jsx';
+import StoryAudio from './StoryAudio.jsx';
 
 
 function PersonHeroCameo({ person }) {
@@ -488,6 +489,7 @@ export default function PersonDetails({
                         {s.location && <span>{s.location}</span>}
                         {s.narrator && <span>&middot; Recounted by {s.narrator}</span>}
                       </div>
+                      <StoryAudio story={s} />
                     </div>
                     {(canStory || canDelStory) && (
                       <div style={{ display: 'flex', gap: '4px' }}>

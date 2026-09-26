@@ -11022,3 +11022,120 @@ button {
   color: var(--ft-text-primary);
   font-weight: 600;
 }
+
+/* ── Voice stories ───────────────────────────────────────── */
+.ft-voice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ft-voice__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ft-voice__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--ft-emerald-border);
+  background: var(--ft-emerald-soft);
+  color: var(--ft-text-primary);
+  font: 600 0.86rem var(--ft-font-body);
+  cursor: pointer;
+}
+
+.ft-voice__btn--stop {
+  border-color: var(--ft-coral);
+  background: var(--ft-coral-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.ft-voice__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ft-coral);
+  animation: ftBeaconPulse 1.4s ease-in-out infinite;
+}
+
+.ft-voice__link {
+  border: 0;
+  background: none;
+  color: var(--ft-text-secondary);
+  font: 500 0.8rem var(--ft-font-body);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ft-voice__limit,
+.ft-voice__note {
+  font-size: 0.76rem;
+  color: var(--ft-text-muted);
+  margin: 0;
+}
+
+.ft-voice__transcribe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.82rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-voice__transcribe label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.ft-voice__transcribe input[type='checkbox'] {
+  width: auto;
+}
+
+.ft-voice__transcribe select {
+  width: auto;
+  padding: 4px 8px;
+}
+
+.ft-voice__interim {
+  margin: 0;
+  font-style: italic;
+  color: var(--ft-text-secondary);
+  font-size: 0.85rem;
+}
+
+.ft-voice__player {
+  width: 100%;
+  height: 40px;
+}
+
+.ft-voice__error {
+  margin: 0;
+  color: var(--ft-coral);
+  font-size: 0.8rem;
+}
+
+.ft-story-audio {
+  width: 100%;
+  height: 40px;
+  margin: 8px 0;
+}
+
+.ft-story-audio-figure {
+  margin: 8px 0 4px;
+}
+
+.ft-story-audio-figure figcaption {
+  font-size: 0.75rem;
+  color: var(--ft-text-muted);
+}

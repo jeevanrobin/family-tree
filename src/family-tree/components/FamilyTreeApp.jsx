@@ -959,6 +959,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           story={editingStory}
           onClose={() => setStoryModalOpen(false)}
           onSaveStory={handleSaveStory}
+          isLocalMode={isLocalMode}
+          cloudFamilyId={activeFamily?.id || null}
         />
 
         <EventModal

@@ -153,6 +153,16 @@ function storyToRow(story, familyId) {
     date: story.date || null,
     location: story.location || '',
     narrator: story.narrator || '',
+    // Audio columns (migration 010) are only sent for voice stories, so text
+    // stories keep saving on databases that have not run that migration yet.
+    ...(story.audioPath
+      ? {
+          audio_path: story.audioPath,
+          audio_mime_type: story.audioMimeType || null,
+          audio_duration_sec: story.audioDurationSec ?? null,
+          transcript_language: story.transcriptLanguage || null,
+        }
+      : {}),
   };
 }
 
@@ -167,6 +177,10 @@ function rowToStory(row, relatedPersonIds = []) {
     location: row.location || '',
     narrator: row.narrator || '',
     relatedPersonIds,
+    audioPath: row.audio_path || null,
+    audioMimeType: row.audio_mime_type || null,
+    audioDurationSec: row.audio_duration_sec ?? null,
+    transcriptLanguage: row.transcript_language || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
