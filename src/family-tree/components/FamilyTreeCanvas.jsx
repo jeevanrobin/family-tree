@@ -3,10 +3,11 @@
  * Seamless pan, zoom, smooth camera glide, generational stagger, and active relationship animations.
  */
 
-import React, { useState, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react';
 import PersonCard from './PersonCard.jsx';
 import TreeMinimap from './TreeMinimap.jsx';
 import { useTreeInteraction } from '../hooks/useTreeInteraction.js';
+import { computeTreeHighlight } from '../engine/treeHighlight.js';
 
 const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   {
@@ -14,8 +15,9 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     selectedId,
     immediateFamilyMap,
     constellationMap,
-    ancestryLineage,
     relatedIds,
+    kinshipMap,
+    labelLanguage = 'te',
     onSelectPerson,
     onDeselect,
     onScaleChange,
@@ -31,6 +33,18 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   // Arrange Family drag & drop + reorder state - MUST be before conditional return
   const [draggingInfo, setDraggingInfo] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
+  // Hover preview of a person's direct connections (only while nothing is selected)
+  const [hoveredId, setHoveredId] = useState(null);
+
+  const highlight = useMemo(
+    () =>
+      computeTreeHighlight(layout?.lines || [], {
+        selectedId,
+        constellationMap,
+        hoveredId: isArrangeMode ? null : hoveredId,
+      }),
+    [layout?.lines, selectedId, constellationMap, hoveredId, isArrangeMode]
+  );
 
   const handleShiftSibling = useCallback((node, direction) => {
     if (!node?.cohortSiblingIds || !setSiblingOrder) return;
@@ -126,6 +140,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
       zoomOut: interaction.zoomOut,
       reset: interaction.fitTreeToBounds,
       focusOn: interaction.focusOnPerson,
+      focusFamily: interaction.focusOnFamily,
       focusGeneration: interaction.focusOnGeneration,
       fitBranch: interaction.fitBranch,
       panTo: interaction.panToCoordinate,
@@ -222,43 +237,13 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
           </defs>
 
           {lines.map((line) => {
-            let isLineActive = false;
-            let isLineDimmed = false;
-
-            if (selectedId) {
-              const lineageSpouseKeys = ancestryLineage?.lineageSpouseKeys || new Set();
-              const lineageParentChildChildIds = ancestryLineage?.lineageParentChildChildIds || new Set();
-
-              if (line.type === 'spouse') {
-                const isSelfSpouse = line.personId1 === selectedId || line.personId2 === selectedId;
-                const spouseKey = [String(line.personId1), String(line.personId2)].sort().join('-');
-                const isLineageSpouse = lineageSpouseKeys.has(spouseKey);
-
-                if (isSelfSpouse || isLineageSpouse) {
-                  isLineActive = true;
-                } else {
-                  isLineDimmed = true;
-                }
-              } else if (line.type === 'parent-child') {
-                const isDirectToSelected = line.childId === selectedId;
-                const isAncestralLineage = lineageParentChildChildIds.has(line.childId);
-                const isChildOfSelected =
-                  (line.parentIds && line.parentIds.includes(selectedId)) ||
-                  (line.allParentIds && line.allParentIds.includes(selectedId));
-
-                if (isDirectToSelected || isAncestralLineage || isChildOfSelected) {
-                  isLineActive = true;
-                } else {
-                  isLineDimmed = true;
-                }
-              } else if (line.type === 'sibling') {
-                if (line.personId1 === selectedId || line.personId2 === selectedId) {
-                  isLineActive = true;
-                } else {
-                  isLineDimmed = true;
-                }
-              }
-            }
+            const lineState = highlight.lineState.get(line.id);
+            const isLineActive = lineState === 'strong';
+            const isLineSoft = lineState === 'soft';
+            const isLineDimmed = lineState === 'dim' || lineState === 'faint';
+            const stateClass = `${isLineSoft ? 'ft-canvas__line--soft' : ''} ${
+              lineState === 'faint' ? 'ft-canvas__line--faint' : ''
+            }`;
 
             if (line.type === 'spouse') {
               return (
@@ -267,7 +252,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                     d={line.path}
                     className={`ft-canvas__line ft-canvas__line--spouse ${
                       isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
-                    } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''}`}
+                    } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
                   />
                   {/* Marriage Union Emblem */}
                   <g transform={`translate(${line.midX}, ${line.midY})`}>
@@ -299,7 +284,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                     d={line.path}
                     className={`ft-canvas__line ft-canvas__line--sibling ${
                       isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
-                    } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''}`}
+                    } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
                   />
                 </g>
               );
@@ -310,8 +295,10 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 key={line.id}
                 d={line.path}
                 className={`ft-canvas__line ft-canvas__line--parent ${
+                  line.crossFamily ? 'ft-canvas__line--cross-family' : ''
+                } ${
                   isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
-                } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''}`}
+                } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''} ${stateClass}`}
               />
             );
           })}
@@ -328,16 +315,20 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
             immediateFamilyMap?.get(id)?.role ||
             constellationMap?.get(id)?.role ||
             null;
+          const kinship = selectedId && id !== selectedId ? kinshipMap?.get(String(id)) : null;
+          const teluguRole = labelLanguage === 'te' && kinship?.telugu?.length ? kinship : null;
 
           // Generational entrance delay (Gen I -> Gen II -> Gen III -> Gen IV)
           const genDelay = (node.gen || 0) * 80 + (node.x > 0 ? 30 : 0);
           const isReorderable = isArrangeMode && node.canReorder;
-          const isBeingDragged = draggingInfo?.bloodChildId === node.bloodChildId;
+          const isBeingDragged =
+            draggingInfo?.bloodChildId != null && draggingInfo.bloodChildId === node.bloodChildId;
+          const cardState = highlight.cardState.get(String(id)) || (highlight.mode === 'none' ? '' : highlight.mode === 'hover' ? 'faint' : 'dim');
 
           return (
             <div
               key={id}
-              className={`ft-canvas__node-wrapper ft-canvas__node-wrapper--${node.rank} ${isSelected ? 'ft-canvas__node-wrapper--selected' : ''} ${isReorderable ? 'ft-canvas__node-wrapper--arrangeable' : ''} ${isBeingDragged ? 'ft-canvas__node-wrapper--dragging' : ''}`}
+              className={`ft-canvas__node-wrapper ft-canvas__node-wrapper--${node.rank} ${isSelected ? 'ft-canvas__node-wrapper--selected' : ''} ${isReorderable ? 'ft-canvas__node-wrapper--arrangeable' : ''} ${isBeingDragged ? 'ft-canvas__node-wrapper--dragging' : ''} ${cardState ? `ft-canvas__node-wrapper--hl-${cardState}` : ''}`}
               style={{
                 position: 'absolute',
                 left: node.x,
@@ -345,6 +336,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 width: nodeWidth,
                 height: nodeHeight,
               }}
+              onMouseEnter={() => !selectedId && setHoveredId(id)}
+              onMouseLeave={() => setHoveredId((current) => (current === id ? null : current))}
               draggable={isReorderable}
               onDragStart={(e) => handleDragStart(e, node)}
               onDragOver={(e) => handleDragOver(e, node)}
@@ -358,6 +351,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 isRelated={isRelated}
                 constellationTier={constellationTier}
                 relationshipRole={relationRole}
+                teluguRole={teluguRole}
                 onClick={onSelectPerson}
                 animationDelay={genDelay}
               />
@@ -427,7 +421,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
             }}
             onClick={(e) => {
               e.stopPropagation();
-              onToggleBranch?.(badge.unitKey);
+              onToggleBranch?.(badge.unitKeys || badge.unitKey);
             }}
             title={badge.title}
             aria-label={badge.title}

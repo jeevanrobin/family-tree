@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import familyStore from '../../store/FamilyStore.js';
+import { suggestSurname } from '../../utils/suggestSurname.js';
 import { getAllPersons } from '../../data/familyDataService.js';
 import { mediaStorageService } from '../../media/mediaStorageService.js';
 import { useFamily } from '../../auth/FamilyContext.jsx';
@@ -48,6 +49,8 @@ export default function AddPersonModal({
   // Relationship state: 'parent' | 'child' | 'spouse' | 'sibling' | 'father' | 'mother' | 'other'
   const [relOption, setRelOption] = useState('child');
   const [connectRelativeId, setConnectRelativeId] = useState(initialRelativeId || '');
+  // For a child: the other parent (the relative's wife or husband); '' = not known.
+  const [otherParentId, setOtherParentId] = useState('');
 
   // Secondary details (collapsed by default)
   const [showMoreDetails, setShowMoreDetails] = useState(false);
@@ -64,6 +67,8 @@ export default function AddPersonModal({
 
   const [errorMsg, setErrorMsg] = useState('');
   const firstNameInputRef = useRef(null);
+  // Once the user types a surname, stop pre-filling it.
+  const lastNameEditedRef = useRef(false);
 
   // Safe family context consumption
   let familyId = 'local-family';
@@ -107,6 +112,7 @@ export default function AddPersonModal({
       setErrorMsg('');
       setFirstName('');
       setLastName('');
+      lastNameEditedRef.current = false;
       setMiddleName('');
       if (photoPreviewUrl && photoPreviewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(photoPreviewUrl);
@@ -153,6 +159,36 @@ export default function AddPersonModal({
       }, 60);
     }
   }, [isOpen, initialRelativeId, initialRelType, peopleList]);
+
+  // A child's other parent: the relative's spouse(s). Defaults to the most
+  // recent marriage; with several, the user picks.
+  const relativeSpouses = useMemo(
+    () => (isOpen && relOption === 'child' && connectRelativeId ? familyStore.getSpouses(connectRelativeId) : []),
+    [isOpen, relOption, connectRelativeId]
+  );
+  useEffect(() => {
+    setOtherParentId(relativeSpouses.length ? String(relativeSpouses[relativeSpouses.length - 1].id) : '');
+  }, [relativeSpouses]);
+
+  // Pre-fill the surname from the father (for a child) or husband (for a wife).
+  const surnameSuggestion = useMemo(() => {
+    if (!isOpen || creationMode !== 'create' || !connectRelativeId) return null;
+    const family =
+      relOption === 'child'
+        ? {
+            ...familyStore,
+            getParents: (id) => familyStore.getParents(id),
+            // Use the other parent chosen in the form, not any spouse.
+            getSpouses: () => (otherParentId ? [familyStore.getPersonById(otherParentId)].filter(Boolean) : []),
+          }
+        : familyStore;
+    return suggestSurname(relOption, familyStore.getPersonById(connectRelativeId), family, gender);
+  }, [isOpen, creationMode, connectRelativeId, relOption, gender, otherParentId]);
+
+  useEffect(() => {
+    if (!isOpen || lastNameEditedRef.current) return;
+    setLastName(surnameSuggestion?.surname || '');
+  }, [isOpen, surnameSuggestion]);
 
   // Handle escape key to close
   useEffect(() => {
@@ -340,13 +376,12 @@ export default function AddPersonModal({
             parentId: connectRelativeId,
             childId: newPerson.id,
           });
-          // Also link to spouse of connectRelativeId if one exists so both father and mother are linked
-          const spouse = familyStore.getSpouse(connectRelativeId);
-          if (spouse && String(spouse.id) !== String(connectRelativeId)) {
+          // Also link the other parent chosen in the form (mother or father)
+          if (otherParentId && String(otherParentId) !== String(connectRelativeId)) {
             try {
               onAddRelationship({
                 type: 'parent-child',
-                parentId: spouse.id,
+                parentId: otherParentId,
                 childId: newPerson.id,
               });
             } catch (spouseErr) {
@@ -446,13 +481,15 @@ export default function AddPersonModal({
           parentId: connectRelativeId,
           childId: selectedExistingPersonId,
         });
-        // Also link to spouse of connectRelativeId if one exists so both father and mother are linked
-        const spouse = familyStore.getSpouse(connectRelativeId);
-        if (spouse && String(spouse.id) !== String(connectRelativeId)) {
+        // Also link the other parent chosen in the form (mother or father)
+        const alreadyLinked = familyStore
+          .getParents(selectedExistingPersonId)
+          .some((p) => String(p.id) === String(otherParentId));
+        if (otherParentId && String(otherParentId) !== String(connectRelativeId) && !alreadyLinked) {
           try {
             onAddRelationship({
               type: 'parent-child',
-              parentId: spouse.id,
+              parentId: otherParentId,
               childId: selectedExistingPersonId,
             });
           } catch (spouseErr) {
@@ -718,6 +755,26 @@ export default function AddPersonModal({
                       ))}
                     </select>
                   )}
+                  {relOption === 'child' && relativeSpouses.length > 0 && (
+                    <div className="ft-quickadd-other-parent">
+                      <label htmlFor="qa-other-parent" className="ft-quickadd-connect-label">
+                        {selectedRelative?.gender === 'male' ? 'MOTHER' : selectedRelative?.gender === 'female' ? 'FATHER' : 'OTHER PARENT'}
+                      </label>
+                      <select
+                        id="qa-other-parent"
+                        value={otherParentId}
+                        onChange={(e) => setOtherParentId(e.target.value)}
+                        className="ft-quickadd-select"
+                      >
+                        {relativeSpouses.map((sp) => (
+                          <option key={sp.id} value={sp.id}>
+                            {sp.displayName}
+                          </option>
+                        ))}
+                        <option value="">Not known</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -881,9 +938,15 @@ export default function AddPersonModal({
                       type="text"
                       placeholder="e.g. Medida"
                       value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      onChange={(e) => {
+                        lastNameEditedRef.current = true;
+                        setLastName(e.target.value);
+                      }}
                       autoComplete="off"
                     />
+                    {surnameSuggestion && lastName === surnameSuggestion.surname && (
+                      <span className="ft-quickadd-hint">From {surnameSuggestion.fromName}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -922,6 +985,26 @@ export default function AddPersonModal({
                           </option>
                         ))}
                       </select>
+                    )}
+                    {relOption === 'child' && relativeSpouses.length > 0 && (
+                      <div className="ft-quickadd-other-parent">
+                        <label htmlFor="qa-other-parent" className="ft-quickadd-connect-label">
+                          {selectedRelative?.gender === 'male' ? 'MOTHER' : selectedRelative?.gender === 'female' ? 'FATHER' : 'OTHER PARENT'}
+                        </label>
+                        <select
+                          id="qa-other-parent"
+                          value={otherParentId}
+                          onChange={(e) => setOtherParentId(e.target.value)}
+                          className="ft-quickadd-select"
+                        >
+                          {relativeSpouses.map((sp) => (
+                            <option key={sp.id} value={sp.id}>
+                              {sp.displayName}
+                            </option>
+                          ))}
+                          <option value="">Not known</option>
+                        </select>
+                      </div>
                     )}
                   </div>
                 </div>

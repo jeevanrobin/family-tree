@@ -19,7 +19,7 @@ export default function TreeMinimap({
   selectedId,
   isReducedMotion = false,
 }) {
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 720px)').matches);
   const svgRef = useRef(null);
 
   // Derive container dimensions

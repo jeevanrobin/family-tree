@@ -9,7 +9,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   getParents,
   getChildren,
-  getSpouse,
+  getSpouses,
   getSiblings,
   getSiblingDisplayLabel,
   getGeneration,
@@ -33,16 +33,26 @@ import {
   canUploadMedia as checkCanUploadMedia,
   canUploadDocument as checkCanUploadDocument,
 } from '../auth/roles.js';
+import familyStore from '../store/FamilyStore.js';
 import DeleteButton from './rare-ui/DeleteButton.jsx';
+import StoryAudio from './StoryAudio.jsx';
 
 
 function PersonHeroCameo({ person }) {
   const photoSrc = person.photo || person.photoUrl || '';
   const isStoragePath = photoSrc.startsWith('family/');
   const resolvedUrl = useMediaUrl(isStoragePath ? photoSrc : '', photoSrc);
+  const [failedUrl, setFailedUrl] = useState(null);
 
-  if (resolvedUrl) {
-    return <img src={resolvedUrl} alt={person.displayName} className="ft-details__avatar-img" />;
+  if (resolvedUrl && failedUrl !== resolvedUrl) {
+    return (
+      <img
+        src={resolvedUrl}
+        alt={person.displayName}
+        className="ft-details__avatar-img"
+        onError={() => setFailedUrl(resolvedUrl)}
+      />
+    );
   }
   return <span className="ft-details__avatar-initials">{getInitials(person)}</span>;
 }
@@ -88,12 +98,15 @@ function GalleryThumbnailItem({ photo, onOpen }) {
 
 export default function PersonDetails({
   person,
+  // Changes identity on every store update; keeps the family lists below fresh
+  relationships,
   onClose,
   onSelectPerson,
   onCenterPerson,
   onEditPerson,
   onDeletePerson,
   onAddRelative,
+  onFindRelationship,
   // M2B Reactive Collections (from hook, via props)
   stories: storiesProp,
   lifeEvents: lifeEventsProp,
@@ -139,10 +152,10 @@ export default function PersonDetails({
   const canPhoto = isLocalMode || checkCanUploadMedia(currentRole);
   const canDoc = isLocalMode || checkCanUploadDocument(currentRole);
 
-  const parents = useMemo(() => getParents(person?.id), [person?.id]);
-  const children = useMemo(() => getChildren(person?.id), [person?.id]);
-  const spouse = useMemo(() => getSpouse(person?.id), [person?.id]);
-  const siblings = useMemo(() => getSiblings(person?.id), [person?.id]);
+  const parents = useMemo(() => getParents(person?.id), [person?.id, relationships]);
+  const children = useMemo(() => getChildren(person?.id), [person?.id, relationships]);
+  const spouses = useMemo(() => getSpouses(person?.id), [person?.id, relationships]);
+  const siblings = useMemo(() => getSiblings(person?.id), [person?.id, relationships]);
   const lifespan = useMemo(() => getLifespanInfo(person), [person]);
   const avatarBg = useMemo(() => getAvatarGradient(person), [person]);
   const genNum = useMemo(() => getGeneration(person?.id), [person?.id]);
@@ -181,7 +194,9 @@ export default function PersonDetails({
 
   // Immediate Family Summary Text
   const familySummary = [
-    spouse ? `Spouse: ${spouse.displayName}` : null,
+    spouses.length > 0
+      ? `${spouses.length === 1 ? 'Spouse' : 'Spouses'}: ${spouses.map((s) => s.displayName).join(', ')}`
+      : null,
     children.length > 0 ? `${children.length} ${children.length === 1 ? 'Child' : 'Children'}` : null,
     parents.length > 0 ? `${parents.length} ${parents.length === 1 ? 'Parent' : 'Parents'}` : null,
   ].filter(Boolean).join(' • ');
@@ -194,7 +209,6 @@ export default function PersonDetails({
           <span className="ft-details__gen-badge" style={{ color: genMeta.color, borderColor: `${genMeta.color}40` }}>
             {genMeta.title.toUpperCase()}
           </span>
-          <span className="ft-details__id-pill">ID: {person.id.split('-').slice(0, 2).join('-')}</span>
         </div>
 
         <div className="ft-details__header-actions">
@@ -367,6 +381,16 @@ export default function PersonDetails({
                   </button>
                 </div>
               )}
+
+              {onFindRelationship && (
+                <button
+                  type="button"
+                  className="ft-details__kin-btn"
+                  onClick={() => onFindRelationship(person.id)}
+                >
+                  <span lang="te">బంధుత్వం</span> How are we related?
+                </button>
+              )}
             </div>
 
             {/* Vitals Grid */}
@@ -386,7 +410,11 @@ export default function PersonDetails({
                 ) : (
                   <div className="ft-details__item">
                     <span className="ft-details__label">Status</span>
-                    <span className="ft-details__val" style={{ color: 'var(--ft-emerald)' }}>Living Family Member</span>
+                    {person.livingStatus === 'deceased' ? (
+                      <span className="ft-details__val">Passed away (date not recorded)</span>
+                    ) : (
+                      <span className="ft-details__val" style={{ color: 'var(--ft-emerald)' }}>Living Family Member</span>
+                    )}
                   </div>
                 )}
 
@@ -464,6 +492,7 @@ export default function PersonDetails({
                         {s.location && <span>{s.location}</span>}
                         {s.narrator && <span>&middot; Recounted by {s.narrator}</span>}
                       </div>
+                      <StoryAudio story={s} />
                     </div>
                     {(canStory || canDelStory) && (
                       <div style={{ display: 'flex', gap: '4px' }}>
@@ -698,12 +727,14 @@ export default function PersonDetails({
               </div>
             )}
 
-            {/* Spouse */}
-            {spouse && (
+            {/* Spouses (earliest marriage first) */}
+            {spouses.length > 0 && (
               <div className="ft-details__rel-group">
-                <span className="ft-details__rel-role">Spouse</span>
+                <span className="ft-details__rel-role">{spouses.length === 1 ? 'Spouse' : `Spouses (${spouses.length})`}</span>
                 <div className="ft-details__rel-chips">
+                  {spouses.map((spouse) => (
                   <button
+                    key={spouse.id}
                     className="ft-details__rel-chip"
                     onClick={() => onSelectPerson?.(spouse.id)}
                   >
@@ -717,6 +748,38 @@ export default function PersonDetails({
                       <span className="ft-details__rel-chip-name">{spouse.displayName}</span>
                     </div>
                   </button>
+                  ))}
+                </div>
+                {/* Marriage dates power anniversary reminders */}
+                <div className="ft-details__marriages">
+                  {spouses.map((spouse) => {
+                    const marriage = familyStore.getMarriage(person.id, spouse.id);
+                    const date = marriage?.startDate || '';
+                    return (
+                      <label key={spouse.id} className="ft-details__marriage">
+                        <span>
+                          Married{spouses.length > 1 ? ` (${spouse.firstName || spouse.displayName})` : ''}
+                        </span>
+                        {canEdit ? (
+                          <input
+                            type="date"
+                            value={date}
+                            max={new Date().toISOString().slice(0, 10)}
+                            onChange={(e) => {
+                              try {
+                                familyStore.setMarriageDate(person.id, spouse.id, e.target.value || null);
+                              } catch (err) {
+                                console.warn(err.message);
+                              }
+                            }}
+                            aria-label={`Marriage date with ${spouse.displayName}`}
+                          />
+                        ) : (
+                          <strong>{date ? formatDate(date) : 'Not recorded'}</strong>
+                        )}
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             )}

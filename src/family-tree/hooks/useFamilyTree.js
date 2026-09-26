@@ -19,6 +19,8 @@ import {
   getDocumentsForPerson,
 } from '../data/familyDataService.js';
 import { computeTreeLayout } from '../engine/treeLayout.js';
+import { describeRelationshipsFrom, siblingOrderFromLayout } from '../kinship/kinshipEngine.js';
+import { findRelationshipConflicts } from '../data/relationshipConflicts.js';
 
 export function useFamilyTree() {
   const [snapshot, setSnapshot] = useState(() => familyStore.getSnapshot());
@@ -59,6 +61,21 @@ export function useFamilyTree() {
     });
   }, [persons, relationships, collapsedUnitKeys, selectedId, focusMode, siblingOrder]);
 
+  // Contradictory records (e.g. spouses also saved as parent/child) are drawn
+  // safely but should be fixed; list them so they can be found.
+  const relationshipConflicts = useMemo(
+    () => findRelationshipConflicts(persons, relationships),
+    [persons, relationships]
+  );
+  useEffect(() => {
+    if (relationshipConflicts.length > 0) {
+      console.warn(
+        'Family tree: some relationships contradict each other and were skipped in the layout:\n' +
+          relationshipConflicts.map((c) => `• ${c.message}`).join('\n')
+      );
+    }
+  }, [relationshipConflicts]);
+
   // Selected person entity
   const selectedPerson = useMemo(() => {
     return selectedId ? familyStore.getPersonById(selectedId) : null;
@@ -75,6 +92,36 @@ export function useFamilyTree() {
   }, [selectedId, relationships, persons]);
 
   // Complete ancestral lineage tracing (Grandparents -> Parents -> Selected Child)
+  // What the selected person calls each relative (Telugu + English), from one search.
+  // Elder/younger follows birth dates, else card order (left = elder), so
+  // rearranging siblings updates Annayya / Thammudu, Akka / Chelli...
+  const kinshipMap = useMemo(
+    () =>
+      selectedId
+        ? describeRelationshipsFrom(persons, relationships, selectedId, {
+            siblingOrder: siblingOrderFromLayout(layout, relationships),
+          })
+        : new Map(),
+    [selectedId, persons, relationships, layout]
+  );
+
+  // Relationship labels on cards: Telugu kinship terms or English roles.
+  const [labelLanguage, setLabelLanguageState] = useState(() => {
+    try {
+      return localStorage.getItem('family-tree-label-language') || 'en';
+    } catch {
+      return 'en';
+    }
+  });
+  const setLabelLanguage = useCallback((lang) => {
+    setLabelLanguageState(lang);
+    try {
+      localStorage.setItem('family-tree-label-language', lang);
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+
   const ancestryLineage = useMemo(() => {
     return selectedId
       ? getAncestryLineage(selectedId)
@@ -123,14 +170,17 @@ export function useFamilyTree() {
     setSelectedId(null);
   }, []);
 
-  const toggleBranch = useCallback((unitKey) => {
-    if (!unitKey) return;
+  // Accepts one unit key or all keys of a couple's unit (either spouse's key
+  // collapses the couple, so expanding must clear every one of them).
+  const toggleBranch = useCallback((unitKeyOrKeys) => {
+    const keys = (Array.isArray(unitKeyOrKeys) ? unitKeyOrKeys : [unitKeyOrKeys]).filter(Boolean);
+    if (keys.length === 0) return;
     setCollapsedUnitKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(unitKey)) {
-        next.delete(unitKey);
+      if (keys.some((key) => next.has(key))) {
+        keys.forEach((key) => next.delete(key));
       } else {
-        next.add(unitKey);
+        next.add(keys[0]);
       }
       return next;
     });
@@ -292,6 +342,7 @@ export function useFamilyTree() {
   }, []);
 
   return {
+    relationshipConflicts,
     persons,
     relationships,
     stories,
@@ -307,6 +358,9 @@ export function useFamilyTree() {
     constellationMap,
     ancestryLineage,
     relatedIds,
+    kinshipMap,
+    labelLanguage,
+    setLabelLanguage,
     selectedPersonStories,
     selectedPersonEvents,
     selectedPersonPhotos,

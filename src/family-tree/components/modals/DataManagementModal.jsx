@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
+import { exportGedcom, importGedcom } from '../../gedcom/gedcom.js';
 
 export default function DataManagementModal({
   isOpen,
@@ -50,6 +51,32 @@ export default function DataManagementModal({
     }
   };
 
+  const downloadFile = (content, type, filename) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportGedcom = () => {
+    try {
+      const data = onExportData();
+      const ged = exportGedcom(data.family || data);
+      downloadFile(ged, 'text/plain;charset=utf-8', `family-tree-${new Date().toISOString().split('T')[0]}.ged`);
+      setStatusMessage({
+        type: 'success',
+        text: 'Exported as GEDCOM (.ged). Ancestry, MyHeritage, FamilySearch and Gramps can import this file.',
+      });
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: err.message || 'GEDCOM export failed.' });
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -59,10 +86,20 @@ export default function DataManagementModal({
       try {
         const text = event.target?.result;
         if (typeof text === 'string') {
-          onImportData(text);
+          const isGedcom = /\.ged$/i.test(file.name) || /^\uFEFF?0 HEAD/.test(text);
+          let warnings = [];
+          if (isGedcom) {
+            const converted = importGedcom(text);
+            warnings = converted.warnings;
+            onImportData(JSON.stringify({ schemaVersion: '2.0.0', family: converted.family }));
+          } else {
+            onImportData(text);
+          }
           setStatusMessage({
             type: 'success',
-            text: 'Family data successfully imported and verified!',
+            text: isGedcom
+              ? `GEDCOM imported: ${warnings.length ? `${warnings.length} link(s) skipped.` : 'all people and families loaded.'}`
+              : 'Family data successfully imported and verified!',
           });
           setTimeout(() => {
             onClose();
@@ -198,6 +235,13 @@ export default function DataManagementModal({
               </svg>
               <span>Export JSON</span>
             </button>
+            <button
+              className="ft-form-btn ft-form-btn--secondary"
+              onClick={handleExportGedcom}
+              title="GEDCOM is the standard family-tree format used by Ancestry, MyHeritage and FamilySearch"
+            >
+              <span>Export GEDCOM</span>
+            </button>
           </div>
 
           {/* Import Card */}
@@ -207,13 +251,13 @@ export default function DataManagementModal({
                 Import Family Backup
               </div>
               <p style={{ fontSize: '0.80rem', color: 'var(--ft-text-secondary)', marginTop: '2px' }}>
-                Load and validate a previously saved backup file.
+                Load a saved backup (.json) or a GEDCOM file (.ged) from Ancestry, MyHeritage or FamilySearch. This replaces the current tree.
               </p>
             </div>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json,application/json"
+              accept=".json,application/json,.ged"
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />

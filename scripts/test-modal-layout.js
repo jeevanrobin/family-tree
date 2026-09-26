@@ -332,10 +332,19 @@ runTest('Mobile responsive rule in CSS provides safe area padding and compact he
 });
 
 runTest('Theme compatibility: footers use semantic css variables for both light and dark modes', () => {
-  assert(cssContent.includes('--ft-surface-soft: #F1F1EE'), 'light surface-soft defined');
-  assert(cssContent.includes('--ft-surface-soft: #1E252C'), 'dark surface-soft defined');
-  assert(cssContent.includes('--ft-border-subtle: #EDEDE8'), 'light border-subtle defined');
-  assert(cssContent.includes('--ft-border-subtle: #1E252C'), 'dark border-subtle defined');
+  // Both theme token blocks must define the tokens the modal footers use
+  // (checks the tokens exist, not specific palette values).
+  const themeBlock = (selector) => {
+    const start = cssContent.indexOf(selector);
+    assert(start !== -1, `${selector} theme block exists`);
+    return cssContent.slice(start, cssContent.indexOf('}', start));
+  };
+  const lightBlock = themeBlock('[data-theme="light"] {');
+  const darkBlock = themeBlock('[data-theme="dark"] {');
+  for (const token of ['--ft-surface-soft:', '--ft-border-subtle:']) {
+    assert(lightBlock.includes(token), `light ${token} defined`);
+    assert(darkBlock.includes(token), `dark ${token} defined`);
+  }
 });
 
 runTest('Accessibility: all modals have dialog roles, aria labels, and Esc handlers or close buttons', () => {

@@ -11,10 +11,12 @@ import ClickSpark from './react-bits/ClickSpark.jsx';
 import SearchOverlay from './SearchOverlay.jsx';
 import { GENERATION_CONFIG } from '../data/familyDataService.js';
 import { useFamily } from '../auth/FamilyContext.jsx';
+import familyStore from '../store/FamilyStore.js';
 import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
 import UserProfileMenu from './UserProfileMenu.jsx';
 import NotificationBell from './rare-ui/NotificationBell.jsx';
+import RemindersPanel, { useUpcomingOccasions, countSoonOccasions } from './RemindersPanel.jsx';
 
 
 export default function TreeHeader({
@@ -25,6 +27,11 @@ export default function TreeHeader({
   onDeselect,
   onOpenAddModal,
   onOpenDataModal,
+  onOpenPoster,
+  onOpenHistory,
+  onOpenDuplicates,
+  onOpenPlaces,
+  onOpenComplete,
   onStartTour,
   theme,
   onToggleTheme,
@@ -41,6 +48,9 @@ export default function TreeHeader({
 }) {
   const [familySelectorOpen, setFamilySelectorOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const occasions = useUpcomingOccasions();
+  const soonCount = countSoonOccasions(occasions);
   const selectorRef = useRef(null);
   const navigate = useNavigate();
 
@@ -259,6 +269,17 @@ export default function TreeHeader({
             {!isLocalMode && (
               <span
                 className={`ft-sync-badge ft-sync-badge--${syncStatus}`}
+                {...(syncStatus === 'error' && {
+                  role: 'button',
+                  tabIndex: 0,
+                  onClick: () => familyStore.retryFailedSync(),
+                  onKeyDown: (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      familyStore.retryFailedSync();
+                    }
+                  },
+                })}
                 title={
                   syncStatus === 'synced'
                     ? 'All changes saved to cloud'
@@ -268,12 +289,13 @@ export default function TreeHeader({
                     ? 'Offline — changes safely saved in local cache'
                     : syncStatus === 'pending'
                     ? 'Changes saved locally, pending cloud sync'
-                    : 'Sync alert — changes safely preserved in local cache'
+                    : 'Some changes did not reach the cloud. They are kept on this device — click to retry.'
                 }
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
+                  cursor: syncStatus === 'error' ? 'pointer' : 'default',
                   fontSize: '0.65rem',
                   padding: '1px 6px',
                   borderRadius: '10px',
@@ -328,7 +350,7 @@ export default function TreeHeader({
                     ? 'Saved locally'
                     : syncStatus === 'pending'
                     ? 'Saving...'
-                    : 'Offline cache'}
+                    : 'Retry sync'}
                 </span>
               </span>
             )}
@@ -453,14 +475,24 @@ export default function TreeHeader({
           </button>
         </Magnet>
 
-        {/* Rare UI Notification Bell for Collaboration & Settings */}
-        <Magnet strength={3} active={!isReducedMotion}>
-          <NotificationBell
-            count={syncStatus === 'pending' || syncStatus === 'offline' ? 1 : 0}
-            onClick={() => setSettingsModalOpen(true)}
-            title="Family Archive Collaboration & Settings"
-          />
-        </Magnet>
+        {/* Reminders bell: birthdays, anniversaries and death anniversaries */}
+        <div className="ft-reminders-anchor">
+          <Magnet strength={3} active={!isReducedMotion}>
+            <NotificationBell
+              count={soonCount}
+              onClick={() => setRemindersOpen((open) => !open)}
+              title={soonCount ? `${soonCount} family occasion${soonCount === 1 ? '' : 's'} this week` : 'Upcoming family occasions'}
+              aria-expanded={remindersOpen}
+            />
+          </Magnet>
+          {remindersOpen && (
+            <RemindersPanel
+              occasions={occasions}
+              onClose={() => setRemindersOpen(false)}
+              onSelectPerson={onSelectPerson}
+            />
+          )}
+        </div>
 
 
         {/* Profile & Settings Menu with Destination Navigation */}
@@ -469,6 +501,11 @@ export default function TreeHeader({
           onNavigateView={onNavigateView}
           onOpenSettings={() => setSettingsModalOpen(true)}
           onOpenDataModal={onOpenDataModal}
+          onOpenPoster={onOpenPoster}
+          onOpenHistory={onOpenHistory}
+          onOpenDuplicates={onOpenDuplicates}
+          onOpenPlaces={onOpenPlaces}
+          onOpenComplete={canAdd ? onOpenComplete : undefined}
           onStartTour={onStartTour}
           isReducedMotion={isReducedMotion}
           onToggleReducedMotion={onToggleReducedMotion}

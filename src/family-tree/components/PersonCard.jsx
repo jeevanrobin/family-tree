@@ -3,7 +3,7 @@
  * Minimal, crisp, photographic profile card with smooth motion feedback and constellation weighting.
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { getInitials, getLifespanInfo, getAvatarGradient } from '../utils/familyHelpers.js';
 import SpotlightCard from './react-bits/SpotlightCard.jsx';
 import { useMediaUrl } from '../hooks/useMediaUrl.js';
@@ -13,6 +13,7 @@ export default function PersonCard({
   isSelected,
   isRelated,
   relationshipRole,
+  teluguRole = null,
   constellationTier = 'default',
   generationRank = 'current',
   onClick,
@@ -25,6 +26,10 @@ export default function PersonCard({
   const rawPhoto = person.photo || person.photoUrl || '';
   const isStoragePath = rawPhoto.startsWith('family/');
   const resolvedPhoto = useMediaUrl(isStoragePath ? rawPhoto : '', rawPhoto);
+  // Fall back to initials when the photo fails to load, instead of showing
+  // the browser's broken-image alt text inside the avatar.
+  const [failedPhoto, setFailedPhoto] = useState(null);
+  const showPhoto = Boolean(resolvedPhoto) && failedPhoto !== resolvedPhoto;
 
   let cardClasses = `ft-person-card ft-person-card--${generationRank} ft-person-card--${person.gender || 'unspecified'}`;
   if (isSelected) cardClasses += ' ft-person-card--selected';
@@ -85,8 +90,30 @@ export default function PersonCard({
       }}
     >
       {/* Contextual Relationship Role Badge */}
-      {relationshipRole && (
-        <span className="ft-person-card__relation-pill" aria-label={`Relationship: ${relationshipRole}`}>
+      {teluguRole ? (
+        <span
+          className={`ft-person-card__relation-pill ft-person-card__relation-pill--te ${
+            constellationTier === 'extended' || constellationTier === 'unrelated' ? 'ft-person-card__relation-pill--soft' : ''
+          }`}
+          title={`${teluguRole.telugu.map((t) => t.term.roman + (t.when ? ` (${t.when})` : '')).join(' / ')}${
+            teluguRole.english ? ` · ${teluguRole.english}` : ''
+          }${teluguRole.description ? ` · ${teluguRole.description}` : ''}`}
+          aria-label={`Relationship: ${teluguRole.telugu.map((t) => t.term.roman).join(' or ')}`}
+        >
+          <span lang="te" className="ft-person-card__relation-script">
+            {teluguRole.telugu.map((t) => t.term.script).join(' / ')}
+          </span>
+          <span className="ft-person-card__relation-roman">
+            {teluguRole.telugu.map((t) => t.term.roman).join(' / ')}
+          </span>
+        </span>
+      ) : relationshipRole && (
+        <span
+          className={`ft-person-card__relation-pill ${
+            constellationTier === 'extended' ? 'ft-person-card__relation-pill--soft' : ''
+          }`}
+          aria-label={`Relationship: ${relationshipRole}`}
+        >
           {relationshipRole}
         </span>
       )}
@@ -101,8 +128,13 @@ export default function PersonCard({
       {/* Archival portrait frame */}
       <div className="ft-person-card__avatar-frame">
         <div className="ft-person-card__avatar" style={{ background: avatarBg }}>
-          {resolvedPhoto ? (
-            <img src={resolvedPhoto} alt={person.displayName} className="ft-person-card__photo" />
+          {showPhoto ? (
+            <img
+              src={resolvedPhoto}
+              alt={person.displayName}
+              className="ft-person-card__photo"
+              onError={() => setFailedPhoto(resolvedPhoto)}
+            />
           ) : (
             <span className="ft-person-card__initials">{initials}</span>
           )}

@@ -5,7 +5,7 @@
  * and responsive spatial lineage canvas.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useFamilyTree } from '../hooks/useFamilyTree.js';
 import TreeHeader from './TreeHeader.jsx';
@@ -30,18 +30,38 @@ import DocumentModal from './modals/DocumentModal.jsx';
 import PhotoLightbox from './modals/PhotoLightbox.jsx';
 import DocumentViewerModal from './modals/DocumentViewerModal.jsx';
 import GlobalSearchModal from './GlobalSearchModal.jsx';
-import FamilyTimelineView from './timeline/FamilyTimelineView.jsx';
-import FamilyMemoriesView from './memories/FamilyMemoriesView.jsx';
-import FamilyArchiveView from './archive/FamilyArchiveView.jsx';
-import FamilyInsightsView from './insights/FamilyInsightsView.jsx';
+import RelationshipFinderModal from './modals/RelationshipFinderModal.jsx';
+import TreePosterModal from './modals/TreePosterModal.jsx';
+import ChangeHistoryModal from './modals/ChangeHistoryModal.jsx';
+import DuplicatesModal from './modals/DuplicatesModal.jsx';
+import FamilyPlacesModal from './modals/FamilyPlacesModal.jsx';
+import CompleteTreeModal from './modals/CompleteTreeModal.jsx';
+import RelationshipConflictBanner from './RelationshipConflictBanner.jsx';
+import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
 import { indexedDBManager } from '../store/local/indexedDBManager.js';
 import { FAMILY_ID_KEY } from '../store/repository/index.js';
 
+// Secondary views load on demand; the tree view ships with the app.
+const FamilyTimelineView = lazy(() => import('./timeline/FamilyTimelineView.jsx'));
+const FamilyMemoriesView = lazy(() => import('./memories/FamilyMemoriesView.jsx'));
+const FamilyArchiveView = lazy(() => import('./archive/FamilyArchiveView.jsx'));
+const FamilyInsightsView = lazy(() => import('./insights/FamilyInsightsView.jsx'));
+
+function ViewLoading() {
+  return (
+    <div className="ft-view-loading" role="status" aria-live="polite">
+      <span className="ft-view-loading__spinner" aria-hidden="true" />
+      <span className="ft-view-loading__label">Loading…</span>
+    </div>
+  );
+}
+
 export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree', activeFamily: activeFamilyProp = null }) {
   const {
     persons,
+    relationships,
     generations,
     layout,
     selectedId,
@@ -49,6 +69,9 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     immediateFamilyMap,
     constellationMap,
     ancestryLineage,
+    kinshipMap,
+    labelLanguage,
+    setLabelLanguage,
     relatedIds,
     selectPerson,
     deselectPerson,
@@ -83,12 +106,21 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     clearAllData,
     exportData,
     importData,
+    relationshipConflicts,
   } = useFamilyTree();
+  const [conflictsDismissed, setConflictsDismissed] = useState(false);
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [canvasScale, setCanvasScale] = useState(1);
   const [activeGenFilter, setActiveGenFilter] = useState(null);
   const [isTourOpen, setIsTourOpen] = useState(false);
+  // Person the "How are we related?" finder starts from (null = closed)
+  const [relFinderFrom, setRelFinderFrom] = useState(null);
+  const [posterOpen, setPosterOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+  const [placesOpen, setPlacesOpen] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
   const [isArrangeMode, setIsArrangeMode] = useState(false);
 
   const handleToggleArrangeMode = useCallback(() => {
@@ -134,6 +166,15 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   // Safe consumption of active family for family-scoped search history
   const familyContext = useOptionalFamily();
   const activeFamily = activeFamilyProp || familyContext?.activeFamily;
+
+  // Name shown as the author of this device's changes in the change history.
+  const currentUser = familyContext?.user;
+  useEffect(() => {
+    const meta = currentUser?.user_metadata || {};
+    familyStore.setHistoryActor(
+      meta.display_name || meta.name || (currentUser?.email ? currentUser.email.split('@')[0] : 'You')
+    );
+  }, [currentUser]);
   const activeFamilyId = activeFamily?.id || (isLocalMode ? 'local' : 'default');
 
   const [showIntro, setShowIntro] = useState(() => {
@@ -300,7 +341,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
       setDetailsInitialSection(section);
       setDetailsOpen(true);
       setTimeout(() => {
-        canvasRef.current?.focusOn(personId);
+        canvasRef.current?.focusFamily(personId);
       }, 40);
     },
     [selectPerson]
@@ -622,6 +663,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           isReducedMotion={isReducedMotion}
         />
       )}
+      <Suspense fallback={<ViewLoading />}>
       {viewMode === 'insights' ? (
         <FamilyInsightsView
           store={familyStore}
@@ -744,6 +786,11 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             onDeselect={handleDeselect}
             onOpenAddModal={() => handleOpenAddModal(null, null)}
             onOpenDataModal={() => setDataModalOpen(true)}
+            onOpenPoster={() => setPosterOpen(true)}
+            onOpenHistory={() => setHistoryOpen(true)}
+            onOpenDuplicates={() => setDuplicatesOpen(true)}
+            onOpenPlaces={() => setPlacesOpen(true)}
+            onOpenComplete={() => setCompleteOpen(true)}
             onStartTour={handleStartTour}
             theme={theme}
             onToggleTheme={handleToggleTheme}
@@ -780,6 +827,16 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
               </div>
             )}
 
+            {!isArrangeMode && !conflictsDismissed && (
+              <RelationshipConflictBanner
+                conflicts={relationshipConflicts}
+                persons={persons}
+                onRemoveRelationships={(ids) => ids.forEach((id) => familyStore.removeRelationship(id))}
+                onSelectPerson={handleSelectPerson}
+                onHide={() => setConflictsDismissed(true)}
+              />
+            )}
+
             <FamilyTreeCanvas
               ref={canvasRef}
               layout={layout}
@@ -788,6 +845,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
               constellationMap={constellationMap}
               ancestryLineage={ancestryLineage}
               relatedIds={relatedIds}
+              kinshipMap={kinshipMap}
+              labelLanguage={labelLanguage}
               onSelectPerson={handleSelectPerson}
               onDeselect={handleDeselect}
               onScaleChange={setCanvasScale}
@@ -843,6 +902,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                 onExpandAll={expandAll}
                 onCollapseAll={collapseAll}
                 hasSelection={Boolean(selectedId)}
+                labelLanguage={labelLanguage}
+                onSetLabelLanguage={setLabelLanguage}
                 scale={canvasScale}
                 isReducedMotion={isReducedMotion}
               />
@@ -852,6 +913,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             {detailsOpen && selectedPerson && (
               <PersonDetails
                 person={selectedPerson}
+                onFindRelationship={(id) => setRelFinderFrom(id)}
+                relationships={relationships}
                 stories={selectedPersonStories}
                 lifeEvents={selectedPersonEvents}
                 photos={selectedPersonPhotos}
@@ -877,6 +940,61 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           </main>
         </>
       )}
+      </Suspense>
+
+        <FamilyPlacesModal
+          isOpen={placesOpen}
+          onClose={() => setPlacesOpen(false)}
+          onSelectPerson={(id) => {
+            setPlacesOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
+
+        <CompleteTreeModal
+          isOpen={completeOpen}
+          onClose={() => setCompleteOpen(false)}
+          onSelectPerson={(id) => {
+            setCompleteOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
+
+        <DuplicatesModal
+          isOpen={duplicatesOpen}
+          onClose={() => setDuplicatesOpen(false)}
+          canMerge={isLocalMode || canEditPerson(familyContext?.currentRole)}
+          onSelectPerson={(id) => {
+            setDuplicatesOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
+
+        <ChangeHistoryModal
+          isOpen={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          canRestore={isLocalMode || canEditPerson(familyContext?.currentRole)}
+          onSelectPerson={(id) => {
+            setHistoryOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
+
+        <TreePosterModal
+          isOpen={posterOpen}
+          onClose={() => setPosterOpen(false)}
+          familyName={activeFamily?.name || ''}
+        />
+
+        <RelationshipFinderModal
+          isOpen={relFinderFrom !== null}
+          fromPersonId={relFinderFrom}
+          onClose={() => setRelFinderFrom(null)}
+          onSelectPerson={(id) => {
+            setRelFinderFrom(null);
+            handleSelectPerson(id);
+          }}
+        />
 
         {/* Explore Family Guided Tour Journey */}
         <GuidedTourModal
@@ -930,6 +1048,8 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           story={editingStory}
           onClose={() => setStoryModalOpen(false)}
           onSaveStory={handleSaveStory}
+          isLocalMode={isLocalMode}
+          cloudFamilyId={activeFamily?.id || null}
         />
 
         <EventModal

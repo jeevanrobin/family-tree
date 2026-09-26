@@ -37,9 +37,45 @@ function personToRow(person, familyId) {
   };
 }
 
+// Client person field → family_members column, for partial updates.
+const PERSON_FIELD_COLUMNS = {
+  firstName: 'first_name',
+  middleName: 'middle_name',
+  lastName: 'last_name',
+  displayName: 'display_name',
+  gender: 'gender',
+  livingStatus: 'living_status',
+  dateOfBirth: 'date_of_birth',
+  dateOfDeath: 'date_of_death',
+  placeOfBirth: 'place_of_birth',
+  hometown: 'hometown',
+  currentLocation: 'current_location',
+  occupation: 'occupation',
+  photo: 'photo_url',
+  photoUrl: 'photo_url',
+  biography: 'biography',
+  notes: 'notes',
+  privacy: 'privacy',
+};
+
+/**
+ * Only the columns for fields this client actually changed, so concurrent
+ * edits to different fields of the same person by different family members
+ * don't overwrite each other. Returns null when no column-level info exists.
+ */
+function personChangedColumns(person, row) {
+  if (!Array.isArray(person._changedFields)) return null;
+  const partial = {};
+  for (const field of person._changedFields) {
+    const column = PERSON_FIELD_COLUMNS[field];
+    if (column) partial[column] = row[column];
+  }
+  return partial;
+}
+
 function rowToPerson(row) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     firstName: row.first_name || '',
     middleName: row.middle_name || '',
@@ -87,8 +123,9 @@ function relationshipToRow(rel, familyId) {
 
 function rowToRelationship(row) {
   const base = {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
+    type: row.type,
     personId1: row.person_id_1,
     personId2: row.person_id_2,
     createdAt: row.created_at,
@@ -117,12 +154,22 @@ function storyToRow(story, familyId) {
     date: story.date || null,
     location: story.location || '',
     narrator: story.narrator || '',
+    // Audio columns (migration 010) are only sent for voice stories, so text
+    // stories keep saving on databases that have not run that migration yet.
+    ...(story.audioPath
+      ? {
+          audio_path: story.audioPath,
+          audio_mime_type: story.audioMimeType || null,
+          audio_duration_sec: story.audioDurationSec ?? null,
+          transcript_language: story.transcriptLanguage || null,
+        }
+      : {}),
   };
 }
 
 function rowToStory(row, relatedPersonIds = []) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     title: row.title || 'Untitled Memory',
@@ -131,6 +178,10 @@ function rowToStory(row, relatedPersonIds = []) {
     location: row.location || '',
     narrator: row.narrator || '',
     relatedPersonIds,
+    audioPath: row.audio_path || null,
+    audioMimeType: row.audio_mime_type || null,
+    audioDurationSec: row.audio_duration_sec ?? null,
+    transcriptLanguage: row.transcript_language || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -151,7 +202,7 @@ function lifeEventToRow(event, familyId) {
 
 function rowToLifeEvent(row, relatedPersonIds = []) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     type: row.type || 'Other',
@@ -182,7 +233,7 @@ function photoToRow(photo, familyId) {
 
 function rowToPhoto(row, relatedPersonIds = []) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     src: row.src || '',
@@ -217,7 +268,7 @@ function documentToRow(doc, familyId) {
 
 function rowToDocument(row) {
   return {
-    id: row.local_id,
+    id: row.local_id || row.id,
     uuid: row.id,
     personId: row.person_id,
     name: row.name || 'Archival Document',
@@ -293,6 +344,29 @@ export class SupabaseAdapter extends FamilyRepository {
    * Prevents cross-family relationship or artifact creation.
    * @private
    */
+  /**
+   * Insert a new entity row exactly once. If a row with the same local_id
+   * already exists in this family (an earlier attempt succeeded but its
+   * response was lost, so the queue retried the create), update that row
+   * instead of inserting a duplicate. Returns a { data, error } result.
+   */
+  async _insertOnce(table, row) {
+    if (row.local_id) {
+      const existing = await supabase
+        .from(table)
+        .select('id')
+        .eq('family_id', this.familyId)
+        .eq('local_id', row.local_id)
+        .limit(1);
+      if (existing.error) return existing;
+      const existingId = existing.data?.[0]?.id;
+      if (existingId) {
+        return supabase.from(table).update(row).eq('id', existingId).select().single();
+      }
+    }
+    return supabase.from(table).insert(row).select().single();
+  }
+
   async _verifyPersonsBelongToFamily(personIds) {
     const validIds = (personIds || []).filter(Boolean).map(String);
     if (validIds.length === 0) return true;
@@ -379,11 +453,99 @@ export class SupabaseAdapter extends FamilyRepository {
       }
     }
 
-    return { people, relationships, stories, lifeEvents, photos, documents, siblingOrder };
+    return localizePersonReferences({
+      people, relationships, stories, lifeEvents, photos, documents, siblingOrder,
+    });
   }
 
   async persist() {
     // Cloud adapter mutations are executed via granular methods.
+  }
+
+  /**
+   * Server-side change history (migration 011), newest first, in the same
+   * shape as FamilyStore's on-device log. Returns [] if the log table does
+   * not exist yet.
+   */
+  async loadChangeLog({ limit = 300 } = {}) {
+    await this._validateSessionAndScope();
+    const fid = this.familyId;
+    const [logRes, membersRes] = await Promise.all([
+      supabase
+        .from('family_change_log')
+        .select('*')
+        .eq('family_id', fid)
+        .order('changed_at', { ascending: false })
+        .limit(limit),
+      supabase.from('family_members').select('id, local_id').eq('family_id', fid),
+    ]);
+    if (logRes.error) {
+      console.warn('SupabaseAdapter: change log unavailable:', logRes.error.message);
+      return [];
+    }
+    const rows = logRes.data || [];
+
+    // UUID -> local id, including people who have since been deleted.
+    const uuidToLocal = new Map((membersRes.data || []).map((m) => [String(m.id), String(m.local_id || m.id)]));
+    rows
+      .filter((r) => r.table_name === 'family_members')
+      .forEach((r) => {
+        const d = r.old_data || r.new_data;
+        if (d && !uuidToLocal.has(String(d.id))) uuidToLocal.set(String(d.id), String(d.local_id || d.id));
+      });
+    const localize = (rel) => {
+      if (!rel) return rel;
+      const out = { ...rel };
+      ['personId1', 'personId2', 'parentId', 'childId', 'personAId', 'personBId'].forEach((k) => {
+        if (k in out && out[k] != null) out[k] = uuidToLocal.get(String(out[k])) ?? out[k];
+      });
+      return out;
+    };
+    const ACTION = { INSERT: 'create', UPDATE: 'update', DELETE: 'delete' };
+    const IGNORED = new Set(['uuid', 'updatedAt', 'createdAt']);
+
+    const entries = rows.map((r) => {
+      const isPerson = r.table_name === 'family_members';
+      const convert = (d) => (d ? (isPerson ? rowToPerson(d) : localize(rowToRelationship(d))) : null);
+      const before = convert(r.old_data);
+      const after = convert(r.new_data);
+      const entry = {
+        id: `srv-${r.id}`,
+        at: r.changed_at,
+        actor: r.changed_by_name || 'A family member',
+        source: 'cloud',
+        action: ACTION[r.action],
+        entityType: isPerson ? 'person' : 'relationship',
+        entityId: String((after || before)?.id),
+        before,
+        after,
+      };
+      if (entry.action === 'update' && before && after) {
+        entry.fields = Object.keys(after).filter(
+          (k) => !IGNORED.has(k) && JSON.stringify(after[k]) !== JSON.stringify(before[k])
+        );
+      }
+      return entry;
+    });
+
+    // Attach relationships removed together with a deleted person so that
+    // restoring the person brings them back as well.
+    entries
+      .filter((e) => e.entityType === 'person' && e.action === 'delete')
+      .forEach((personEntry) => {
+        const t = new Date(personEntry.at).getTime();
+        personEntry.related = entries
+          .filter(
+            (e) =>
+              e.entityType === 'relationship' &&
+              e.action === 'delete' &&
+              Math.abs(new Date(e.at).getTime() - t) < 5000 &&
+              Object.values(e.before || {}).includes(personEntry.entityId)
+          )
+          .map((e) => e.before);
+      });
+
+    return entries.filter((e) => e.entityType !== 'person' || e.action !== 'update' || e.fields?.length);
   }
 
   // ── Sibling Cohort Ordering ────────────────────────
@@ -486,16 +648,31 @@ export class SupabaseAdapter extends FamilyRepository {
 
     if (person._isNew) {
       const data = throwIfError(
-        await supabase.from('family_members').insert(row).select().single(),
+        await this._insertOnce('family_members', row),
         'insert person'
       );
       return rowToPerson(data);
     }
 
+    const changedColumns = personChangedColumns(person, row);
+    if (changedColumns && Object.keys(changedColumns).length === 0) {
+      // Nothing persisted in the cloud changed; return the current row.
+      const current = throwIfError(
+        await supabase
+          .from('family_members')
+          .select('*')
+          .eq('local_id', person.id)
+          .eq('family_id', this.familyId)
+          .single(),
+        'load person'
+      );
+      return rowToPerson(current);
+    }
+
      const data = throwIfError(
        await supabase
          .from('family_members')
-         .update(row)
+         .update(changedColumns || row)
          .eq('local_id', person.id)
          .eq('family_id', this.familyId)
          .select()
@@ -538,7 +715,7 @@ export class SupabaseAdapter extends FamilyRepository {
 
     const row = relationshipToRow(rel, this.familyId);
     const data = throwIfError(
-      await supabase.from('relationships').insert(row).select().single(),
+      await this._insertOnce('relationships', row),
       'insert relationship'
     );
     return rowToRelationship(data);
@@ -570,7 +747,7 @@ export class SupabaseAdapter extends FamilyRepository {
     let savedRow;
     if (story._isNew) {
       savedRow = throwIfError(
-        await supabase.from('stories').insert(row).select().single(),
+        await this._insertOnce('stories', row),
         'insert story'
       );
      } else {
@@ -584,11 +761,12 @@ export class SupabaseAdapter extends FamilyRepository {
            .single(),
          'update story'
        );
-       await supabase.from('story_persons').delete().eq('story_id', story.id);
-     }
+    }
+    // Replace person links by the row UUID (also makes retried creates idempotent).
+    await supabase.from('story_persons').delete().eq('story_id', savedRow.id);
 
     if (story.relatedPersonIds?.length > 0) {
-      const junctionRows = story.relatedPersonIds.map((pid) => ({
+      const junctionRows = [...new Set(story.relatedPersonIds.map(String))].map((pid) => ({
         story_id: savedRow.id,
         person_id: pid,
       }));
@@ -626,7 +804,7 @@ export class SupabaseAdapter extends FamilyRepository {
     let savedRow;
     if (event._isNew) {
       savedRow = throwIfError(
-        await supabase.from('life_events').insert(row).select().single(),
+        await this._insertOnce('life_events', row),
         'insert life_event'
       );
     } else {
@@ -640,11 +818,12 @@ export class SupabaseAdapter extends FamilyRepository {
            .single(),
          'update life_event'
        );
-       await supabase.from('life_event_persons').delete().eq('life_event_id', event.id);
     }
+    // Replace person links by the row UUID (also makes retried creates idempotent).
+    await supabase.from('life_event_persons').delete().eq('life_event_id', savedRow.id);
 
     if (event.relatedPersonIds?.length > 0) {
-      const junctionRows = event.relatedPersonIds.map((pid) => ({
+      const junctionRows = [...new Set(event.relatedPersonIds.map(String))].map((pid) => ({
         life_event_id: savedRow.id,
         person_id: pid,
       }));
@@ -693,7 +872,7 @@ export class SupabaseAdapter extends FamilyRepository {
     let savedRow;
     if (photo._isNew) {
       savedRow = throwIfError(
-        await supabase.from('media').insert(row).select().single(),
+        await this._insertOnce('media', row),
         'insert media'
       );
     } else {
@@ -707,11 +886,12 @@ export class SupabaseAdapter extends FamilyRepository {
            .single(),
          'update media'
        );
-       await supabase.from('media_persons').delete().eq('media_id', photo.id);
     }
+    // Replace person links by the row UUID (also makes retried creates idempotent).
+    await supabase.from('media_persons').delete().eq('media_id', savedRow.id);
 
     if (photo.relatedPersonIds?.length > 0) {
-      const junctionRows = photo.relatedPersonIds.map((pid) => ({
+      const junctionRows = [...new Set(photo.relatedPersonIds.map(String))].map((pid) => ({
         media_id: savedRow.id,
         person_id: pid,
       }));
@@ -760,7 +940,7 @@ export class SupabaseAdapter extends FamilyRepository {
 
     if (doc._isNew) {
       const data = throwIfError(
-        await supabase.from('documents').insert(row).select().single(),
+        await this._insertOnce('documents', row),
         'insert document'
       );
       return rowToDocument(data);
@@ -875,6 +1055,49 @@ export class SupabaseAdapter extends FamilyRepository {
 }
 
 // ── Junction table helper ─────────────────────────────────────
+
+/**
+ * Rows reference people by their database UUID (person_id, person_id_1, ...),
+ * while the client keys people by their local ID. Rewrite every person
+ * reference in a loaded snapshot to the local ID so relationships, stories,
+ * events, photos and documents line up with the loaded people.
+ */
+export function localizePersonReferences(data) {
+  const uuidToLocal = new Map();
+  for (const person of data.people || []) {
+    if (person.uuid) uuidToLocal.set(String(person.uuid), String(person.id));
+  }
+  const toLocal = (ref) => {
+    if (ref === null || ref === undefined) return ref;
+    return uuidToLocal.get(String(ref)) ?? ref;
+  };
+  const REF_FIELDS = ['personId', 'personId1', 'personId2', 'parentId', 'childId', 'personAId', 'personBId'];
+  const localizeEntity = (entity) => {
+    const out = { ...entity };
+    for (const field of REF_FIELDS) {
+      if (field in out) out[field] = toLocal(out[field]);
+    }
+    if (Array.isArray(out.relatedPersonIds)) {
+      out.relatedPersonIds = out.relatedPersonIds.map(toLocal);
+    }
+    return out;
+  };
+
+  const siblingOrder = {};
+  for (const [cohortKey, ids] of Object.entries(data.siblingOrder || {})) {
+    siblingOrder[cohortKey] = Array.isArray(ids) ? ids.map(toLocal) : ids;
+  }
+
+  return {
+    ...data,
+    siblingOrder,
+    relationships: (data.relationships || []).map(localizeEntity),
+    stories: (data.stories || []).map(localizeEntity),
+    lifeEvents: (data.lifeEvents || []).map(localizeEntity),
+    photos: (data.photos || []).map(localizeEntity),
+    documents: (data.documents || []).map(localizeEntity),
+  };
+}
 
 function buildJunctionMap(rows, parentKey, childKey) {
   const map = new Map();

@@ -162,6 +162,8 @@ describe('SupabaseAdapter Unit Tests', () => {
           eq: vi.fn(() => ({
             eq: vi.fn(() => ({
               maybeSingle: vi.fn().mockResolvedValue({ data: { role: 'editor' }, error: null }),
+              // Existing-row lookup done before insert (no existing row).
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
             })),
             in: vi.fn().mockResolvedValue({ count: 2, error: null }),
           })),

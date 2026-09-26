@@ -96,8 +96,11 @@ export class SyncAdapter extends FamilyRepository {
 
   // ── Granular Entity Mutations (Offline-First Queueing) ─────
 
-  async savePerson(person, { operation = MUTATION_OP.UPDATE } = {}) {
-    return this.syncEngine.enqueue(ENTITY_TYPES.PERSON, person.id, operation, person);
+  async savePerson(person, { operation = MUTATION_OP.UPDATE, changedFields = null } = {}) {
+    const payload = Array.isArray(changedFields) && operation === MUTATION_OP.UPDATE
+      ? { ...person, _changedFields: changedFields }
+      : person;
+    return this.syncEngine.enqueue(ENTITY_TYPES.PERSON, person.id, operation, payload);
   }
 
   async deletePerson(personId) {
@@ -207,8 +210,31 @@ export class SyncAdapter extends FamilyRepository {
     return this.syncEngine.getStatus();
   }
 
+  async loadChangeLog(options) {
+    if (!this.supabaseAdapter || typeof this.supabaseAdapter.loadChangeLog !== 'function') return [];
+    return this.supabaseAdapter.loadChangeLog(options);
+  }
+
+  async getFailedMutations() {
+    return this.syncEngine.getFailedMutations();
+  }
+
+  async retryFailedMutations() {
+    return this.syncEngine.retryFailed();
+  }
+
   subscribeSyncStatus(listener) {
     return this.syncEngine.subscribe(listener);
+  }
+
+  /**
+   * FamilyStore hook: called with the reconciled snapshot after each cloud pull
+   * (background sync after hydration, reconnect recovery), so remote edits and
+   * deletions reach the UI without a reload.
+   */
+  onRemoteUpdate(listener) {
+    if (typeof this.syncEngine.onRemoteData !== 'function') return () => {};
+    return this.syncEngine.onRemoteData(listener);
   }
 
   destroy() {

@@ -22,6 +22,9 @@ import {
 
 export const SCHEMA_VERSION = '2.0.0';
 
+/** Most recent changes kept in the on-device history. */
+const MAX_CHANGE_LOG = 500;
+
 /**
  * Safely merge repository mutation results into in-memory entities.
  * CRITICAL ID INTEGRITY RULE:
@@ -214,6 +217,8 @@ export class FamilyStore {
     this.listeners = new Set();
     this.repository = repository || new LocalAdapter();
     this._searchIndex = null;
+    this._historyActor = 'You';
+    this.changeLog = this._loadChangeLog();
     this.init();
   }
 
@@ -421,6 +426,12 @@ export class FamilyStore {
       photoId: s.photoId ? String(s.photoId) : null,
       documentId: s.documentId ? String(s.documentId) : null,
       tags: Array.isArray(s.tags) ? s.tags : [],
+      // Voice story: cloud storage path, or a data URL kept in the browser (local mode)
+      audioPath: s.audioPath || null,
+      audioSrc: s.audioSrc || null,
+      audioMimeType: s.audioMimeType || null,
+      audioDurationSec: Number.isFinite(s.audioDurationSec) ? s.audioDurationSec : null,
+      transcriptLanguage: s.transcriptLanguage || null,
       createdAt: s.createdAt || new Date().toISOString(),
       updatedAt: s.updatedAt || new Date().toISOString(),
     };
@@ -735,6 +746,218 @@ export class FamilyStore {
     return genMap;
   }
 
+  // ── Change History ─────────────────────────────────────────
+  // Every edit to people and relationships is logged with before/after
+  // snapshots so it can be reviewed and restored. Kept per family on this
+  // device (the cloud keeps its own server-side log, see migration 011).
+
+  _historyKey() {
+    const fid = this.repository?.familyId || 'local';
+    return `family-tree-history-${fid}`;
+  }
+
+  _loadChangeLog() {
+    try {
+      if (typeof localStorage === 'undefined') return [];
+      const raw = localStorage.getItem(this._historyKey());
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  _saveChangeLog() {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(this._historyKey(), JSON.stringify(this.changeLog));
+      }
+    } catch {
+      // Storage full: keep the in-memory log for this session.
+    }
+  }
+
+  /** Name recorded as the author of subsequent changes. */
+  setHistoryActor(name) {
+    this._historyActor = name || 'You';
+  }
+
+  _logChange({ action, entityType, entityId, before = null, after = null, fields = null, related = null }) {
+    const clone = (v) => (v == null ? null : JSON.parse(JSON.stringify(v)));
+    const entry = {
+      id: `chg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      at: new Date().toISOString(),
+      actor: this._historyActor,
+      source: 'local',
+      action,
+      entityType,
+      entityId: String(entityId),
+      before: clone(before),
+      after: clone(after),
+      ...(fields ? { fields } : {}),
+      ...(related && related.length ? { related: clone(related) } : {}),
+    };
+    this.changeLog.unshift(entry);
+    if (this.changeLog.length > MAX_CHANGE_LOG) this.changeLog.length = MAX_CHANGE_LOG;
+    this._saveChangeLog();
+    return entry;
+  }
+
+  getChangeLog() {
+    return [...this.changeLog];
+  }
+
+  /**
+   * History to show: the cloud log (every member's edits) when the family is
+   * synced, otherwise this device's log.
+   */
+  async loadChangeHistory() {
+    if (this.repository && typeof this.repository.loadChangeLog === 'function') {
+      try {
+        const remote = await this.repository.loadChangeLog();
+        if (remote.length > 0) return remote;
+      } catch (err) {
+        console.warn('FamilyStore: could not load cloud change history:', err.message);
+      }
+    }
+    return this.getChangeLog();
+  }
+
+  /**
+   * Undo a logged change. The restore is itself a new change in the log.
+   * @param {object} entry a change log entry (local or from the cloud log)
+   */
+  restoreChange(entry) {
+    if (!entry) throw new Error('Nothing to restore.');
+    const { action, entityType, entityId, before, after, fields } = entry;
+
+    if (entityType === 'person') {
+      if (action === 'update') {
+        if (!this.people.has(entityId)) throw new Error('This person has since been deleted.');
+        const keys = fields && fields.length ? fields : Object.keys(before || {});
+        const updates = {};
+        keys.forEach((k) => {
+          if (k !== 'id' && k !== 'updatedAt' && k !== 'createdAt') updates[k] = before?.[k] ?? null;
+        });
+        return this.updatePerson(entityId, updates);
+      }
+      if (action === 'create') {
+        if (!this.people.has(entityId)) throw new Error('This person was already removed.');
+        return this.deletePerson(entityId);
+      }
+      if (action === 'delete') {
+        if (this.people.has(entityId)) throw new Error('This person already exists.');
+        const restored = this.addPerson(before);
+        (entry.related || []).forEach((rel) => {
+          const ends = rel.type === 'parent-child' ? [rel.parentId, rel.childId] : [rel.personAId, rel.personBId];
+          if (ends.every((id) => this.people.has(String(id))) && !this.relationships.some((r) => r.id === rel.id)) {
+            try {
+              this.addRelationship(rel);
+            } catch {
+              // An equivalent relationship was recorded again since; keep that one.
+            }
+          }
+        });
+        return restored;
+      }
+    }
+
+    if (entityType === 'relationship') {
+      if (action === 'create') {
+        const rel = this.relationships.find((r) => r.id === entityId) || null;
+        if (!rel) throw new Error('This relationship was already removed.');
+        return this.removeRelationship(entityId);
+      }
+      if (action === 'delete') {
+        return this.addRelationship(before);
+      }
+      if (action === 'update' && before?.type === 'spouse') {
+        return this.setMarriageDate(before.personAId, before.personBId, before.startDate || null);
+      }
+    }
+
+    throw new Error('This change cannot be restored automatically.');
+  }
+
+  /**
+   * Merge a duplicate into the person to keep.
+   * - Empty details of the kept person are filled from the duplicate
+   *   (`fieldChoices` can pick the duplicate's value for specific fields).
+   * - Relationships, stories, events, photos and documents are moved over;
+   *   links that would duplicate an existing one, or point a person at
+   *   themselves, are dropped, and at most two parents are kept.
+   * - The duplicate is then deleted. Every step is a normal, synced and
+   *   logged change.
+   * @returns {object} the kept person
+   */
+  mergePeople(keepId, removeId, { fieldChoices = {} } = {}) {
+    const keep = this.getPersonById(keepId);
+    const dup = this.getPersonById(removeId);
+    if (!keep || !dup) throw new Error('Both people must exist to merge.');
+    if (String(keepId) === String(removeId)) throw new Error('Cannot merge a person with themselves.');
+    const K = String(keepId);
+    const R = String(removeId);
+
+    const MERGE_FIELDS = [
+      'firstName', 'middleName', 'lastName', 'gender', 'livingStatus', 'dateOfBirth', 'dateOfDeath',
+      'placeOfBirth', 'hometown', 'currentLocation', 'occupation', 'photo', 'photoUrl', 'biography', 'notes',
+    ];
+    const isEmpty = (v) => v === null || v === undefined || v === '' || v === 'unknown' || v === 'unspecified';
+    const updates = {};
+    MERGE_FIELDS.forEach((f) => {
+      if (fieldChoices[f] === 'duplicate' || (fieldChoices[f] !== 'keep' && isEmpty(keep[f]) && !isEmpty(dup[f]))) {
+        if (dup[f] !== keep[f]) updates[f] = dup[f];
+      }
+    });
+    if (!isEmpty(keep.notes) && !isEmpty(dup.notes) && keep.notes !== dup.notes && fieldChoices.notes !== 'keep') {
+      updates.notes = `${keep.notes}\n${dup.notes}`;
+    }
+    if (updates.firstName || updates.middleName || updates.lastName) {
+      updates.displayName = [updates.firstName ?? keep.firstName, updates.middleName ?? keep.middleName, updates.lastName ?? keep.lastName]
+        .filter(Boolean)
+        .join(' ');
+    }
+    if (Object.keys(updates).length) this.updatePerson(K, updates);
+
+    // Move relationships.
+    const swap = (id) => (String(id) === R ? K : String(id));
+    const involving = this.relationships.filter((r) =>
+      r.type === 'parent-child' ? r.parentId === R || r.childId === R : r.personAId === R || r.personBId === R
+    );
+    involving.forEach((rel) => {
+      this.removeRelationship(rel.id);
+      const moved =
+        rel.type === 'parent-child'
+          ? { ...rel, id: undefined, parentId: swap(rel.parentId), childId: swap(rel.childId), personId1: undefined, personId2: undefined }
+          : { ...rel, id: undefined, personAId: swap(rel.personAId), personBId: swap(rel.personBId), personId1: undefined, personId2: undefined };
+      const ends = rel.type === 'parent-child' ? [moved.parentId, moved.childId] : [moved.personAId, moved.personBId];
+      if (ends[0] === ends[1]) return;
+      if (rel.type === 'parent-child' && this.getParents(moved.childId).length >= 2) return;
+      try {
+        this.addRelationship(moved);
+      } catch {
+        // Already linked this way: nothing to move.
+      }
+    });
+
+    // Move attached records.
+    const repoint = (item) => ({
+      ...(String(item.personId) === R ? { personId: K } : {}),
+      ...(Array.isArray(item.relatedPersonIds) && item.relatedPersonIds.map(String).includes(R)
+        ? { relatedPersonIds: [...new Set(item.relatedPersonIds.map(swap))] }
+        : {}),
+    });
+    const touches = (item) =>
+      String(item.personId) === R || (Array.isArray(item.relatedPersonIds) && item.relatedPersonIds.map(String).includes(R));
+    this.stories.filter(touches).forEach((s) => this.updateStory(s.id, repoint(s)));
+    this.lifeEvents.filter(touches).forEach((e) => this.updateLifeEvent(e.id, repoint(e)));
+    this.photos.filter(touches).forEach((p) => this.updatePhoto(p.id, { ...repoint(p), isPrimary: false }));
+    this.documents.filter(touches).forEach((d) => this.updateDocument(d.id, repoint(d)));
+
+    this.deletePerson(R);
+    return this.getPersonById(K);
+  }
+
   addPerson(personData) {
     const person = this.normalizePerson(personData);
     if (!person.firstName.trim()) {
@@ -761,6 +984,7 @@ export class FamilyStore {
       );
     }
 
+    this._logChange({ action: 'create', entityType: 'person', entityId: person.id, after: person });
     this.notify();
 
     if (this.repository && typeof this.repository.savePerson === 'function') {
@@ -796,11 +1020,27 @@ export class FamilyStore {
       throw new Error('Date of birth cannot be after date of death.');
     }
 
+    // Tell the repository which fields changed so the cloud update touches
+    // only those columns (concurrent edits to other fields survive).
+    const changedFields = Object.keys(validated).filter(
+      (key) => key !== 'updatedAt' && validated[key] !== existing[key]
+    );
+
     this.people.set(validated.id, validated);
+    if (changedFields.length > 0) {
+      this._logChange({
+        action: 'update',
+        entityType: 'person',
+        entityId: validated.id,
+        before: existing,
+        after: validated,
+        fields: changedFields,
+      });
+    }
     this.notify();
 
     if (this.repository && typeof this.repository.savePerson === 'function') {
-      Promise.resolve(this.repository.savePerson(validated, { operation: 'update' }))
+      Promise.resolve(this.repository.savePerson(validated, { operation: 'update', changedFields }))
         .then((savedPerson) => {
           if (savedPerson) applyRepositoryResult(validated, savedPerson);
         })
@@ -815,6 +1055,13 @@ export class FamilyStore {
   deletePerson(id) {
     const personId = String(id);
     if (!this.people.has(personId)) return false;
+
+    const removedPerson = this.people.get(personId);
+    const removedRelationships = this.relationships.filter((r) =>
+      r.type === 'parent-child'
+        ? r.parentId === personId || r.childId === personId
+        : r.personAId === personId || r.personBId === personId
+    );
 
     // Delete person
     this.people.delete(personId);
@@ -836,6 +1083,13 @@ export class FamilyStore {
     this.photos = this.photos.filter((ph) => ph.personId !== personId);
     this.documents = this.documents.filter((d) => d.personId !== personId);
 
+    this._logChange({
+      action: 'delete',
+      entityType: 'person',
+      entityId: personId,
+      before: removedPerson,
+      related: removedRelationships,
+    });
     this.notify();
 
     if (this.repository && typeof this.repository.deletePerson === 'function') {
@@ -880,6 +1134,64 @@ export class FamilyStore {
     if (!rel) return null;
     const spouseId = rel.personAId === id ? rel.personBId : rel.personAId;
     return this.getPersonById(spouseId);
+  }
+
+  /** The spouse relationship between two people, if recorded. */
+  getMarriage(personAId, personBId) {
+    const a = String(personAId);
+    const b = String(personBId);
+    return (
+      this.relationships.find(
+        (r) =>
+          r.type === 'spouse' &&
+          ((r.personAId === a && r.personBId === b) || (r.personAId === b && r.personBId === a))
+      ) || null
+    );
+  }
+
+  /** Record (or clear, with null) the marriage date of a couple; synced like other edits. */
+  setMarriageDate(personAId, personBId, startDate) {
+    const rel = this.getMarriage(personAId, personBId);
+    if (!rel) throw new Error('These two people are not recorded as spouses.');
+    if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+      throw new Error('Marriage date must be a full date (YYYY-MM-DD).');
+    }
+    const before = { ...rel };
+    rel.startDate = startDate || null;
+    rel.updatedAt = new Date().toISOString();
+    this._logChange({
+      action: 'update',
+      entityType: 'relationship',
+      entityId: rel.id,
+      before,
+      after: rel,
+      fields: ['startDate'],
+    });
+    this.notify();
+
+    if (this.repository && typeof this.repository.saveRelationship === 'function') {
+      Promise.resolve(this.repository.saveRelationship({ ...rel }, { operation: 'update' })).catch((err) => {
+        console.warn('FamilyStore: repository.saveRelationship (marriage date) failed:', err);
+      });
+    }
+    return rel;
+  }
+
+  /** Every spouse of a person, earliest marriage first. */
+  getSpouses(personId) {
+    if (!personId) return [];
+    const id = String(personId);
+    return this.relationships
+      .map((r, index) => ({ r, index }))
+      .filter(({ r }) => r.type === 'spouse' && (r.personAId === id || r.personBId === id))
+      .sort((x, y) => {
+        const a = x.r.startDate || '';
+        const b = y.r.startDate || '';
+        if (a && b && a !== b) return a < b ? -1 : 1;
+        return x.index - y.index;
+      })
+      .map(({ r }) => this.getPersonById(r.personAId === id ? r.personBId : r.personAId))
+      .filter(Boolean);
   }
 
   getSiblings(personId) {
@@ -990,6 +1302,7 @@ export class FamilyStore {
     }
 
     this.relationships.push(norm);
+    this._logChange({ action: 'create', entityType: 'relationship', entityId: norm.id, after: norm });
     this.notify();
 
     if (this.repository && typeof this.repository.saveRelationship === 'function') {
@@ -1003,9 +1316,11 @@ export class FamilyStore {
 
   removeRelationship(relId) {
     const id = String(relId);
+    const removed = this.relationships.find((r) => r.id === id) || null;
     const initialLen = this.relationships.length;
     this.relationships = this.relationships.filter((r) => r.id !== id);
     if (this.relationships.length !== initialLen) {
+      this._logChange({ action: 'delete', entityType: 'relationship', entityId: id, before: removed });
       this.notify();
 
       if (this.repository && typeof this.repository.deleteRelationship === 'function') {
@@ -1471,6 +1786,14 @@ export class FamilyStore {
     return 'synced';
   }
 
+  /** Re-queue cloud changes that failed to sync (sync badge "Retry sync"). */
+  async retryFailedSync() {
+    if (this.repository && typeof this.repository.retryFailedMutations === 'function') {
+      return this.repository.retryFailedMutations();
+    }
+    return null;
+  }
+
   subscribeSyncStatus(listener) {
     if (this.repository && typeof this.repository.subscribeSyncStatus === 'function') {
       return this.repository.subscribeSyncStatus(listener);
@@ -1718,6 +2041,7 @@ export class FamilyStore {
     this.photos = [];
     this.documents = [];
     this.repository = repository;
+    this.changeLog = this._loadChangeLog(); // history belongs to the family
     this.notify(); // Inform listeners immediately of cleared state
     this.init();
   }

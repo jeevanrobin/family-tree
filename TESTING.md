@@ -10,13 +10,15 @@ GitHub Actions workflow runs on every push and pull request to `main`:
 
 - **Runtime:** Node.js 22.x
 - **Install:** `npm ci`
-- **Legacy tests:** `npm test` (267 tests)
-- **Vitest tests:** `npm run test:vitest` (235 tests, 8 skipped)
+- **Legacy tests:** `npm test` (26 scripts, run in sequence)
+- **Vitest tests:** `npm run test:vitest` (488 passed, 8 skipped)
 - **Coverage:** `npm run test:vitest -- --coverage` (artifact uploaded)
 - **Build:** `npm run build`
 - **Lint:** `npm run lint` (oxlint)
 
 **Quality Gates:** CI fails if any test suite fails or lint reports errors.
+
+`scripts/test-backup-id-integrity.js` includes a regression step against a real family backup that is not in the repository. It is skipped unless `BACKUP_REGRESSION_FILE` points at the backup JSON.
 
 **Live Supabase Tests:** 8 tests are skipped by default. They require GitHub secrets to be configured:
 - `TEST_USER_EMAIL`
@@ -37,7 +39,7 @@ When secrets are absent, CI passes with those tests skipped.
 ### 2. Vitest Tests
 - Location: `tests/`
 - Framework: Vitest + coverage via v8
-- Total: 319 tests (311 passed, 8 skipped)
+- Total: 496 tests (488 passed, 8 skipped)
 - Run: `npm run test:vitest`
 - Coverage: `npm run test:vitest -- --coverage`
 

@@ -8,6 +8,8 @@ export default function ZoomControls({
   onFitBranch,
   focusMode = 'all',
   onSetFocusMode,
+  labelLanguage = 'te',
+  onSetLabelLanguage,
   onExpandAll,
   onCollapseAll,
   hasSelection,
@@ -60,6 +62,30 @@ export default function ZoomControls({
               aria-label="Focus Family"
             >
               Focus Family
+            </button>
+          </div>
+          <div className="ft-controls__divider" />
+          <div className="ft-controls__group" role="radiogroup" aria-label="Relationship label language">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={labelLanguage === 'te'}
+              className={`ft-controls__pill-btn ${labelLanguage === 'te' ? 'ft-controls__pill-btn--active' : ''}`}
+              onClick={() => onSetLabelLanguage?.('te')}
+              title="Show relationships in Telugu"
+              lang="te"
+            >
+              తెలుగు
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={labelLanguage === 'en'}
+              className={`ft-controls__pill-btn ${labelLanguage === 'en' ? 'ft-controls__pill-btn--active' : ''}`}
+              onClick={() => onSetLabelLanguage?.('en')}
+              title="Show relationships in English"
+            >
+              EN
             </button>
           </div>
           <div className="ft-controls__divider" />
