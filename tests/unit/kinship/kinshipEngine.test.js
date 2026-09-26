@@ -216,3 +216,49 @@ describe('elder/younger for a sibling shown in another family row', () => {
     expect(all.get('sis').telugu.map((t) => t.term.roman)).toEqual(['Akka']); // added before ego
   });
 });
+
+describe('cousin seniority without birth dates', () => {
+  const undated = persons.map((p) => ({ ...p, dateOfBirth: null }));
+  // Card order of the parents' generation: pedananna, nanna, chinnanna, atta.
+  const order = ['pedananna', 'nanna', 'chinnanna', 'atta'];
+  const siblingOrder = (a, b) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    return ia < 0 || ib < 0 ? null : ia < ib;
+  };
+  const relU = (to, opts) => describeRelationship(undated, relationships, 'me', to, opts);
+
+  it('elder sibling’s child is elder: father’s elder brother’s son is Annayya', () => {
+    expect(romans(relU('cousinPar', { siblingOrder }))).toEqual(['Annayya']);
+  });
+
+  it('younger sibling’s child is younger: father’s younger sister’s daughter is Maradalu', () => {
+    expect(romans(relU('cousinCross', { siblingOrder }))).toEqual(['Maradalu']);
+  });
+
+  it('follows card moves: atta moved before nanna makes her daughter Vadina', () => {
+    const moved = ['atta', 'pedananna', 'nanna', 'chinnanna'];
+    const so = (a, b) => (moved.includes(a) && moved.includes(b) ? moved.indexOf(a) < moved.indexOf(b) : null);
+    expect(romans(relU('cousinCross', { siblingOrder: so }))).toEqual(['Vadina']);
+  });
+
+  it('cousins’ own birth dates win when both are known', () => {
+    // cousinPar (1990) is elder than me (1992) even if his father were placed after mine.
+    const reversed = (a, b) => siblingOrder(b, a);
+    expect(romans(describeRelationship(persons, relationships, 'me', 'cousinPar', { siblingOrder: reversed }))).toEqual(['Annayya']);
+  });
+
+  it('still lists both options when nothing is known', () => {
+    expect(romans(relU('cousinPar'))).toEqual(['Annayya', 'Thammudu']);
+  });
+});
+
+describe('cousin with unknown gender', () => {
+  it('keeps the elder/younger decision', () => {
+    const ppl = persons.map((p) => ({ ...p, dateOfBirth: null, gender: p.id === 'cousinCross' ? null : p.gender }));
+    const order = ['pedananna', 'nanna', 'chinnanna', 'atta'];
+    const siblingOrder = (a, b) => (order.includes(a) && order.includes(b) ? order.indexOf(a) < order.indexOf(b) : null);
+    const r = describeRelationship(ppl, relationships, 'me', 'cousinCross', { siblingOrder });
+    expect(romans(r)).toEqual(['Bavamaridi', 'Maradalu']);
+  });
+});

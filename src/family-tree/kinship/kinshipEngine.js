@@ -372,20 +372,45 @@ function teluguTerms(signature, steps, ego, people, siblingOrder = null) {
         options = null;
         break;
       }
+      // Cousin seniority: their own birth dates when both are known;
+      // otherwise the families' seniority — the child of the elder sibling
+      // is treated as elder (parents' birth dates or card order).
+      const cousinByAge = (elder, younger) => {
+        const own = isElder(target, ego);
+        const e = own !== null ? own : isElder(sibling, parent, siblingOrder);
+        if (e === true) return [{ term: elder }];
+        if (e === false) return [{ term: younger }];
+        needAge(target, ego);
+        return [{ term: elder, when: 'if elder' }, { term: younger, when: 'if younger' }];
+      };
+      // Gender unknown: male and female terms side by side, keeping any
+      // elder/younger decision already made.
+      const eitherGender = (maleOpts, femaleOpts) => {
+        const decided = maleOpts.length === 1 && femaleOpts.length === 1;
+        return decided
+          ? [
+              { term: maleOpts[0].term, when: 'if male' },
+              { term: femaleOpts[0].term, when: 'if female' },
+            ]
+          : [...maleOpts, ...femaleOpts].map(({ term }) => ({ term }));
+      };
       const parallel = pg === sg;
       if (parallel) {
         options = tg === 'male'
-          ? byAge(target, ego, T.annayya, T.thammudu)
+          ? cousinByAge(T.annayya, T.thammudu)
           : tg === 'female'
-            ? byAge(target, ego, T.akka, T.chelli)
-            : (needGender(target), [T.annayya, T.thammudu, T.akka, T.chelli].map((term) => ({ term })));
+            ? cousinByAge(T.akka, T.chelli)
+            : (needGender(target), eitherGender(cousinByAge(T.annayya, T.thammudu), cousinByAge(T.akka, T.chelli)));
       } else if (tg === 'male') {
-        options = byAge(target, ego, T.bava, egoG === 'female' ? T.maridi : T.bavamaridi);
+        options = cousinByAge(T.bava, egoG === 'female' ? T.maridi : T.bavamaridi);
       } else if (tg === 'female') {
-        options = byAge(target, ego, T.vadina, T.maradalu);
+        options = cousinByAge(T.vadina, T.maradalu);
       } else {
         needGender(target);
-        options = [T.bava, T.bavamaridi, T.vadina, T.maradalu].map((term) => ({ term }));
+        options = eitherGender(
+          cousinByAge(T.bava, egoG === 'female' ? T.maridi : T.bavamaridi),
+          cousinByAge(T.vadina, T.maradalu)
+        );
       }
       break;
     }
