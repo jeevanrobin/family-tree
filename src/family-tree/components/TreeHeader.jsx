@@ -31,6 +31,7 @@ export default function TreeHeader({
   onOpenHistory,
   onOpenDuplicates,
   onOpenPlaces,
+  onOpenComplete,
   onStartTour,
   theme,
   onToggleTheme,
@@ -504,6 +505,7 @@ export default function TreeHeader({
           onOpenHistory={onOpenHistory}
           onOpenDuplicates={onOpenDuplicates}
           onOpenPlaces={onOpenPlaces}
+          onOpenComplete={canAdd ? onOpenComplete : undefined}
           onStartTour={onStartTour}
           isReducedMotion={isReducedMotion}
           onToggleReducedMotion={onToggleReducedMotion}

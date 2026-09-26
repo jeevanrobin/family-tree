@@ -35,6 +35,7 @@ import TreePosterModal from './modals/TreePosterModal.jsx';
 import ChangeHistoryModal from './modals/ChangeHistoryModal.jsx';
 import DuplicatesModal from './modals/DuplicatesModal.jsx';
 import FamilyPlacesModal from './modals/FamilyPlacesModal.jsx';
+import CompleteTreeModal from './modals/CompleteTreeModal.jsx';
 import RelationshipConflictBanner from './RelationshipConflictBanner.jsx';
 import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
@@ -119,6 +120,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   const [historyOpen, setHistoryOpen] = useState(false);
   const [duplicatesOpen, setDuplicatesOpen] = useState(false);
   const [placesOpen, setPlacesOpen] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
   const [isArrangeMode, setIsArrangeMode] = useState(false);
 
   const handleToggleArrangeMode = useCallback(() => {
@@ -788,6 +790,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             onOpenHistory={() => setHistoryOpen(true)}
             onOpenDuplicates={() => setDuplicatesOpen(true)}
             onOpenPlaces={() => setPlacesOpen(true)}
+            onOpenComplete={() => setCompleteOpen(true)}
             onStartTour={handleStartTour}
             theme={theme}
             onToggleTheme={handleToggleTheme}
@@ -944,6 +947,15 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           onClose={() => setPlacesOpen(false)}
           onSelectPerson={(id) => {
             setPlacesOpen(false);
+            handleSelectPerson(id);
+          }}
+        />
+
+        <CompleteTreeModal
+          isOpen={completeOpen}
+          onClose={() => setCompleteOpen(false)}
+          onSelectPerson={(id) => {
+            setCompleteOpen(false);
             handleSelectPerson(id);
           }}
         />
