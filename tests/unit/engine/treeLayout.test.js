@@ -508,7 +508,13 @@ describe('computeTreeLayout options: collapse, focus and sibling order', () => {
 
   it('orders by the blood child even when they are the spouse in their unit', () => {
     // 'as' is the blood child of root2 but is the spouse in the a+as unit.
-    const p = [...persons, { id: 'root2', displayName: 'Root 2' }, { id: 'c', displayName: 'C' }];
+    // Both spouses have parents in the tree; as the son, 'as' places the
+    // couple under root2's family.
+    const p = [
+      ...persons.map((x) => (x.id === 'as' ? { ...x, gender: 'male' } : x)),
+      { id: 'root2', displayName: 'Root 2' },
+      { id: 'c', displayName: 'C' },
+    ];
     const r = [
       ...relationships,
       { id: 'r9', type: 'parent-child', parentId: 'root2', childId: 'as' },
@@ -658,5 +664,64 @@ describe('computeTreeLayout remarriage child placement', () => {
     // Row stays inside the family's footprint.
     expect(n('k1').x).toBeGreaterThanOrEqual(n('s1').x - 1);
     expect(n('k2').x + NODE_WIDTH).toBeLessThanOrEqual(n('s2').x + NODE_WIDTH + 1);
+  });
+});
+
+import intermarried from '../../fixtures/intermarried-family.json';
+
+describe('computeTreeLayout with marriages between two families in the tree', () => {
+  const { people, relationships } = intermarried;
+  const layout = computeTreeLayout(people, relationships);
+  const node = (id) => layout.nodes.get(id);
+
+  it('places every person exactly once with no overlapping cards', () => {
+    expect(layout.nodes.size).toBe(people.length);
+    const list = [...layout.nodes.values()];
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i];
+        const b = list[j];
+        const overlap = a.x < b.x + NODE_WIDTH && b.x < a.x + NODE_WIDTH && a.y < b.y + NODE_HEIGHT && b.y < a.y + NODE_HEIGHT;
+        expect(overlap, `${a.person.id} overlaps ${b.person.id}`).toBe(false);
+      }
+    }
+  });
+
+  it("places a cousin couple under the husband's parents", () => {
+    // p33 (son of p19 + p27) married p35 (daughter of p20).
+    const coupleCenter = (node('p33').centerX + node('p35').centerX) / 2;
+    const husbandsParents = (node('p19').centerX + node('p27').centerX) / 2;
+    const wifesMother = node('p20').centerX;
+    expect(Math.abs(coupleCenter - husbandsParents)).toBeLessThan(Math.abs(coupleCenter - wifesMother));
+  });
+
+  it("links the wife's parents with a dashed cross-family connector", () => {
+    const link = layout.lines.find((l) => l.type === 'parent-child' && l.childId === 'p35');
+    expect(link.crossFamily).toBe(true);
+    const own = layout.lines.find((l) => l.type === 'parent-child' && l.childId === 'p33');
+    expect(own.crossFamily).toBe(false);
+  });
+
+  it('never lets two connector buses in the same gap overlap at the same height', () => {
+    const buses = new Map();
+    layout.lines
+      .filter((l) => l.type === 'parent-child' && Math.abs(l.sourceX - l.targetX) >= 2)
+      .forEach((l) => {
+        const key = `${l.allParentIds.join('+')}:${l.crossFamily}`;
+        const bus = buses.get(key) || { y: l.junctionY, left: l.sourceX, right: l.sourceX };
+        bus.left = Math.min(bus.left, l.targetX);
+        bus.right = Math.max(bus.right, l.targetX);
+        buses.set(key, bus);
+      });
+    const list = [...buses.values()];
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i];
+        const b = list[j];
+        if (a.y !== b.y) continue;
+        const overlap = a.left <= b.right && b.left <= a.right;
+        expect(overlap).toBe(false);
+      }
+    }
   });
 });

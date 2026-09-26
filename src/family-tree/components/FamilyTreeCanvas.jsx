@@ -310,6 +310,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 key={line.id}
                 d={line.path}
                 className={`ft-canvas__line ft-canvas__line--parent ${
+                  line.crossFamily ? 'ft-canvas__line--cross-family' : ''
+                } ${
                   isLineActive ? 'ft-canvas__line--active ft-canvas__line--animated' : ''
                 } ${isLineDimmed ? 'ft-canvas__line--dimmed' : ''}`}
               />

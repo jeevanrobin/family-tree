@@ -231,13 +231,43 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     layerUnits.set(g, units);
   }
 
+  // ── Which family "owns" each child unit ──────────────────────
+  // When both spouses of a couple have their parents in the tree (e.g. a
+  // marriage between cousins), the couple is placed once, under one family:
+  // the husband's when genders are recorded, otherwise the family reached
+  // first. The other family links to them with a "married into" connector.
+  const childUnitCandidates = new Map(); // childUnit.id -> [{ parentUnit, bloodChildId }]
+  const unitByMember = new Map();
+  layerUnits.forEach((units) => units.forEach((u) => u.memberIds.forEach((id) => unitByMember.set(String(id), u))));
+  for (let g = minGen; g <= maxGen; g++) {
+    (layerUnits.get(g) || []).forEach((parentUnit) => {
+      const nextLayer = layerUnits.get(g + 1) || [];
+      parentUnit.childrenIds.forEach((childId) => {
+        const childUnit = nextLayer.find((u) => u.memberIds.includes(String(childId)));
+        if (!childUnit) return;
+        if (!childUnitCandidates.has(childUnit.id)) childUnitCandidates.set(childUnit.id, []);
+        const list = childUnitCandidates.get(childUnit.id);
+        if (!list.some((c) => c.parentUnit === parentUnit)) {
+          list.push({ parentUnit, bloodChildId: String(childId) });
+        }
+      });
+    });
+  }
+  const childUnitOwner = new Map(); // childUnit.id -> { parentUnit, bloodChildId }
+  childUnitCandidates.forEach((candidates, childUnitId) => {
+    const sons = candidates.filter((c) => personMap.get(c.bloodChildId)?.gender === 'male');
+    childUnitOwner.set(childUnitId, sons.length === 1 ? sons[0] : candidates[0]);
+  });
+  const hasCrossFamily = [...childUnitCandidates.values()].some((list) => list.length > 1);
+
   // ── Collapse & focus ─────────────────────────────────────────
   const focusActive =
     focusMode !== 'all' && focusPersonId !== null && personMap.has(focusPersonId);
   const constrained = focusActive || collapsedUnits.size > 0;
-  // The M5C.2 subtree geometry models one spouse per person, so remarriages
-  // are measured with the recursive unit measure below instead.
-  const useSubtreeGeometry = !constrained && !hasMultiSpouse;
+  // The M5C.2 subtree geometry models one spouse per person and places a
+  // couple under both families, so remarriages and marriages between two
+  // families in the tree are measured with the recursive unit measure below.
+  const useSubtreeGeometry = !constrained && !hasMultiSpouse && !hasCrossFamily;
 
   const collectRelatives = (startId, edges) => {
     const found = new Set();
@@ -282,9 +312,9 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
       seen.add(childId);
 
       const childUnit = childUnits.find((u) => u.memberIds.includes(String(childId)));
-      if (childUnit) {
+      if (childUnit && childUnitOwner.get(childUnit.id)?.parentUnit === unit) {
         childUnit.memberIds.forEach((id) => seen.add(id));
-        result.push({ unit: childUnit, bloodChildId: String(childId) });
+        result.push({ unit: childUnit, bloodChildId: childUnitOwner.get(childUnit.id).bloodChildId });
       }
     });
 
@@ -587,14 +617,22 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
 
     if (!p1 && !p2) return;
 
-    const parentUnitKey = p2
+    // A child placed under the other spouse's family (marriage between two
+    // families in the tree) is linked with a distinct "married into" line.
+    const childUnit = unitByMember.get(String(childId));
+    const parentUnit = unitByMember.get(String((p1 || p2).person.id));
+    const owner = childUnit ? childUnitOwner.get(childUnit.id) : null;
+    const crossFamily = Boolean(owner && parentUnit && owner.parentUnit !== parentUnit);
+
+    const parentUnitKey = (p2
       ? [p1.person.id, p2.person.id].sort().join('-')
-      : (p1 ? p1.person.id : p2.person.id);
+      : (p1 ? p1.person.id : p2.person.id)) + (crossFamily ? ':cross' : '');
 
     if (!parentUnitChildren.has(parentUnitKey)) {
       parentUnitChildren.set(parentUnitKey, {
         p1: p1 || p2,
         p2: p1 ? p2 : null,
+        crossFamily,
         children: [],
       });
     }
@@ -606,10 +644,15 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     });
   });
 
-  parentUnitChildren.forEach(({ p1, p2, children }) => {
-    // Determine source anchor point:
-    // If a couple, stem drops from between the couple at bottom center
-    // If single parent, stem drops from parent card bottom center
+  // Each family's connector bus gets its own lane (height) in the gap between
+  // generations whenever its horizontal extent would overlap another family's,
+  // so connectors of neighbouring families never merge into one line.
+  const LANE_STEP = 12;
+  const LANE_OFFSETS = [0, -LANE_STEP, LANE_STEP, -2 * LANE_STEP, 2 * LANE_STEP];
+  const LANE_MARGIN = 16;
+  const buses = [];
+  parentUnitChildren.forEach((group) => {
+    const { p1, p2, children } = group;
     let sourceX, sourceY;
     if (p1 && p2) {
       sourceX = (p1.centerX + p2.centerX) / 2;
@@ -619,12 +662,46 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
       sourceX = p1.centerX;
       sourceY = p1.y + NODE_HEIGHT;
     }
-
-    // Children top anchor
     const minChildY = Math.min(...children.map((c) => c.childNode.y));
-    // Junction bar runs halfway through the vertical generation gap below parent cards
     const parentBottomY = Math.max(p1.y, p2 ? p2.y : p1.y) + NODE_HEIGHT;
-    const junctionY = parentBottomY + Math.max((minChildY - parentBottomY) * 0.5, 20);
+    const xs = [sourceX, ...children.map((c) => c.childNode.centerX)];
+    buses.push({
+      ...group,
+      sourceX,
+      sourceY,
+      parentBottomY,
+      minChildY,
+      left: Math.min(...xs),
+      right: Math.max(...xs),
+    });
+  });
+
+  const lanesByBand = new Map(); // parentBottomY -> [[{left, right}], ...] per lane index
+  buses
+    .slice()
+    .sort((a, b) => a.left - b.left || a.right - b.right)
+    .forEach((bus) => {
+      if (!lanesByBand.has(bus.parentBottomY)) lanesByBand.set(bus.parentBottomY, []);
+      const lanes = lanesByBand.get(bus.parentBottomY);
+      let lane = lanes.findIndex((spans) =>
+        spans.every((sp) => bus.left > sp.right + LANE_MARGIN || bus.right < sp.left - LANE_MARGIN)
+      );
+      if (lane === -1) {
+        lanes.push([]);
+        lane = lanes.length - 1;
+      }
+      lanes[lane].push({ left: bus.left, right: bus.right });
+      bus.lane = lane;
+    });
+
+  buses.forEach(({ p1, p2, children, crossFamily, sourceX, sourceY, parentBottomY, minChildY, lane }) => {
+    // Junction bar runs through the vertical generation gap below parent cards
+    const baseJunctionY = parentBottomY + Math.max((minChildY - parentBottomY) * 0.5, 20);
+    const offset = LANE_OFFSETS[lane % LANE_OFFSETS.length];
+    const junctionY = Math.min(
+      Math.max(baseJunctionY + offset, parentBottomY + 8),
+      Math.max(minChildY - 8, parentBottomY + 8)
+    );
 
     children.forEach(({ childId, childNode, directParentIds }) => {
       const targetX = childNode.centerX;
@@ -652,6 +729,7 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
         parentIds: directParentIds,
         allParentIds: p2 ? [p1.person.id, p2.person.id] : [p1.person.id],
         childId,
+        crossFamily,
         sourceX,
         sourceY,
         junctionY,

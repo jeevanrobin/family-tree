@@ -1,0 +1,535 @@
+{
+ "_note": "Anonymized shape of a real 5-generation family: 39 people, cousin marriages between two branches, children recorded with one or both parents.",
+ "people": [
+  {
+   "id": "p1",
+   "displayName": "Person 1",
+   "firstName": "Person 1",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p2",
+   "displayName": "Person 2",
+   "firstName": "Person 2",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p3",
+   "displayName": "Person 3",
+   "firstName": "Person 3",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p4",
+   "displayName": "Person 4",
+   "firstName": "Person 4",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p5",
+   "displayName": "Person 5",
+   "firstName": "Person 5",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p6",
+   "displayName": "Person 6",
+   "firstName": "Person 6",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p7",
+   "displayName": "Person 7",
+   "firstName": "Person 7",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p8",
+   "displayName": "Person 8",
+   "firstName": "Person 8",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p9",
+   "displayName": "Person 9",
+   "firstName": "Person 9",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p10",
+   "displayName": "Person 10",
+   "firstName": "Person 10",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p11",
+   "displayName": "Person 11",
+   "firstName": "Person 11",
+   "gender": "unspecified"
+  },
+  {
+   "id": "p12",
+   "displayName": "Person 12",
+   "firstName": "Person 12",
+   "gender": "male"
+  },
+  {
+   "id": "p13",
+   "displayName": "Person 13",
+   "firstName": "Person 13",
+   "gender": "male"
+  },
+  {
+   "id": "p14",
+   "displayName": "Person 14",
+   "firstName": "Person 14",
+   "gender": "female"
+  },
+  {
+   "id": "p15",
+   "displayName": "Person 15",
+   "firstName": "Person 15",
+   "gender": "male"
+  },
+  {
+   "id": "p16",
+   "displayName": "Person 16",
+   "firstName": "Person 16",
+   "gender": "female"
+  },
+  {
+   "id": "p17",
+   "displayName": "Person 17",
+   "firstName": "Person 17",
+   "gender": "female"
+  },
+  {
+   "id": "p18",
+   "displayName": "Person 18",
+   "firstName": "Person 18",
+   "gender": "female"
+  },
+  {
+   "id": "p19",
+   "displayName": "Person 19",
+   "firstName": "Person 19",
+   "gender": "male"
+  },
+  {
+   "id": "p20",
+   "displayName": "Person 20",
+   "firstName": "Person 20",
+   "gender": "female"
+  },
+  {
+   "id": "p21",
+   "displayName": "Person 21",
+   "firstName": "Person 21",
+   "gender": "female"
+  },
+  {
+   "id": "p22",
+   "displayName": "Person 22",
+   "firstName": "Person 22",
+   "gender": "female"
+  },
+  {
+   "id": "p23",
+   "displayName": "Person 23",
+   "firstName": "Person 23",
+   "gender": "female"
+  },
+  {
+   "id": "p24",
+   "displayName": "Person 24",
+   "firstName": "Person 24",
+   "gender": "female"
+  },
+  {
+   "id": "p25",
+   "displayName": "Person 25",
+   "firstName": "Person 25",
+   "gender": "male"
+  },
+  {
+   "id": "p26",
+   "displayName": "Person 26",
+   "firstName": "Person 26",
+   "gender": "male"
+  },
+  {
+   "id": "p27",
+   "displayName": "Person 27",
+   "firstName": "Person 27",
+   "gender": "female"
+  },
+  {
+   "id": "p28",
+   "displayName": "Person 28",
+   "firstName": "Person 28",
+   "gender": "male"
+  },
+  {
+   "id": "p29",
+   "displayName": "Person 29",
+   "firstName": "Person 29",
+   "gender": "male"
+  },
+  {
+   "id": "p30",
+   "displayName": "Person 30",
+   "firstName": "Person 30",
+   "gender": "male"
+  },
+  {
+   "id": "p31",
+   "displayName": "Person 31",
+   "firstName": "Person 31",
+   "gender": "male"
+  },
+  {
+   "id": "p32",
+   "displayName": "Person 32",
+   "firstName": "Person 32",
+   "gender": "male"
+  },
+  {
+   "id": "p33",
+   "displayName": "Person 33",
+   "firstName": "Person 33",
+   "gender": "male"
+  },
+  {
+   "id": "p34",
+   "displayName": "Person 34",
+   "firstName": "Person 34",
+   "gender": "female"
+  },
+  {
+   "id": "p35",
+   "displayName": "Person 35",
+   "firstName": "Person 35",
+   "gender": "female"
+  },
+  {
+   "id": "p36",
+   "displayName": "Person 36",
+   "firstName": "Person 36",
+   "gender": "male"
+  },
+  {
+   "id": "p37",
+   "displayName": "Person 37",
+   "firstName": "Person 37",
+   "gender": "male"
+  },
+  {
+   "id": "p38",
+   "displayName": "Person 38",
+   "firstName": "Person 38",
+   "gender": "male"
+  },
+  {
+   "id": "p39",
+   "displayName": "Person 39",
+   "firstName": "Person 39",
+   "gender": "male"
+  }
+ ],
+ "relationships": [
+  {
+   "id": "r1",
+   "type": "parent-child",
+   "parentId": "p12",
+   "childId": "p13"
+  },
+  {
+   "id": "r2",
+   "type": "spouse",
+   "personAId": "p13",
+   "personBId": "p14"
+  },
+  {
+   "id": "r3",
+   "type": "parent-child",
+   "parentId": "p13",
+   "childId": "p15"
+  },
+  {
+   "id": "r4",
+   "type": "spouse",
+   "personAId": "p15",
+   "personBId": "p16"
+  },
+  {
+   "id": "r5",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p17"
+  },
+  {
+   "id": "r6",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p18"
+  },
+  {
+   "id": "r7",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p19"
+  },
+  {
+   "id": "r8",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p20"
+  },
+  {
+   "id": "r9",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p21"
+  },
+  {
+   "id": "r10",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p22"
+  },
+  {
+   "id": "r11",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p23"
+  },
+  {
+   "id": "r12",
+   "type": "parent-child",
+   "parentId": "p15",
+   "childId": "p24"
+  },
+  {
+   "id": "r13",
+   "type": "spouse",
+   "personAId": "p17",
+   "personBId": "p25"
+  },
+  {
+   "id": "r14",
+   "type": "spouse",
+   "personAId": "p18",
+   "personBId": "p26"
+  },
+  {
+   "id": "r15",
+   "type": "spouse",
+   "personAId": "p19",
+   "personBId": "p27"
+  },
+  {
+   "id": "r16",
+   "type": "spouse",
+   "personAId": "p20",
+   "personBId": "p28"
+  },
+  {
+   "id": "r17",
+   "type": "spouse",
+   "personAId": "p21",
+   "personBId": "p29"
+  },
+  {
+   "id": "r18",
+   "type": "spouse",
+   "personAId": "p22",
+   "personBId": "p30"
+  },
+  {
+   "id": "r19",
+   "type": "spouse",
+   "personAId": "p23",
+   "personBId": "p31"
+  },
+  {
+   "id": "r20",
+   "type": "spouse",
+   "personAId": "p24",
+   "personBId": "p32"
+  },
+  {
+   "id": "r21",
+   "type": "parent-child",
+   "parentId": "p19",
+   "childId": "p33"
+  },
+  {
+   "id": "r22",
+   "type": "parent-child",
+   "parentId": "p19",
+   "childId": "p34"
+  },
+  {
+   "id": "r23",
+   "type": "parent-child",
+   "parentId": "p20",
+   "childId": "p35"
+  },
+  {
+   "id": "r24",
+   "type": "spouse",
+   "personAId": "p33",
+   "personBId": "p35"
+  },
+  {
+   "id": "r25",
+   "type": "parent-child",
+   "parentId": "p23",
+   "childId": "p36"
+  },
+  {
+   "id": "r26",
+   "type": "parent-child",
+   "parentId": "p31",
+   "childId": "p36"
+  },
+  {
+   "id": "r27",
+   "type": "spouse",
+   "personAId": "p36",
+   "personBId": "p34"
+  },
+  {
+   "id": "r28",
+   "type": "parent-child",
+   "parentId": "p17",
+   "childId": "p11"
+  },
+  {
+   "id": "r29",
+   "type": "parent-child",
+   "parentId": "p17",
+   "childId": "p6"
+  },
+  {
+   "id": "r30",
+   "type": "parent-child",
+   "parentId": "p17",
+   "childId": "p4"
+  },
+  {
+   "id": "r31",
+   "type": "parent-child",
+   "parentId": "p17",
+   "childId": "p3"
+  },
+  {
+   "id": "r32",
+   "type": "parent-child",
+   "parentId": "p17",
+   "childId": "p5"
+  },
+  {
+   "id": "r33",
+   "type": "parent-child",
+   "parentId": "p17",
+   "childId": "p7"
+  },
+  {
+   "id": "r34",
+   "type": "parent-child",
+   "parentId": "p26",
+   "childId": "p1"
+  },
+  {
+   "id": "r35",
+   "type": "parent-child",
+   "parentId": "p18",
+   "childId": "p1"
+  },
+  {
+   "id": "r36",
+   "type": "parent-child",
+   "parentId": "p18",
+   "childId": "p9"
+  },
+  {
+   "id": "r37",
+   "type": "parent-child",
+   "parentId": "p26",
+   "childId": "p9"
+  },
+  {
+   "id": "r38",
+   "type": "parent-child",
+   "parentId": "p18",
+   "childId": "p2"
+  },
+  {
+   "id": "r39",
+   "type": "parent-child",
+   "parentId": "p26",
+   "childId": "p2"
+  },
+  {
+   "id": "r40",
+   "type": "parent-child",
+   "parentId": "p18",
+   "childId": "p10"
+  },
+  {
+   "id": "r41",
+   "type": "parent-child",
+   "parentId": "p26",
+   "childId": "p10"
+  },
+  {
+   "id": "r42",
+   "type": "parent-child",
+   "parentId": "p18",
+   "childId": "p8"
+  },
+  {
+   "id": "r43",
+   "type": "parent-child",
+   "parentId": "p26",
+   "childId": "p8"
+  },
+  {
+   "id": "r44",
+   "type": "parent-child",
+   "parentId": "p20",
+   "childId": "p37"
+  },
+  {
+   "id": "r45",
+   "type": "parent-child",
+   "parentId": "p28",
+   "childId": "p37"
+  },
+  {
+   "id": "r46",
+   "type": "parent-child",
+   "parentId": "p20",
+   "childId": "p38"
+  },
+  {
+   "id": "r47",
+   "type": "parent-child",
+   "parentId": "p28",
+   "childId": "p38"
+  },
+  {
+   "id": "r48",
+   "type": "parent-child",
+   "parentId": "p20",
+   "childId": "p39"
+  },
+  {
+   "id": "r49",
+   "type": "parent-child",
+   "parentId": "p28",
+   "childId": "p39"
+  }
+ ]
+}

@@ -1055,6 +1055,13 @@ button {
   stroke-linecap: round;
 }
 
+/* Link to a child placed under their spouse's family (marriage between two
+   families in the tree). Dashed so it reads as "married into", not a bus. */
+.ft-canvas__line--cross-family {
+  stroke-dasharray: 6 5;
+  opacity: 0.75;
+}
+
 .ft-canvas__line--sibling {
   stroke: var(--ft-line-color);
   stroke-width: clamp(2px, calc(1.8px / var(--canvas-scale, 1)), 4.5px);
