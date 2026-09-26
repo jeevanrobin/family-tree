@@ -1,24 +1,16 @@
 import { chromium } from '@playwright/test';
 import fs from 'fs';
 const d = JSON.parse(fs.readFileSync('/tmp/claude-0/-home-user-family-tree/7da6b52e-f1e8-54b7-b5a7-840367393bf8/scratchpad/medida.json','utf8')).family;
-const s = d.relationships.find(r=>r.type==='spouse');
-d.relationships.push({ id:'bad1', type:'parent-child', parentId: s.personId1, childId: s.personId2 });
-const pcs = d.relationships.filter(r=>r.type==='parent-child');
-const g = pcs.find(r => pcs.some(q => q.parentId === r.childId));
-const gc = pcs.find(q => q.parentId === g.childId).childId;
-d.relationships.push({ id:'bad2', type:'parent-child', parentId: gc, childId: g.parentId });
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-const ctx = await b.newContext({ viewport: { width: 1400, height: 800 } });
+for (const w of [800, 1024, 1400, 1920]) {
+const ctx = await b.newContext({ viewport: { width: w, height: 800 } });
 await ctx.addInitScript((x) => { if (!sessionStorage.getItem('s')) { localStorage.setItem('family-tree-data-v2', JSON.stringify(x)); localStorage.setItem('medida_theme','light'); sessionStorage.setItem('s','1'); } }, { schemaVersion:'2.0.0', ...d });
-const p = await ctx.newPage(); const errs=[]; p.on('pageerror', e=>errs.push(e.message));
-await p.goto('http://localhost:5173/app', { waitUntil:'networkidle' }); await p.waitForTimeout(2000);
-await p.screenshot({ path: '/tmp/claude-0/-home-user-family-tree/7da6b52e-f1e8-54b7-b5a7-840367393bf8/scratchpad/conf1.png' });
-console.log(await p.locator('.ft-conflicts').innerText());
-await p.getByRole('button', { name: /Keep as husband/ }).click(); await p.waitForTimeout(500);
-console.log('---\n' + await p.locator('.ft-conflicts').innerText());
-await p.locator('.ft-conflicts__btn').first().click(); await p.waitForTimeout(500);
-console.log('---\n' + await p.locator('.ft-conflicts').innerText());
-await p.screenshot({ path: '/tmp/claude-0/-home-user-family-tree/7da6b52e-f1e8-54b7-b5a7-840367393bf8/scratchpad/conf2.png' });
-const stored = JSON.parse(await p.evaluate(() => localStorage.getItem('family-tree-data-v2')));
-console.log('bad left', stored.relationships.filter(r => r.id.startsWith('bad')).map(r=>r.id), 'cards', await p.locator('.ft-person-card').count(), errs);
+const p = await ctx.newPage();
+await p.goto('http://localhost:5173/app', { waitUntil:'networkidle' }); await p.waitForTimeout(1800);
+const hh = await p.evaluate(() => { const h = document.querySelector('.ft-header'); const bad = [...h.querySelectorAll('button')].filter(b => { const r=b.getBoundingClientRect(); return r.width && (r.right > innerWidth || r.height > 48); }).map(b=>b.innerText||b.title); return { h: h.getBoundingClientRect().height, bad }; });
+console.log(w, JSON.stringify(hh));
+await p.screenshot({ path: '/tmp/claude-0/-home-user-family-tree/7da6b52e-f1e8-54b7-b5a7-840367393bf8/scratchpad/hdr-'+w+'.png', clip: { x:0, y:0, width: w, height: 110 } });
+if (w===1400) await p.screenshot({ path: '/tmp/claude-0/-home-user-family-tree/7da6b52e-f1e8-54b7-b5a7-840367393bf8/scratchpad/open-1400.png' });
+await ctx.close();
+}
 await b.close();

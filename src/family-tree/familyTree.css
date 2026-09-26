@@ -11534,8 +11534,8 @@ button {
   max-width: 180px;
 }
 
-/* ── Phone header: two rows, every control reachable ─────────── */
-@media (max-width: 720px) {
+/* ── Phone / tablet header: every control reachable ─────────── */
+@media (max-width: 900px) {
   .ft-header {
     flex-wrap: wrap;
     height: auto;
@@ -11711,7 +11711,7 @@ button {
   white-space: nowrap;
 }
 
-@media (max-width: 1280px) and (min-width: 721px) {
+@media (max-width: 1280px) and (min-width: 901px) {
   .ft-header .ft-header__product-brand,
   .ft-header .ft-header__subtitle,
   .ft-header .ft-search__shortcut-hint,
@@ -11721,5 +11721,8 @@ button {
   }
   .ft-header .ft-header__search-wrap .ft-search {
     width: 170px;
+  }
+  .ft-header .ft-header__title {
+    white-space: nowrap;
   }
 }
