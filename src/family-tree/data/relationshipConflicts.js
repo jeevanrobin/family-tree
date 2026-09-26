@@ -17,16 +17,25 @@ export function findRelationshipConflicts(persons, relationships) {
   const nameOf = new Map((persons || []).map((p) => [String(p.id), p.displayName || p.firstName || String(p.id)]));
   const conflicts = [];
   const children = new Map();
-  const parentPairs = new Set();
+  const parentPairs = new Map(); // "parent|child" -> [relationship ids]
+  const edgeRel = new Map(); // "parent|child" -> first relationship id
 
   (relationships || []).forEach((r) => {
     if (r.type !== 'parent-child') return;
     const [parent, child] = parentChildPair(r);
     if (parent === child) {
-      conflicts.push({ kind: 'own-parent', ids: [parent], message: `${nameOf.get(parent)} is recorded as their own parent` });
+      conflicts.push({
+        kind: 'own-parent',
+        ids: [parent],
+        relationshipIds: [String(r.id)],
+        message: `${nameOf.get(parent)} is recorded as their own parent`,
+      });
       return;
     }
-    parentPairs.add(`${parent}|${child}`);
+    const key = `${parent}|${child}`;
+    if (!parentPairs.has(key)) parentPairs.set(key, []);
+    parentPairs.get(key).push(String(r.id));
+    if (!edgeRel.has(key)) edgeRel.set(key, String(r.id));
     if (!children.has(parent)) children.set(parent, []);
     children.get(parent).push(child);
   });
@@ -34,10 +43,13 @@ export function findRelationshipConflicts(persons, relationships) {
   (relationships || []).forEach((r) => {
     if (r.type !== 'spouse') return;
     const [a, b] = spousePair(r);
-    if (parentPairs.has(`${a}|${b}`) || parentPairs.has(`${b}|${a}`)) {
+    const parentRelIds = [...(parentPairs.get(`${a}|${b}`) || []), ...(parentPairs.get(`${b}|${a}`) || [])];
+    if (parentRelIds.length > 0) {
       conflicts.push({
         kind: 'spouse-and-parent',
         ids: [a, b],
+        spouseRelationshipIds: [String(r.id)],
+        parentRelationshipIds: parentRelIds,
         message: `${nameOf.get(a)} and ${nameOf.get(b)} are recorded as both spouses and parent/child`,
       });
     }
@@ -67,6 +79,8 @@ export function findRelationshipConflicts(persons, relationships) {
             conflicts.push({
               kind: 'ancestor-loop',
               ids: loop,
+              // The link that closes the loop (last person → first).
+              closingRelationshipId: edgeRel.get(`${id}|${next}`),
               message: `${loop.map((x) => nameOf.get(x)).join(' → ')} → ${nameOf.get(next)} forms a loop (someone is their own ancestor)`,
             });
           }

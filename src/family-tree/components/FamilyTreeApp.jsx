@@ -35,6 +35,7 @@ import TreePosterModal from './modals/TreePosterModal.jsx';
 import ChangeHistoryModal from './modals/ChangeHistoryModal.jsx';
 import DuplicatesModal from './modals/DuplicatesModal.jsx';
 import FamilyPlacesModal from './modals/FamilyPlacesModal.jsx';
+import RelationshipConflictBanner from './RelationshipConflictBanner.jsx';
 import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
@@ -823,26 +824,14 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
               </div>
             )}
 
-            {!isArrangeMode && !conflictsDismissed && relationshipConflicts?.length > 0 && (
-              <div className="ft-arrange-banner ft-arrange-banner--warning" role="alert">
-                <div className="ft-arrange-banner__info">
-                  <span className="ft-arrange-banner__dot" />
-                  <span className="ft-arrange-banner__text">
-                    <strong>Please check these relationships:</strong>{' '}
-                    {relationshipConflicts.slice(0, 3).map((c) => c.message).join('; ')}
-                    {relationshipConflicts.length > 3 && ` (and ${relationshipConflicts.length - 3} more)`}. Open a
-                    person and remove the wrong link.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="ft-arrange-banner__done-btn"
-                  onClick={() => setConflictsDismissed(true)}
-                  title="Hide this message"
-                >
-                  Hide
-                </button>
-              </div>
+            {!isArrangeMode && !conflictsDismissed && (
+              <RelationshipConflictBanner
+                conflicts={relationshipConflicts}
+                persons={persons}
+                onRemoveRelationships={(ids) => ids.forEach((id) => familyStore.removeRelationship(id))}
+                onSelectPerson={handleSelectPerson}
+                onHide={() => setConflictsDismissed(true)}
+              />
             )}
 
             <FamilyTreeCanvas

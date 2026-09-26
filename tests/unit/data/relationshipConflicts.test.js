@@ -35,3 +35,13 @@ describe('layout with contradictory data', () => {
     expect(layout).toBeTruthy();
   });
 });
+
+describe('conflict fixes', () => {
+  it('names the relationships each fix would remove', () => {
+    const [c] = findRelationshipConflicts(people, [...base, pc('a', 'b')]);
+    expect(c.parentRelationshipIds).toEqual(['a-b']);
+    expect(c.spouseRelationshipIds).toEqual(['s-a-b']);
+    const loop = findRelationshipConflicts(people, [...base, pc('d', 'a')]).find((x) => x.kind === 'ancestor-loop');
+    expect(loop.closingRelationshipId).toBe('d-a');
+  });
+});
