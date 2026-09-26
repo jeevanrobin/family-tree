@@ -125,6 +125,7 @@ function rowToRelationship(row) {
   const base = {
     id: row.local_id || row.id,
     uuid: row.id,
+    type: row.type,
     personId1: row.person_id_1,
     personId2: row.person_id_2,
     createdAt: row.created_at,

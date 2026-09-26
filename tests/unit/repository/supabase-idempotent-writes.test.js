@@ -193,3 +193,16 @@ describe('SupabaseAdapter voice stories', () => {
     expect(Object.keys(db.stories[0]).some((k) => k.startsWith('audio_') || k === 'transcript_language')).toBe(false);
   });
 });
+
+describe('SupabaseAdapter relationship loading', () => {
+  it('keeps the relationship type so a fresh device can draw the tree', async () => {
+    for (const key of Object.keys(db)) delete db[key];
+    const adapter = new SupabaseAdapter(FID);
+    adapter._validateSessionAndScope = vi.fn().mockResolvedValue({ userId: 'u1', role: 'owner' });
+    adapter._verifyPersonsBelongToFamily = vi.fn().mockResolvedValue(true);
+    const saved = await adapter.saveRelationship({ id: 'rel-1', type: 'spouse', personAId: 'uuid-a', personBId: 'uuid-b', _isNew: true });
+    expect(saved.type).toBe('spouse');
+    const child = await adapter.saveRelationship({ id: 'rel-2', type: 'parent-child', parentId: 'uuid-a', childId: 'uuid-c', _isNew: true });
+    expect(child).toMatchObject({ type: 'parent-child', parentId: 'uuid-a', childId: 'uuid-c' });
+  });
+});
