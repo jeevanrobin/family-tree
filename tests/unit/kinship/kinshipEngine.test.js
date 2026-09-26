@@ -146,3 +146,73 @@ describe('describeRelationshipsFrom', () => {
     expect(describeRelationshipsFrom(persons, relationships, 'nobody').size).toBe(0);
   });
 });
+
+import { siblingOrderFromLayout } from '../../../src/family-tree/kinship/kinshipEngine.js';
+import { computeTreeLayout } from '../../../src/family-tree/engine/treeLayout.js';
+
+describe('elder/younger from card order', () => {
+  // Parents with four children, no birth dates recorded.
+  const people = [
+    P('dad', 'male'), P('mom', 'female'),
+    P('b1', 'male'), P('s1', 'female'), P('ego', 'male'), P('b2', 'male'),
+    P('b1wife', 'female'),
+  ];
+  const rels = [
+    sp('dad', 'mom'),
+    ...['b1', 's1', 'ego', 'b2'].flatMap((c) => [pc('dad', c), pc('mom', c)]),
+    sp('b1', 'b1wife'),
+  ];
+  const termsFor = (order) => {
+    const layout = computeTreeLayout(people, rels, { customSiblingOrders: order ? { 'dad-children': order } : {} });
+    const all = describeRelationshipsFrom(people, rels, 'ego', { siblingOrder: siblingOrderFromLayout(layout) });
+    return (id) => all.get(id).telugu.map((t) => t.term.roman);
+  };
+
+  it('treats siblings to the left as elder and to the right as younger', () => {
+    const t = termsFor(['b1', 's1', 'ego', 'b2']);
+    expect(t('b1')).toEqual(['Annayya']);
+    expect(t('s1')).toEqual(['Akka']);
+    expect(t('b2')).toEqual(['Thammudu']);
+    expect(t('b1wife')).toEqual(['Vadina']); // elder brother's wife
+  });
+
+  it('follows the new order after siblings are rearranged', () => {
+    const t = termsFor(['ego', 'b2', 's1', 'b1']);
+    expect(t('b1')).toEqual(['Thammudu']);
+    expect(t('s1')).toEqual(['Chelli']);
+    expect(t('b1wife')).toEqual(['Maradalu']); // younger brother's wife
+  });
+
+  it('lets recorded birth dates win over card order', () => {
+    const dated = people.map((p) => (p.id === 'b2' ? { ...p, dateOfBirth: '1960-01-01' } : p.id === 'ego' ? { ...p, dateOfBirth: '1970-01-01' } : p));
+    const layout = computeTreeLayout(dated, rels, { customSiblingOrders: { 'dad-children': ['b1', 's1', 'ego', 'b2'] } });
+    const all = describeRelationshipsFrom(dated, rels, 'ego', { siblingOrder: siblingOrderFromLayout(layout) });
+    expect(all.get('b2').telugu.map((t) => t.term.roman)).toEqual(['Annayya']);
+  });
+
+  it("uses the parent's position for their siblings (Pedananna / Chinnanna)", () => {
+    const kid = P('kid', 'male');
+    const layout = computeTreeLayout([...people, kid], [...rels, pc('ego', 'kid')], { customSiblingOrders: { 'dad-children': ['b1', 's1', 'ego', 'b2'] } });
+    const all = describeRelationshipsFrom([...people, kid], [...rels, pc('ego', 'kid')], 'kid', { siblingOrder: siblingOrderFromLayout(layout) });
+    expect(all.get('b1').telugu.map((t) => t.term.roman)).toEqual(['Pedananna']);
+    expect(all.get('b2').telugu.map((t) => t.term.roman)).toEqual(['Chinnanna / Babai']);
+  });
+});
+
+describe('elder/younger for a sibling shown in another family row', () => {
+  it('falls back to the order the children were added', () => {
+    // 'sis' marries into another family in the tree, so her card is not in her parents' row.
+    const people = [
+      P('dad', 'male'), P('mom', 'female'), P('sis', 'female'), P('ego', 'male'),
+      P('inlawDad', 'male'), P('husband', 'male'),
+    ];
+    const rels = [
+      sp('dad', 'mom'), pc('dad', 'sis'), pc('mom', 'sis'), pc('dad', 'ego'), pc('mom', 'ego'),
+      pc('inlawDad', 'husband'), sp('husband', 'sis'),
+    ];
+    const layout = computeTreeLayout(people, rels);
+    expect(layout.nodes.get('sis').cohortKey).not.toBe(layout.nodes.get('ego').cohortKey);
+    const all = describeRelationshipsFrom(people, rels, 'ego', { siblingOrder: siblingOrderFromLayout(layout, rels) });
+    expect(all.get('sis').telugu.map((t) => t.term.roman)).toEqual(['Akka']); // added before ego
+  });
+});

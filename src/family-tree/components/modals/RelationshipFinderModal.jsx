@@ -6,7 +6,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import familyStore from '../../store/FamilyStore.js';
-import { describeRelationship } from '../../kinship/kinshipEngine.js';
+import { describeRelationship, siblingOrderFromLayout } from '../../kinship/kinshipEngine.js';
+import { computeTreeLayout } from '../../engine/treeLayout.js';
 import { getInitials, getAvatarGradient } from '../../utils/familyHelpers.js';
 
 const STEP_LABEL = { P: 'parent', C: 'child', S: 'spouse', B: 'sibling' };
@@ -98,7 +99,13 @@ export default function RelationshipFinderModal({ isOpen, fromPersonId, onClose,
 
   const result = useMemo(() => {
     if (!snapshot || !fromId || !toId) return null;
-    return describeRelationship(snapshot.people, snapshot.relationships, fromId, toId);
+    // Elder/younger: birth dates, else sibling card order (left = elder).
+    const layout = computeTreeLayout(snapshot.people, snapshot.relationships, {
+      customSiblingOrders: snapshot.siblingOrder || {},
+    });
+    return describeRelationship(snapshot.people, snapshot.relationships, fromId, toId, {
+      siblingOrder: siblingOrderFromLayout(layout, snapshot.relationships),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromId, toId, isOpen]);
 

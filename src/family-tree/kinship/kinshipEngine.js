@@ -154,12 +154,53 @@ function birthTime(person) {
   return Number.isNaN(t) ? null : t;
 }
 
-/** true when a is older than b, false when younger, null when unknown. */
-function isElder(a, b) {
+/**
+ * true when a is older than b, false when younger, null when unknown.
+ * Birth dates decide when both are recorded; otherwise the optional
+ * `siblingOrder(aId, bId)` (card order in the tree: left = elder) is used.
+ */
+function isElder(a, b, siblingOrder = null) {
   const ta = birthTime(a);
   const tb = birthTime(b);
-  if (ta === null || tb === null || ta === tb) return null;
-  return ta < tb;
+  if (ta !== null && tb !== null && ta !== tb) return ta < tb;
+  if (siblingOrder && a && b) return siblingOrder(String(a.id), String(b.id)) ?? null;
+  return null;
+}
+
+/**
+ * Sibling order from the tree layout: within a family's row of children,
+ * a card further left is treated as elder. Follows Arrange Family moves.
+ * @returns {(aId: string, bId: string) => boolean|null}
+ */
+export function siblingOrderFromLayout(layout, relationships = []) {
+  const position = new Map();
+  (layout?.allNodes || layout?.nodes || new Map()).forEach((node, id) => {
+    if (node.cohortKey && String(node.bloodChildId) === String(id)) {
+      position.set(String(id), { cohort: node.cohortKey, index: node.siblingIndex });
+    }
+  });
+
+  // Fallback for siblings shown in different rows (e.g. a daughter placed
+  // with her husband's family): the order the children were added.
+  const addedOrder = new Map(); // parentId -> [childId...]
+  relationships.forEach((r) => {
+    if (r.type !== 'parent-child' && r.type !== 'parent') return;
+    const parent = String(r.parentId ?? r.personId1);
+    if (!addedOrder.has(parent)) addedOrder.set(parent, []);
+    addedOrder.get(parent).push(String(r.childId ?? r.personId2));
+  });
+
+  return (aId, bId) => {
+    const a = position.get(String(aId));
+    const b = position.get(String(bId));
+    if (a && b && a.cohort === b.cohort && a.index !== b.index) return a.index < b.index;
+    for (const children of addedOrder.values()) {
+      const ia = children.indexOf(String(aId));
+      const ib = children.indexOf(String(bId));
+      if (ia !== -1 && ib !== -1 && ia !== ib) return ia < ib;
+    }
+    return null;
+  };
 }
 
 const ENGLISH_STEP = {
@@ -220,7 +261,7 @@ function englishTerm(signature, target) {
  * Telugu term(s) for the common relationships.
  * @returns {{ options: Array<{term, when?}>, missing: string[] } | null}
  */
-function teluguTerms(signature, steps, ego, people) {
+function teluguTerms(signature, steps, ego, people, siblingOrder = null) {
   const person = (id) => people.get(String(id));
   const target = person(steps[steps.length - 1]?.id);
   const tg = genderOf(target);
@@ -241,7 +282,7 @@ function teluguTerms(signature, steps, ego, people) {
   };
   // Choose between elder/younger terms; unknown ages list both.
   const byAge = (a, b, elder, younger) => {
-    const e = isElder(a, b);
+    const e = isElder(a, b, siblingOrder);
     if (e === true) return [{ term: elder }];
     if (e === false) return [{ term: younger }];
     needAge(a, b);
@@ -415,11 +456,11 @@ function teluguTerms(signature, steps, ego, people) {
  *   missing: string[],          details that would make the answer exact
  * }}
  */
-export function describeRelationship(persons, relationships, fromId, toId) {
+export function describeRelationship(persons, relationships, fromId, toId, { siblingOrder = null } = {}) {
   const people = new Map(persons.map((p) => [String(p.id), p]));
   const ego = people.get(String(fromId));
   const steps = findRelationshipPath(persons, relationships, fromId, toId);
-  return describeSteps(steps, ego, people, fromId, toId);
+  return describeSteps(steps, ego, people, fromId, toId, siblingOrder);
 }
 
 /**
@@ -427,7 +468,7 @@ export function describeRelationship(persons, relationships, fromId, toId) {
  * other connected person, what `fromId` calls them.
  * @returns {Map<string, ReturnType<typeof describeRelationship>>}
  */
-export function describeRelationshipsFrom(persons, relationships, fromId) {
+export function describeRelationshipsFrom(persons, relationships, fromId, { siblingOrder = null } = {}) {
   const { people, edges } = buildGraph(persons, relationships);
   const from = String(fromId);
   const out = new Map();
@@ -435,12 +476,12 @@ export function describeRelationshipsFrom(persons, relationships, fromId) {
   if (!ego) return out;
   const prev = shortestPathTree(edges, from);
   prev.forEach((_, id) => {
-    out.set(id, describeSteps(stepsTo(prev, from, id), ego, people, from, id));
+    out.set(id, describeSteps(stepsTo(prev, from, id), ego, people, from, id, siblingOrder));
   });
   return out;
 }
 
-function describeSteps(steps, ego, people, fromId, toId) {
+function describeSteps(steps, ego, people, fromId, toId, siblingOrder = null) {
   if (!ego || steps === null) {
     return { found: false, path: [], english: null, description: '', telugu: [], missing: [] };
   }
@@ -455,14 +496,14 @@ function describeSteps(steps, ego, people, fromId, toId) {
       const [male, female, neutral] = ENGLISH_STEP[step.type];
       let word = pick(genderOf(p), male, female, neutral);
       if (step.type === 'B') {
-        const elder = isElder(p, people.get(step.from));
+        const elder = isElder(p, people.get(step.from), siblingOrder);
         if (elder !== null) word = `${elder ? 'elder' : 'younger'} ${word}`;
       }
       return word;
     })
     .join("'s ");
 
-  const telugu = teluguTerms(signature, compressed, ego, people);
+  const telugu = teluguTerms(signature, compressed, ego, people, siblingOrder);
 
   return {
     found: true,

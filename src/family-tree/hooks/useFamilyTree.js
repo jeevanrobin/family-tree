@@ -19,7 +19,7 @@ import {
   getDocumentsForPerson,
 } from '../data/familyDataService.js';
 import { computeTreeLayout } from '../engine/treeLayout.js';
-import { describeRelationshipsFrom } from '../kinship/kinshipEngine.js';
+import { describeRelationshipsFrom, siblingOrderFromLayout } from '../kinship/kinshipEngine.js';
 
 export function useFamilyTree() {
   const [snapshot, setSnapshot] = useState(() => familyStore.getSnapshot());
@@ -77,9 +77,16 @@ export function useFamilyTree() {
 
   // Complete ancestral lineage tracing (Grandparents -> Parents -> Selected Child)
   // What the selected person calls each relative (Telugu + English), from one search.
+  // Elder/younger follows birth dates, else card order (left = elder), so
+  // rearranging siblings updates Annayya / Thammudu, Akka / Chelli...
   const kinshipMap = useMemo(
-    () => (selectedId ? describeRelationshipsFrom(persons, relationships, selectedId) : new Map()),
-    [selectedId, persons, relationships]
+    () =>
+      selectedId
+        ? describeRelationshipsFrom(persons, relationships, selectedId, {
+            siblingOrder: siblingOrderFromLayout(layout, relationships),
+          })
+        : new Map(),
+    [selectedId, persons, relationships, layout]
   );
 
   // Relationship labels on cards: Telugu kinship terms or English roles.
