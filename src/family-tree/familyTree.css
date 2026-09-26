@@ -1369,17 +1369,17 @@ button {
   top: -8px;
   right: 12px;
   font-size: 0.58rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--ft-accent-ink);
-  background: var(--ft-lavender);
+  color: #FFFFFF;
+  background: var(--ft-accent);
   padding: 2px 7px;
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 4px rgba(229, 101, 21, 0.35);
   animation: ftPillPop 0.25s cubic-bezier(0.34, 1.4, 0.64, 1);
   z-index: 10;
-  opacity: 0.92;
+  opacity: 1;
 }
 
 @keyframes ftPillPop {
@@ -11455,4 +11455,12 @@ button {
   .ft-migration-map {
     height: 320px;
   }
+}
+
+/* Wider family (grandparents, in-laws, descendants): outlined orange */
+.ft-person-card__relation-pill--soft {
+  color: var(--ft-accent);
+  background: var(--ft-surface);
+  border: 1px solid var(--ft-accent);
+  box-shadow: none;
 }

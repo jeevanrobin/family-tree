@@ -90,7 +90,12 @@ export default function PersonCard({
     >
       {/* Contextual Relationship Role Badge */}
       {relationshipRole && (
-        <span className="ft-person-card__relation-pill" aria-label={`Relationship: ${relationshipRole}`}>
+        <span
+          className={`ft-person-card__relation-pill ${
+            constellationTier === 'extended' ? 'ft-person-card__relation-pill--soft' : ''
+          }`}
+          aria-label={`Relationship: ${relationshipRole}`}
+        >
           {relationshipRole}
         </span>
       )}
