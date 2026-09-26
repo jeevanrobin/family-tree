@@ -31,6 +31,7 @@ import PhotoLightbox from './modals/PhotoLightbox.jsx';
 import DocumentViewerModal from './modals/DocumentViewerModal.jsx';
 import GlobalSearchModal from './GlobalSearchModal.jsx';
 import RelationshipFinderModal from './modals/RelationshipFinderModal.jsx';
+import TreePosterModal from './modals/TreePosterModal.jsx';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
 import { indexedDBManager } from '../store/local/indexedDBManager.js';
@@ -104,6 +105,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
   const [isTourOpen, setIsTourOpen] = useState(false);
   // Person the "How are we related?" finder starts from (null = closed)
   const [relFinderFrom, setRelFinderFrom] = useState(null);
+  const [posterOpen, setPosterOpen] = useState(false);
   const [isArrangeMode, setIsArrangeMode] = useState(false);
 
   const handleToggleArrangeMode = useCallback(() => {
@@ -760,6 +762,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
             onDeselect={handleDeselect}
             onOpenAddModal={() => handleOpenAddModal(null, null)}
             onOpenDataModal={() => setDataModalOpen(true)}
+            onOpenPoster={() => setPosterOpen(true)}
             onStartTour={handleStartTour}
             theme={theme}
             onToggleTheme={handleToggleTheme}
@@ -896,6 +899,12 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
         </>
       )}
       </Suspense>
+
+        <TreePosterModal
+          isOpen={posterOpen}
+          onClose={() => setPosterOpen(false)}
+          familyName={activeFamily?.name || ''}
+        />
 
         <RelationshipFinderModal
           isOpen={relFinderFrom !== null}

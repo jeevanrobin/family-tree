@@ -11139,3 +11139,66 @@ button {
   font-size: 0.75rem;
   color: var(--ft-text-muted);
 }
+
+/* ── Tree poster export ──────────────────────────────────── */
+.ft-poster-body {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.ft-poster-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ft-poster-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.84rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-poster-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.ft-poster-meta,
+.ft-poster-hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ft-text-muted);
+}
+
+.ft-poster-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ft-poster-preview {
+  border-radius: 12px;
+  border: 1px solid var(--ft-border);
+  background: var(--ft-surface-soft);
+  padding: 10px;
+  max-height: 62vh;
+  overflow: auto;
+}
+
+.ft-poster-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  .ft-poster-body {
+    grid-template-columns: 1fr;
+  }
+}
