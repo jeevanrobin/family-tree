@@ -108,9 +108,9 @@ export function useFamilyTree() {
   // Relationship labels on cards: Telugu kinship terms or English roles.
   const [labelLanguage, setLabelLanguageState] = useState(() => {
     try {
-      return localStorage.getItem('family-tree-label-language') || 'te';
+      return localStorage.getItem('family-tree-label-language') || 'en';
     } catch {
-      return 'te';
+      return 'en';
     }
   });
   const setLabelLanguage = useCallback((lang) => {
