@@ -42,3 +42,4 @@ playwright/.cache/
 # Generated test output
 coverage/
 /test_*.png
+.firebase/
