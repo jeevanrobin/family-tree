@@ -1,0 +1,33 @@
+# Deploys the live site when changes are merged into main.
+name: Deploy to Firebase Hosting (live)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Deploy only once the Firebase secret has been added (see DEPLOY.md).
+      HAS_FIREBASE_SECRET: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ANVAYA_FAMILYTREE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      - if: env.HAS_FIREBASE_SECRET != 'true'
+        run: echo "Firebase secret not set yet; skipping deploy (see DEPLOY.md)."
+      - if: env.HAS_FIREBASE_SECRET == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ANVAYA_FAMILYTREE }}
+          channelId: live
+          projectId: anvaya-familytree
