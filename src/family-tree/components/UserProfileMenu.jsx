@@ -7,6 +7,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFamily } from '../auth/FamilyContext.jsx';
 import { ROLE_LABELS } from '../auth/roles.js';
+import { canInstall, onInstallAvailability, promptInstall } from '../pwa/installPrompt.js';
 
 export default function UserProfileMenu({
   activeView = 'tree',
@@ -24,6 +25,9 @@ export default function UserProfileMenu({
   isLocalMode = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Offered when the browser says the app can be installed (Chrome/Android).
+  const [installable, setInstallable] = useState(canInstall);
+  useEffect(() => onInstallAvailability(setInstallable), []);
   const menuRef = useRef(null);
 
   // Safe consumption of FamilyContext
@@ -219,6 +223,24 @@ export default function UserProfileMenu({
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               <span>Explore the family story</span>
+            </button>
+          )}
+
+          {installable && (
+            <button
+              type="button"
+              className="ft-header__menu-item"
+              role="menuitem"
+              onClick={() => {
+                closeMenu();
+                promptInstall();
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M12 3v12M7 10l5 5 5-5" />
+                <path d="M5 21h14" />
+              </svg>
+              <span>Install app</span>
             </button>
           )}
 

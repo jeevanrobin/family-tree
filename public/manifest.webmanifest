@@ -1,0 +1,19 @@
+{
+  "name": "Anvaya Family Tree",
+  "short_name": "Anvaya",
+  "description": "Your family's private tree: generations, stories and memories.",
+  "id": "/",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E0E4E8",
+  "theme_color": "#E56515",
+  "lang": "en",
+  "categories": ["lifestyle", "social"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
