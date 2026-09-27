@@ -118,6 +118,8 @@ function relationshipToRow(rel, familyId) {
     person_id_1: personId1,
     person_id_2: personId2,
     start_date: rel.startDate || null,
+    // Only sent when set, so saving works before migration 012 is applied.
+    ...(rel.placement ? { placement: rel.placement } : {}),
   };
 }
 
@@ -139,6 +141,7 @@ function rowToRelationship(row) {
     base.personAId = row.person_id_1;
     base.personBId = row.person_id_2;
     base.startDate = row.start_date || null;
+    base.placement = row.placement || null;
   }
 
   return base;

@@ -22,17 +22,20 @@ const FIELD_LABELS = {
   notes: 'Notes',
   privacy: 'Privacy',
   startDate: 'Marriage date',
+  placement: 'Shown with',
 };
 
 const HIDDEN_FIELDS = new Set(['photoUrl', 'displayName']);
 
 function formatValue(field, value) {
+  if (field === 'placement' && !value) return "husband's family";
   if (value === null || value === undefined || value === '') return '—';
   if (/date/i.test(field) && /^\d{4}-\d{2}-\d{2}/.test(String(value))) {
     const d = new Date(`${String(value).slice(0, 10)}T00:00:00`);
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
   if (field === 'photo') return value ? 'photo' : '—';
+  if (field === 'placement') return value === 'wife' ? "wife's family" : "husband's family";
   const text = String(value);
   return text.length > 60 ? `${text.slice(0, 57)}…` : text;
 }

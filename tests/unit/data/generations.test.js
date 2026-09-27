@@ -41,3 +41,34 @@ describe('generations when spouses come from different rows', () => {
     expect(cross[0].junctionY).toBeGreaterThan(y('pullamma'));
   });
 });
+
+describe('illarikam: couple shown with the wife’s family', () => {
+  // Two families; Ravi (son of A) marries Sita (daughter of B), same row.
+  const people = [P('a1', 'male'), P('a2', 'female'), P('b1', 'male'), P('b2', 'female'), P('ravi', 'male'), P('sita', 'female')];
+  const base = [
+    sp('a1', 'a2'), sp('b1', 'b2'),
+    pc('a1', 'ravi'), pc('a2', 'ravi'), pc('b1', 'sita'), pc('b2', 'sita'),
+  ];
+  const owner = (placement) => {
+    const rels = [...base, { ...sp('ravi', 'sita'), placement }];
+    const layout = computeTreeLayout(people, rels, {});
+    const cross = layout.lines.find((l) => l.crossFamily);
+    return cross.parentIds.includes('a1') ? 'wife' : 'husband'; // the *other* family gets the cross link
+  };
+
+  it('defaults to the husband’s family', () => {
+    expect(owner(null)).toBe('husband');
+  });
+
+  it('follows the marriage setting', () => {
+    expect(owner('wife')).toBe('wife');
+  });
+
+  it('with different rows, the husband joins the wife’s row when set', () => {
+    const { people: ppl, rels } = family('male');
+    const withWife = rels.map((r) => (r.type === 'spouse' && r.personAId === 'yakareddy' ? { ...r, placement: 'wife' } : r));
+    const gen = computeGenerations(ppl, withWife);
+    expect(gen.get('yakareddy')).toBe(gen.get('pullamma'));
+    expect(gen.get('pullamma')).toBe(gen.get('mallamma') + 1);
+  });
+});

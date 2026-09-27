@@ -343,6 +343,25 @@ export function getAncestryLineage(selectedId) {
 
 // ── Dynamic Generation Calculation (Data-Driven from Graph) ─
 
+/**
+ * Whose family a married couple is shown with: the marriage's own
+ * `placement` ('husband' | 'wife') when set, otherwise the husband's side
+ * (recorded male, or — gender not recorded — married to a woman).
+ * @returns {string|null} the spouse whose family hosts the couple, or null
+ *   when it cannot be told (e.g. neither gender recorded).
+ */
+export function coupleHostId(aId, bId, genderOf, placement = null) {
+  const gA = genderOf(aId);
+  const gB = genderOf(bId);
+  const husbandSide = (x, gx, go) => (gx === 'male' && go !== 'male') || (go === 'female' && gx !== 'female');
+  let husband = null;
+  let wife = null;
+  if (husbandSide(aId, gA, gB)) [husband, wife] = [aId, bId];
+  else if (husbandSide(bId, gB, gA)) [husband, wife] = [bId, aId];
+  if (!husband) return null;
+  return placement === 'wife' ? wife : husband;
+}
+
 export function computeGenerations(people = getAllPersons(), relationships = getAllRelationships()) {
   const genMap = new Map();
   if (!people || people.length === 0) return genMap;
@@ -388,30 +407,25 @@ export function computeGenerations(people = getAllPersons(), relationships = get
   // pushing rows down, so the number of passes and rows is capped.
   const genderOf = new Map(people.map((p) => [p.id, p.gender]));
   const hasParents = (id) => (childToParents.get(id) || []).length > 0;
-  // The husband's side: recorded male, or (gender not recorded) married to
-  // someone recorded female.
-  const isHusbandSide = (x, other) => {
-    const gx = genderOf.get(x);
-    const go = genderOf.get(other);
-    return (gx === 'male' && go !== 'male') || (go === 'female' && gx !== 'female');
-  };
   const spousePairs = [];
   relationships.forEach((r) => {
     if (r.type !== 'spouse') return;
     const a = r.personAId || r.personId1;
     const b = r.personBId || r.personId2;
-    if (a && b && a !== b) spousePairs.push([a, b]);
+    if (a && b && a !== b) spousePairs.push([a, b, r.placement || null]);
   });
+  const hostOf = (a, b, placement) => coupleHostId(a, b, (id) => genderOf.get(id), placement);
   const siblingPairs = [];
   siblingGraph.forEach((list, a) => list.forEach((b) => siblingPairs.push([a, b])));
 
   // A wife whose husband also has parents in the tree takes his row outright
   // (her own parents would otherwise keep pulling her one row lower).
   const followsSpouse = new Map(); // wifeId -> husbandId
-  spousePairs.forEach(([a, b]) => {
+  spousePairs.forEach(([a, b, placement]) => {
     if (!hasParents(a) || !hasParents(b)) return;
-    if (isHusbandSide(a, b)) followsSpouse.set(b, a);
-    else if (isHusbandSide(b, a)) followsSpouse.set(a, b);
+    const host = hostOf(a, b, placement);
+    if (host === a) followsSpouse.set(b, a);
+    else if (host === b) followsSpouse.set(a, b);
   });
 
   const cap = people.length + 1;
@@ -437,7 +451,7 @@ export function computeGenerations(people = getAllPersons(), relationships = get
     });
 
     // Spouses share a row.
-    spousePairs.forEach(([a, b]) => {
+    spousePairs.forEach(([a, b, placement]) => {
       if (!genMap.has(a) || !genMap.has(b)) return;
       const gA = genMap.get(a);
       const gB = genMap.get(b);
@@ -447,8 +461,8 @@ export function computeGenerations(people = getAllPersons(), relationships = get
       let target;
       if (aBlood && !bBlood) target = gA;
       else if (bBlood && !aBlood) target = gB;
-      else if (aBlood && bBlood && isHusbandSide(a, b)) target = gA;
-      else if (aBlood && bBlood && isHusbandSide(b, a)) target = gB;
+      else if (aBlood && bBlood && hostOf(a, b, placement) === a) target = gA;
+      else if (aBlood && bBlood && hostOf(a, b, placement) === b) target = gB;
       else target = Math.max(gA, gB);
       set(a, target);
       set(b, target);

@@ -20,6 +20,7 @@ import {
   GENERATION_CONFIG,
 } from '../data/familyDataService.js';
 import { getInitials, formatDate, getLifespanInfo, getAvatarGradient } from '../utils/familyHelpers.js';
+import { coupleHostId } from '../data/familyDataService.js';
 import { useFamily } from '../auth/FamilyContext.jsx';
 import { useMediaUrl } from '../hooks/useMediaUrl.js';
 import {
@@ -855,8 +856,20 @@ export default function PersonDetails({
                   {spouses.map((spouse) => {
                     const marriage = familyStore.getMarriage(person.id, spouse.id);
                     const date = marriage?.startDate || '';
+                    // Which family the couple is shown with — only a choice
+                    // when both spouses have parents in the tree.
+                    const genderOf = (id) => familyStore.getPersonById(id)?.gender;
+                    const husbandId = coupleHostId(person.id, spouse.id, genderOf, 'husband');
+                    const bothHaveParents =
+                      familyStore.getParents(person.id).length > 0 && familyStore.getParents(spouse.id).length > 0;
+                    const showPlacement = canEdit && marriage && husbandId && bothHaveParents;
+                    const husband = husbandId === String(person.id) ? person : spouse;
+                    const wife = husband === person ? spouse : person;
+                    const placement = marriage?.placement === 'wife' ? 'wife' : 'husband';
+                    const firstName = (p) => p.firstName || p.displayName;
                     return (
-                      <label key={spouse.id} className="ft-details__marriage">
+                      <React.Fragment key={spouse.id}>
+                      <label className="ft-details__marriage">
                         <span>
                           Married{spouses.length > 1 ? ` (${spouse.firstName || spouse.displayName})` : ''}
                         </span>
@@ -878,6 +891,37 @@ export default function PersonDetails({
                           <strong>{date ? formatDate(date) : 'Not recorded'}</strong>
                         )}
                       </label>
+                      {showPlacement && (
+                        <div className="ft-details__placement" role="group" aria-label="Show this couple with">
+                          <span>Show this couple with</span>
+                          <div className="ft-details__placement-options">
+                            {[
+                              ['husband', `${firstName(husband)}'s family`],
+                              ['wife', `${firstName(wife)}'s family`],
+                            ].map(([value, label]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                className={`ft-details__placement-btn ${placement === value ? 'ft-details__placement-btn--on' : ''}`}
+                                aria-pressed={placement === value}
+                                onClick={() => {
+                                  try {
+                                    familyStore.setMarriagePlacement(person.id, spouse.id, value);
+                                  } catch (err) {
+                                    console.warn(err.message);
+                                  }
+                                }}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          {placement === 'wife' && (
+                            <span className="ft-details__placement-note">Illarikam: shown with the wife's family.</span>
+                          )}
+                        </div>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </div>
