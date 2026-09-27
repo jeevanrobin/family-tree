@@ -434,6 +434,15 @@ export default function PersonDetails({
               )}
             </div>
 
+            {person.privacy === 'private' && (
+              <p className="ft-details__private-note" role="note">
+                🔒{' '}
+                {canEdit
+                  ? 'Private: viewers see only the name and photo.'
+                  : 'Private: details are visible to the family’s owners and editors.'}
+              </p>
+            )}
+
             {/* Vitals Grid */}
             <div className="ft-details__section" style={{ marginTop: '20px' }}>
               <h3 className="ft-details__section-title">Vitals &amp; Origins</h3>

@@ -12208,3 +12208,51 @@ button {
   font-size: 0.74rem;
   color: var(--ft-text-muted);
 }
+
+/* ── Private person ─────────────────────────────────────────── */
+.ft-form-private {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--ft-border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.ft-form-private input {
+  margin-top: 3px;
+  accent-color: var(--ft-accent);
+}
+
+.ft-form-private span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  color: var(--ft-text-primary);
+}
+
+.ft-form-private small {
+  font-size: 0.75rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-person-card__lock {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.ft-details__private-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--ft-surface-soft);
+  border: 1px dashed var(--ft-border);
+  font-size: 0.82rem;
+  color: var(--ft-text-secondary);
+}

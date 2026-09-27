@@ -34,6 +34,7 @@ export default function EditPersonModal({
   const [occupation, setOccupation] = useState(initial.occupation);
   const [biography, setBiography] = useState(initial.biography);
   const [notes, setNotes] = useState(initial.notes);
+  const [isPrivate, setIsPrivate] = useState(initial.isPrivate);
 
   // Profile Photo Upload State
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
@@ -81,6 +82,7 @@ export default function EditPersonModal({
       setOccupation(state.occupation);
       setBiography(state.biography);
       setNotes(state.notes);
+      setIsPrivate(state.isPrivate);
 
       // Clean up previous preview URL if any
       if (photoPreviewUrl && photoPreviewUrl.startsWith('blob:')) {
@@ -125,6 +127,7 @@ export default function EditPersonModal({
     setOccupation(state.occupation);
     setBiography(state.biography);
     setNotes(state.notes);
+    setIsPrivate(state.isPrivate);
     setErrorMsg('');
     onClose?.();
   };
@@ -223,6 +226,7 @@ export default function EditPersonModal({
           isPhotoRemoved,
           biography,
           notes,
+          isPrivate,
         },
         person
       );
@@ -447,6 +451,22 @@ export default function EditPersonModal({
                 disabled={isUploadingPhoto}
               />
             </div>
+
+            <label className="ft-form-private">
+              <input
+                type="checkbox"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                disabled={isUploadingPhoto}
+              />
+              <span>
+                <strong>🔒 Private</strong>
+                <small>
+                  Viewers see only the name and photo. Dates, places, job, notes, stories, photos and documents are
+                  visible to owners and editors.
+                </small>
+              </span>
+            </label>
           </div>
 
           <div className="ft-modal-footer">

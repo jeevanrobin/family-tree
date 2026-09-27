@@ -233,3 +233,24 @@ describe('SupabaseAdapter change log', () => {
     expect(entries[0].before).toMatchObject({ type: 'spouse', personAId: 'person-a' });
   });
 });
+
+describe('SupabaseAdapter private members', () => {
+  it('loads people through family_members_visible when the database has it', async () => {
+    const { supabase } = await import('../../../src/family-tree/lib/supabaseClient.js');
+    const masked = [{ id: 'uuid-p', local_id: 'person-p', family_id: FID, display_name: 'Neeraja', privacy: 'private', date_of_birth: null }];
+    supabase.rpc.mockResolvedValueOnce({ data: masked, error: null });
+    const adapter = new SupabaseAdapter(FID);
+    const res = await adapter._loadVisibleMembers(FID);
+    expect(supabase.rpc).toHaveBeenCalledWith('family_members_visible', { check_family_id: FID });
+    expect(res.data).toEqual(masked);
+  });
+
+  it('falls back to the table before migration 013 is applied', async () => {
+    const { supabase } = await import('../../../src/family-tree/lib/supabaseClient.js');
+    for (const key of Object.keys(db)) delete db[key];
+    db.family_members = [{ id: 'uuid-a', local_id: 'person-a', family_id: FID }];
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: { code: 'PGRST202', message: 'Could not find the function public.family_members_visible' } });
+    const res = await new SupabaseAdapter(FID)._loadVisibleMembers(FID);
+    expect(res.data.map((r) => r.id)).toEqual(['uuid-a']);
+  });
+});
