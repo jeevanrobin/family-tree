@@ -186,7 +186,10 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
         const lead = parents.find((p) => p.gender === 'male') || parents[0];
         if (!lead) return;
         const word = child.gender === 'female' ? 'Daughter' : child.gender === 'male' ? 'Son' : 'Child';
-        add(child.id, { targetId: lead.id, text: `↑ ${word} of ${lead.displayName}` });
+        const leadNode = all.get(String(lead.id));
+        const childNode = all.get(String(child.id));
+        const above = leadNode && childNode && leadNode.y < childNode.y;
+        add(child.id, { targetId: lead.id, text: `${above ? '↑ ' : ''}${word} of ${lead.displayName}` });
         const family = (child.lastName || '').trim();
         const childName = child.firstName || child.displayName;
         // One tag, under the father (or the only parent), not under both.

@@ -713,7 +713,14 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
       const targetY = childNode.y;
 
       let path;
-      if (Math.abs(sourceX - targetX) < 2) {
+      let busY = junctionY;
+      if (crossFamily && targetY < parentBottomY) {
+        // Child in the parent's own row (e.g. a niece married to her uncle
+        // and placed with his family): run under the cards into the child's
+        // bottom edge.
+        busY = parentBottomY + 22;
+        path = `M ${sourceX} ${sourceY} L ${sourceX} ${busY} L ${targetX} ${busY} L ${targetX} ${targetY + NODE_HEIGHT}`;
+      } else if (Math.abs(sourceX - targetX) < 2) {
         // Direct vertical drop from marriage union/parent down to child
         path = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
       } else {
@@ -737,7 +744,7 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
         crossFamily,
         sourceX,
         sourceY,
-        junctionY,
+        junctionY: busY,
         targetX,
         targetY,
         path: path.trim().replace(/\s+/g, ' '),

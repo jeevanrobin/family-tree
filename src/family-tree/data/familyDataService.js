@@ -378,78 +378,92 @@ export function computeGenerations(people = getAllPersons(), relationships = get
     }
   });
 
-  // Find root ancestors (nodes with 0 known parents)
-  const roots = people.filter((p) => !childToParents.has(p.id) || childToParents.get(p.id).length === 0);
+  // Generations are settled by repeated passes:
+  //  • a child sits one row below their lowest-placed parent;
+  //  • spouses share a row. A spouse with no parents in the tree joins
+  //    their partner's row. When both have parents in different rows (e.g.
+  //    a man marrying his sister's daughter), the wife joins the husband's
+  //    row, matching how couples are placed with the husband's family.
+  // A loop in the data (someone recorded as their own ancestor) would keep
+  // pushing rows down, so the number of passes and rows is capped.
+  const genderOf = new Map(people.map((p) => [p.id, p.gender]));
+  const hasParents = (id) => (childToParents.get(id) || []).length > 0;
+  // The husband's side: recorded male, or (gender not recorded) married to
+  // someone recorded female.
+  const isHusbandSide = (x, other) => {
+    const gx = genderOf.get(x);
+    const go = genderOf.get(other);
+    return (gx === 'male' && go !== 'male') || (go === 'female' && gx !== 'female');
+  };
+  const spousePairs = [];
+  relationships.forEach((r) => {
+    if (r.type !== 'spouse') return;
+    const a = r.personAId || r.personId1;
+    const b = r.personBId || r.personId2;
+    if (a && b && a !== b) spousePairs.push([a, b]);
+  });
+  const siblingPairs = [];
+  siblingGraph.forEach((list, a) => list.forEach((b) => siblingPairs.push([a, b])));
 
-  // If entire component has loops or no clean root, take any node
-  const processed = new Set();
-  // People on the current descent path: a loop in the data (someone recorded
-  // as their own ancestor) must not recurse forever.
-  const onPath = new Set();
+  // A wife whose husband also has parents in the tree takes his row outright
+  // (her own parents would otherwise keep pulling her one row lower).
+  const followsSpouse = new Map(); // wifeId -> husbandId
+  spousePairs.forEach(([a, b]) => {
+    if (!hasParents(a) || !hasParents(b)) return;
+    if (isHusbandSide(a, b)) followsSpouse.set(b, a);
+    else if (isHusbandSide(b, a)) followsSpouse.set(a, b);
+  });
 
-  function assignGen(personId, currentGen) {
-    if (onPath.has(personId)) return;
-    if (processed.has(personId)) {
-      if (currentGen > (genMap.get(personId) ?? 0)) {
-        genMap.set(personId, currentGen);
-      } else {
+  const cap = people.length + 1;
+  people.forEach((p) => genMap.set(p.id, 0));
+  for (let pass = 0; pass < cap + 2; pass += 1) {
+    let changed = false;
+    const set = (id, g) => {
+      const v = Math.min(g, cap);
+      if (genMap.has(id) && genMap.get(id) !== v) {
+        genMap.set(id, v);
+        changed = true;
+      }
+    };
+
+    // Blood rows: one below the lowest-placed parent.
+    people.forEach((p) => {
+      if (followsSpouse.has(p.id)) {
+        set(p.id, genMap.get(followsSpouse.get(p.id)) ?? 0);
         return;
       }
-    } else {
-      genMap.set(personId, currentGen);
-      processed.add(personId);
-    }
-
-    // Propagate to spouses (must be in same generation)
-    const spouses = spouseGraph.get(personId) || [];
-    spouses.forEach((sId) => {
-      if (genMap.get(sId) !== currentGen) {
-        genMap.set(sId, currentGen);
-        processed.add(sId);
-      }
+      const parents = (childToParents.get(p.id) || []).filter((id) => genMap.has(id));
+      if (parents.length) set(p.id, Math.max(...parents.map((id) => genMap.get(id))) + 1);
     });
 
-    // Propagate to siblings (must be in same generation)
-    const siblings = siblingGraph.get(personId) || [];
-    siblings.forEach((sId) => {
-      if (genMap.get(sId) !== currentGen) {
-        genMap.set(sId, currentGen);
-        processed.add(sId);
-      }
+    // Spouses share a row.
+    spousePairs.forEach(([a, b]) => {
+      if (!genMap.has(a) || !genMap.has(b)) return;
+      const gA = genMap.get(a);
+      const gB = genMap.get(b);
+      if (gA === gB) return;
+      const aBlood = hasParents(a);
+      const bBlood = hasParents(b);
+      let target;
+      if (aBlood && !bBlood) target = gA;
+      else if (bBlood && !aBlood) target = gB;
+      else if (aBlood && bBlood && isHusbandSide(a, b)) target = gA;
+      else if (aBlood && bBlood && isHusbandSide(b, a)) target = gB;
+      else target = Math.max(gA, gB);
+      set(a, target);
+      set(b, target);
     });
 
-    // Propagate to children (must be gen + 1)
-    const children = parentToChildren.get(personId) || [];
-    onPath.add(personId);
-    children.forEach((cId) => {
-      assignGen(cId, currentGen + 1);
+    // Explicit siblings share a row.
+    siblingPairs.forEach(([a, b]) => {
+      if (!genMap.has(a) || !genMap.has(b)) return;
+      const g = Math.max(genMap.get(a), genMap.get(b));
+      set(a, g);
+      set(b, g);
     });
-    onPath.delete(personId);
+
+    if (!changed) break;
   }
-
-  roots.forEach((root) => {
-    assignGen(root.id, 0);
-  });
-
-  // Handle any disconnected or unvisited people
-  people.forEach((p) => {
-    if (!processed.has(p.id)) {
-      assignGen(p.id, 0);
-    }
-  });
-
-  // Ensure spouses have matching generation
-  relationships.forEach((r) => {
-    if (r.type === 'spouse') {
-      const a = r.personAId || r.personId1;
-      const b = r.personBId || r.personId2;
-      const gA = genMap.get(a) ?? 0;
-      const gB = genMap.get(b) ?? 0;
-      const maxG = Math.max(gA, gB);
-      genMap.set(a, maxG);
-      genMap.set(b, maxG);
-    }
-  });
 
   // Normalize minimum generation to 0
   let minGen = Infinity;
