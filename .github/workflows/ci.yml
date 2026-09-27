@@ -49,15 +49,14 @@ jobs:
       TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
       TEST_FAMILY_ID: ${{ secrets.TEST_FAMILY_ID }}
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # The Supabase project settings are deliberately NOT passed here: with
+      # them the legacy suite would run against the production database.
+      # Only the Firebase deploy workflows use them, for the build.
 
 # Secrets Configuration (optional):
 # - TEST_USER_EMAIL: Test user email for live Supabase tests
 # - TEST_USER_PASSWORD: Test user password for live Supabase tests
 # - TEST_FAMILY_ID: UUID of test family for live Supabase tests
-# - VITE_SUPABASE_URL: Supabase project URL
-# - VITE_SUPABASE_ANON_KEY: Supabase anon key (public)
 #
 # When secrets are absent, live integration tests are safely skipped.
 # CI will still pass with 312 tests passed + 8 skipped.
