@@ -388,6 +388,8 @@ export class FamilyStore {
         personId1: personAId,
         personId2: personBId,
         startDate: r.startDate || null,
+        // Which family the couple is shown with: 'husband' (default) or 'wife'.
+        placement: r.placement === 'wife' || r.placement === 'husband' ? r.placement : null,
       };
     }
 
@@ -872,6 +874,9 @@ export class FamilyStore {
         return this.addRelationship(before);
       }
       if (action === 'update' && before?.type === 'spouse') {
+        if ((entry.fields || []).includes('placement')) {
+          return this.setMarriagePlacement(before.personAId, before.personBId, before.placement || null);
+        }
         return this.setMarriageDate(before.personAId, before.personBId, before.startDate || null);
       }
     }
@@ -1172,6 +1177,36 @@ export class FamilyStore {
     if (this.repository && typeof this.repository.saveRelationship === 'function') {
       Promise.resolve(this.repository.saveRelationship({ ...rel }, { operation: 'update' })).catch((err) => {
         console.warn('FamilyStore: repository.saveRelationship (marriage date) failed:', err);
+      });
+    }
+    return rel;
+  }
+
+  /**
+   * Which family a married couple is shown with in the tree: 'husband'
+   * (the default) or 'wife' (e.g. illarikam). Logged and undoable.
+   */
+  setMarriagePlacement(personAId, personBId, placement) {
+    const rel = this.getMarriage(personAId, personBId);
+    if (!rel) throw new Error('These two people are not recorded as spouses.');
+    const value = placement === 'wife' ? 'wife' : placement === 'husband' ? 'husband' : null;
+    if ((rel.placement || null) === value) return rel;
+    const before = { ...rel };
+    rel.placement = value;
+    rel.updatedAt = new Date().toISOString();
+    this._logChange({
+      action: 'update',
+      entityType: 'relationship',
+      entityId: rel.id,
+      before,
+      after: { ...rel },
+      fields: ['placement'],
+    });
+    this.notify();
+
+    if (this.repository && typeof this.repository.saveRelationship === 'function') {
+      Promise.resolve(this.repository.saveRelationship({ ...rel }, { operation: 'update' })).catch((err) => {
+        console.warn('FamilyStore: repository.saveRelationship (placement) failed:', err);
       });
     }
     return rel;

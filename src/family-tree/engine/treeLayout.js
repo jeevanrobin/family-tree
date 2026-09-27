@@ -12,7 +12,7 @@
  * - SUBTREE_GAP (72px) between sibling family branches
  */
 
-import { computeGenerations, GENERATION_CONFIG } from '../data/familyDataService.js';
+import { computeGenerations, coupleHostId, GENERATION_CONFIG } from '../data/familyDataService.js';
 import { computeSubtreeGeometry, FamilySubtree } from './subtreeGeometry.js';
 // Wide cards: photo on the left, name and details on the right.
 export const NODE_WIDTH = 250;
@@ -254,9 +254,23 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     });
   }
   const childUnitOwner = new Map(); // childUnit.id -> { parentUnit, bloodChildId }
+  const marriageOf = (a, b) =>
+    relationships.find((r) => {
+      if (r.type !== 'spouse') return false;
+      const x = String(r.personAId || r.personId1);
+      const y = String(r.personBId || r.personId2);
+      return (x === a && y === b) || (x === b && y === a);
+    });
   childUnitCandidates.forEach((candidates, childUnitId) => {
-    const sons = candidates.filter((c) => personMap.get(c.bloodChildId)?.gender === 'male');
-    childUnitOwner.set(childUnitId, sons.length === 1 ? sons[0] : candidates[0]);
+    // The couple is placed with the family the marriage names (husband's by
+    // default, or the wife's, e.g. illarikam); otherwise the first reached.
+    let owner = null;
+    if (candidates.length > 1) {
+      const [a, b] = candidates.map((c) => c.bloodChildId);
+      const host = coupleHostId(a, b, (id) => personMap.get(String(id))?.gender, marriageOf(a, b)?.placement);
+      owner = candidates.find((c) => c.bloodChildId === host) || null;
+    }
+    childUnitOwner.set(childUnitId, owner || candidates[0]);
   });
   const hasCrossFamily = [...childUnitCandidates.values()].some((list) => list.length > 1);
 
@@ -713,7 +727,14 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
       const targetY = childNode.y;
 
       let path;
-      if (Math.abs(sourceX - targetX) < 2) {
+      let busY = junctionY;
+      if (crossFamily && targetY < parentBottomY) {
+        // Child in the parent's own row (e.g. a niece married to her uncle
+        // and placed with his family): run under the cards into the child's
+        // bottom edge.
+        busY = parentBottomY + 22;
+        path = `M ${sourceX} ${sourceY} L ${sourceX} ${busY} L ${targetX} ${busY} L ${targetX} ${targetY + NODE_HEIGHT}`;
+      } else if (Math.abs(sourceX - targetX) < 2) {
         // Direct vertical drop from marriage union/parent down to child
         path = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
       } else {
@@ -737,7 +758,7 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
         crossFamily,
         sourceX,
         sourceY,
-        junctionY,
+        junctionY: busY,
         targetX,
         targetY,
         path: path.trim().replace(/\s+/g, ' '),

@@ -56,3 +56,16 @@ describe('unlinking relatives', () => {
     expect(store.getSpouses('dad').map((p) => p.id)).toEqual(['mom']);
   });
 });
+
+describe('marriage placement', () => {
+  it('saves the choice, logs it and can be undone', () => {
+    try { localStorage.clear(); } catch { /* no storage */ }
+    const store = makeStore();
+    store.setMarriagePlacement('dad', 'mom', 'wife');
+    expect(store.getMarriage('dad', 'mom').placement).toBe('wife');
+    const [entry] = store.getChangeLog();
+    expect(entry.fields).toEqual(['placement']);
+    store.restoreChange(entry);
+    expect(store.getMarriage('dad', 'mom').placement).toBeNull();
+  });
+});
