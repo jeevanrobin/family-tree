@@ -14,8 +14,9 @@
 
 import { computeGenerations, GENERATION_CONFIG } from '../data/familyDataService.js';
 import { computeSubtreeGeometry, FamilySubtree } from './subtreeGeometry.js';
-export const NODE_WIDTH = 230;
-export const NODE_HEIGHT = 160;
+// Wide cards: photo on the left, name and details on the right.
+export const NODE_WIDTH = 250;
+export const NODE_HEIGHT = 104;
 export const SPOUSE_GAP = 24;        // Tight couple spacing
 export const SIBLING_GAP = 36;       // Sibling cohort spacing (increased for readability)
 export const SUBTREE_GAP = 72;      // Large gap between family clusters/branches (for future use)
@@ -24,18 +25,17 @@ export const FAMILY_UNIT_GAP = 48;
 export const COMPONENT_GAP = 72;
 
 /* Vertical spacing between generations:
-   NODE_HEIGHT (160px) + GENERATION_GAP (65px) = 225px generation height.
-   This provides a compact 65px gap between generation cards without overlap,
-   leaving ideal space for orthogonal junction routing. */
-export const GENERATION_GAP = 65;
-export const GENERATION_HEIGHT = NODE_HEIGHT + GENERATION_GAP; // 225px
+   NODE_HEIGHT (104px) + GENERATION_GAP (72px) = 176px generation height,
+   leaving room for connector buses and the cross-family tags under cards. */
+export const GENERATION_GAP = 72;
+export const GENERATION_HEIGHT = NODE_HEIGHT + GENERATION_GAP; // 176px
 
 /* Roman numerals for generation marks — generations are genuinely ordinal,
    so the numbering carries real information. */
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
 
 /* Vertical anchor offset for spouse connections (side center of card). */
-export const PORTRAIT_BAND_Y = Math.round(NODE_HEIGHT / 2); // 80px
+export const PORTRAIT_BAND_Y = Math.round(NODE_HEIGHT / 2); // 52px
 
 function resolveRank(gen, minGen, maxGen) {
   const span = Math.max(maxGen - minGen, 1);

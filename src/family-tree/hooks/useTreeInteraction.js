@@ -15,6 +15,7 @@ import {
   calculateFocusOnNode,
 } from '../engine/treeInteraction.js';
 import { easeOutCubic } from '../utils/animationHelpers.js';
+import { NODE_WIDTH, NODE_HEIGHT } from '../engine/treeLayout.js';
 
 export function useTreeInteraction({
   layout,
@@ -196,9 +197,9 @@ export function useTreeInteraction({
       // Stay readable: never zoom in past 110% or out below 55% for a family.
       const scale = Math.min(Math.max(target.scale, 0.55), 1.1);
       const minX = Math.min(...familyNodes.map((n) => n.x));
-      const maxX = Math.max(...familyNodes.map((n) => n.x + (n.width || 230)));
+      const maxX = Math.max(...familyNodes.map((n) => n.x + (n.width || NODE_WIDTH)));
       const minY = Math.min(...familyNodes.map((n) => n.y));
-      const maxY = Math.max(...familyNodes.map((n) => n.y + (n.height || 160)));
+      const maxY = Math.max(...familyNodes.map((n) => n.y + (n.height || NODE_HEIGHT)));
       const x = (rect.width - drawerWidth) / 2 - ((minX + maxX) / 2) * scale;
       const y = rect.height / 2 - ((minY + maxY) / 2) * scale;
       animateCameraTo(x, y, scale, duration);

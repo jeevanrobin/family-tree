@@ -6,6 +6,7 @@
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { calculateMinimapTransform } from '../engine/treeInteraction.js';
+import { NODE_WIDTH, NODE_HEIGHT } from '../engine/treeLayout.js';
 
 const MINIMAP_WIDTH = 180;
 const MINIMAP_HEIGHT = 120;
@@ -124,8 +125,8 @@ export default function TreeMinimap({
             const nx = node.x * radar.scale + radar.offsetX;
             const ny = node.y * radar.scale + radar.offsetY;
             if (!Number.isFinite(nx) || !Number.isFinite(ny)) return null;
-            const nw = Math.max((node.width || 230) * radar.scale, 4);
-            const nh = Math.max((node.height || 160) * radar.scale, 3);
+            const nw = Math.max((node.width || NODE_WIDTH) * radar.scale, 4);
+            const nh = Math.max((node.height || NODE_HEIGHT) * radar.scale, 3);
             const isSelected = selectedId === id;
 
             return (

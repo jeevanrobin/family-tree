@@ -8,6 +8,8 @@ import PersonCard from './PersonCard.jsx';
 import TreeMinimap from './TreeMinimap.jsx';
 import { useTreeInteraction } from '../hooks/useTreeInteraction.js';
 import { computeTreeHighlight } from '../engine/treeHighlight.js';
+import { NODE_WIDTH, NODE_HEIGHT } from '../engine/treeLayout.js';
+import { buildFamilyColors, familyKey } from '../utils/familyColors.js';
 
 const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   {
@@ -81,8 +83,8 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     const rect = e.currentTarget.getBoundingClientRect();
     const isLeft = e.clientX < rect.left + rect.width / 2;
     const side = isLeft ? 'before' : 'after';
-    const nodeWidth = layout?.nodeWidth || 230;
-    const nodeHeight = layout?.nodeHeight || 160;
+    const nodeWidth = layout?.nodeWidth || NODE_WIDTH;
+    const nodeHeight = layout?.nodeHeight || NODE_HEIGHT;
     const indicatorX = isLeft ? node.x - 12 : node.x + nodeWidth + 12;
     setDropIndicator({
       cohortKey: node.cohortKey,
@@ -149,6 +151,20 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
     [interaction]
   );
 
+  // Family (surname) colours for the card strips, from everyone in the tree.
+  const familyColors = useMemo(() => {
+    const all = layout?.allNodes || layout?.nodes;
+    if (!all) return buildFamilyColors([]);
+    const nodesList = [...all.values()];
+    // The eldest generation's surname is the tree's own family: first colour.
+    const minGen = Math.min(...nodesList.map((n) => n.gen ?? 0));
+    const eldest = nodesList.find((n) => (n.gen ?? 0) === minGen && familyKey(n.person));
+    return buildFamilyColors(
+      nodesList.map((n) => n.person),
+      { primaryKey: eldest ? familyKey(eldest.person) : '' }
+    );
+  }, [layout]);
+
   // Short "married into" tags replace the long cross-family lines:
   // under the child ("Daughter of …") and under the parent ("Name → Family").
   const crossFamilyTags = useMemo(() => {
@@ -186,7 +202,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
   return (
     <div
       ref={containerRef}
-      className={`ft-canvas ${isPanning ? 'ft-canvas--panning' : ''} ${transform?.scale < 0.55 ? 'ft-canvas--compact-zoom' : ''} ${transform?.scale < 0.5 ? 'ft-canvas--far-zoom' : ''}`}
+      className={`ft-canvas ${isPanning ? 'ft-canvas--panning' : ''} ${transform?.scale < 0.55 ? 'ft-canvas--compact-zoom' : ''}`}
       style={{ '--canvas-scale': transform?.scale || 1 }}
       onMouseDown={interaction.handleMouseDown}
       onMouseMove={interaction.handleMouseMove}
@@ -392,6 +408,7 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
                 teluguRole={teluguRole}
                 onClick={onSelectPerson}
                 animationDelay={genDelay}
+                familyColor={familyColors.colorOf(node.person)}
               />
 
               {crossFamilyTags.has(String(id)) && (
@@ -492,6 +509,21 @@ const FamilyTreeCanvas = forwardRef(function FamilyTreeCanvas(
           </button>
         ))}
       </div>
+
+      {/* Family colour legend (card strips) */}
+      {familyColors.families.length > 1 && (
+        <div className="ft-family-legend" aria-label="Family colours">
+          {familyColors.families.slice(0, 6).map((f) => (
+            <span key={f.key} className="ft-family-legend__item" title={`${f.name}: ${f.count} people`}>
+              <i style={{ background: f.color }} aria-hidden="true" />
+              {f.name}
+            </span>
+          ))}
+          {familyColors.families.length > 6 && (
+            <span className="ft-family-legend__more">+{familyColors.families.length - 6} more</span>
+          )}
+        </div>
+      )}
 
       {/* Radar Overview Minimap */}
       <TreeMinimap
