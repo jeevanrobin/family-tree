@@ -2,8 +2,8 @@
  * MEDIDA'S FAMILY — TREE LAYOUT POLISH & CONNECTOR INTEGRITY TEST
  *
  * Verifies:
- * 1. Exact node dimensions (230x160) matching CSS plaque styling
- * 2. Reduced generation gap (225px vs 282px)
+ * 1. Exact node dimensions (250x104 wide card) matching CSS card styling
+ * 2. Compact generation height (176px)
  * 3. 8 siblings on a single generation row with compact spacing
  * 4. Branch locality: Ramaiah children under Ramaiah, Lakshmi child under Lakshmi
  * 5. Cross-branch marriage: Venkata Reddy and Padmavathi adjacent as a couple unit
@@ -93,9 +93,9 @@ const layout = computeTreeLayout(persons, relationships);
 
 // ── Group 1: Standardized Dimensions & Compact Generation Pitch ──
 console.log('── Group 1: Dimensions & Spacing Standards ──');
-assert(NODE_WIDTH === 230, `NODE_WIDTH is exactly 230px (actual: ${NODE_WIDTH})`);
-assert(NODE_HEIGHT === 160, `NODE_HEIGHT is exactly 160px (actual: ${NODE_HEIGHT})`);
-assert(GENERATION_HEIGHT === 225, `GENERATION_HEIGHT is compact 225px (actual: ${GENERATION_HEIGHT})`);
+assert(NODE_WIDTH === 250, `NODE_WIDTH is exactly 250px (actual: ${NODE_WIDTH})`);
+assert(NODE_HEIGHT === 104, `NODE_HEIGHT is exactly 104px (actual: ${NODE_HEIGHT})`);
+assert(GENERATION_HEIGHT === 176, `GENERATION_HEIGHT is compact 176px (actual: ${GENERATION_HEIGHT})`);
 
 // ── Group 2: Generational Layers & Sibling Cohort ──
 console.log('\n── Group 2: Generational Cohorts ──');

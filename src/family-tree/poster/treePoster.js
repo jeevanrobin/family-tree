@@ -7,6 +7,7 @@
  */
 
 import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT } from '../engine/treeLayout.js';
+import { buildFamilyColors, familyKey } from '../utils/familyColors.js';
 
 const THEMES = {
   light: {
@@ -21,6 +22,8 @@ const THEMES = {
     male: '#7C858E',
     female: '#C98467',
     other: '#8A9099',
+    lateCard: '#F6F0E6',
+    late: '#92400E',
   },
   dark: {
     background: '#0B1018',
@@ -34,6 +37,8 @@ const THEMES = {
     male: '#6D747C',
     female: '#B4472F',
     other: '#737B84',
+    lateCard: '#221F1A',
+    late: '#F2C98A',
   },
 };
 
@@ -127,30 +132,57 @@ export function buildTreePosterSvg(family, options = {}) {
   parts.push('</g>');
 
   parts.push(`<g transform="translate(${offsetX} ${offsetY})" font-family="Helvetica, Arial, sans-serif">`);
+  // Same card as the app: family strip, photo tile on the left (square =
+  // male, round = female), name and details on the right, "Late" for the
+  // deceased.
+  const nodeList = [...layout.nodes.values()];
+  const minGen = Math.min(...nodeList.map((n) => n.gen ?? 0));
+  const eldest = nodeList.find((n) => (n.gen ?? 0) === minGen && familyKey(n.person));
+  const { colorOf } = buildFamilyColors(
+    nodeList.map((n) => n.person),
+    { primaryKey: eldest ? familyKey(eldest.person) : '' }
+  );
   layout.nodes.forEach((node) => {
     const p = node.person;
-    const cx = node.x + NODE_WIDTH / 2;
-    const avatarColor = p.gender === 'male' ? t.male : p.gender === 'female' ? t.female : t.other;
-    const nameLines = wrapName(p.displayName || [p.firstName, p.lastName].filter(Boolean).join(' '));
+    const fam = colorOf(p) || t.other;
+    const late = p.livingStatus === 'deceased';
+    const nameLines = wrapName(p.displayName || [p.firstName, p.lastName].filter(Boolean).join(' '), 18);
     const meta = [showYears ? years(p) : '', showPlaces ? p.placeOfBirth || p.hometown || '' : ''].filter(Boolean);
+    const tile = 60;
+    const tx = node.x + 18;
+    const ty = node.y + (NODE_HEIGHT - tile) / 2;
+    const textX = tx + tile + 12;
+    const lines = (late ? 1 : 0) + nameLines.length + meta.length;
+    let y = node.y + NODE_HEIGHT / 2 - (lines * 18) / 2 + 13;
 
     parts.push(`<g>`);
     parts.push(
-      `<rect x="${node.x}" y="${node.y}" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="14" fill="${t.card}" stroke="${t.cardBorder}" stroke-width="1.5"/>`
+      `<rect x="${node.x}" y="${node.y}" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="14" fill="${late ? t.lateCard : t.card}" stroke="${t.cardBorder}" stroke-width="1.5"/>`
     );
-    parts.push(`<circle cx="${cx}" cy="${node.y + 38}" r="24" fill="${avatarColor}"/>`);
+    parts.push(`<rect x="${node.x}" y="${node.y + 12}" width="5" height="${NODE_HEIGHT - 24}" rx="2" fill="${fam}"/>`);
     parts.push(
-      `<text x="${cx}" y="${node.y + 45}" text-anchor="middle" font-size="17" font-weight="700" fill="#FFFFFF">${escapeXml(initials(p))}</text>`
+      `<rect x="${tx}" y="${ty}" width="${tile}" height="${tile}" rx="${p.gender === 'female' ? tile / 2 : 14}" fill="${fam}" fill-opacity="0.15" stroke="${fam}" stroke-opacity="0.45" stroke-width="2"/>`
     );
-    nameLines.forEach((line, i) => {
+    parts.push(
+      `<text x="${tx + tile / 2}" y="${ty + tile / 2 + 6}" text-anchor="middle" font-size="17" font-weight="700" fill="${fam}" font-family="Helvetica, Arial, sans-serif">${escapeXml(initials(p))}</text>`
+    );
+    if (late) {
       parts.push(
-        `<text x="${cx}" y="${node.y + 88 + i * 21}" text-anchor="middle" font-size="17" font-weight="700" font-family="Georgia, 'Times New Roman', serif" fill="${t.name}">${escapeXml(line)}</text>`
+        `<text x="${textX}" y="${y}" font-size="11" font-weight="700" letter-spacing="1.2" fill="${t.late}" font-family="Helvetica, Arial, sans-serif">🪔 LATE</text>`
       );
+      y += 17;
+    }
+    nameLines.forEach((line) => {
+      parts.push(
+        `<text x="${textX}" y="${y}" font-size="16" font-weight="700" font-family="Georgia, 'Times New Roman', serif" fill="${t.name}">${escapeXml(line)}</text>`
+      );
+      y += 19;
     });
-    meta.forEach((line, i) => {
+    meta.forEach((line) => {
       parts.push(
-        `<text x="${cx}" y="${node.y + 88 + nameLines.length * 21 + 4 + i * 17}" text-anchor="middle" font-size="13" fill="${t.meta}">${escapeXml(line)}</text>`
+        `<text x="${textX}" y="${y}" font-size="12" fill="${t.meta}" font-family="Helvetica, Arial, sans-serif">${escapeXml(line)}</text>`
       );
+      y += 16;
     });
     parts.push(`</g>`);
   });

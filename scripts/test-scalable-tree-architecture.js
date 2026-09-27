@@ -102,8 +102,8 @@ runTest('Deep Multi-Generation Lineage: Card dimensions strictly preserved', () 
 
   const layout = computeTreeLayout(people, relationships);
 
-  assert.strictEqual(layout.nodeWidth, 230, 'Card width must be 230');
-  assert.strictEqual(layout.nodeHeight, 160, 'Card height must be 160');
+  assert.strictEqual(layout.nodeWidth, 250, 'Card width must be 250');
+  assert.strictEqual(layout.nodeHeight, 104, 'Card height must be 104');
 
   assert.strictEqual(layout.nodes.get('gen0_1').gen, 0);
   assert.strictEqual(layout.nodes.get('gen0_2').gen, 0);

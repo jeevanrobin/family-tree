@@ -4,6 +4,7 @@
  */
 
 import { clamp } from '../utils/animationHelpers.js';
+import { NODE_WIDTH, NODE_HEIGHT } from './treeLayout.js';
 
 export const MIN_ZOOM = 0.35;
 export const MAX_ZOOM = 2.2;
@@ -81,9 +82,9 @@ export function calculateFitToBranch(
 
   branchNodes.forEach((node) => {
     if (node.x < minX) minX = node.x;
-    if (node.x + (node.width || 230) > maxX) maxX = node.x + (node.width || 230);
+    if (node.x + (node.width || NODE_WIDTH) > maxX) maxX = node.x + (node.width || NODE_WIDTH);
     if (node.y < minY) minY = node.y;
-    if (node.y + (node.height || 160) > maxY) maxY = node.y + (node.height || 160);
+    if (node.y + (node.height || NODE_HEIGHT) > maxY) maxY = node.y + (node.height || NODE_HEIGHT);
   });
 
   const width = Math.max(maxX - minX, 100);

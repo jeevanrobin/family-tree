@@ -18,6 +18,7 @@ export default function PersonCard({
   generationRank = 'current',
   onClick,
   animationDelay = 0,
+  familyColor = null,
 }) {
   const initials = useMemo(() => getInitials(person), [person]);
   const avatarBg = useMemo(() => getAvatarGradient(person), [person]);
@@ -87,6 +88,8 @@ export default function PersonCard({
       }}
       style={{
         animationDelay: `${animationDelay}ms`,
+        // Family (surname) colour: the strip on the left and the photo tint.
+        ...(familyColor ? { '--ft-family': familyColor } : {}),
       }}
     >
       {/* Contextual Relationship Role Badge */}
@@ -127,7 +130,7 @@ export default function PersonCard({
 
       {/* Archival portrait frame */}
       <div className="ft-person-card__avatar-frame">
-        <div className="ft-person-card__avatar" style={{ background: avatarBg }}>
+        <div className="ft-person-card__avatar" style={familyColor || showPhoto ? undefined : { background: avatarBg }}>
           {showPhoto ? (
             <img
               src={resolvedPhoto}
@@ -139,28 +142,32 @@ export default function PersonCard({
             <span className="ft-person-card__initials">{initials}</span>
           )}
         </div>
-        {/* Status Jewel */}
-        <span
-          className={`ft-person-card__status-dot ft-person-card__status-dot--${person.livingStatus}`}
-          title={person.livingStatus === 'alive' ? 'Living' : 'Deceased'}
-        />
+        {/* Living: a small green dot. Passed away: "Late" beside the name. */}
+        {person.livingStatus === 'alive' && (
+          <span className="ft-person-card__status-dot ft-person-card__status-dot--alive" title="Living" />
+        )}
       </div>
 
       {/* Plaque metadata */}
       <div className="ft-person-card__info">
+        {person.livingStatus === 'deceased' && (
+          <div className="ft-person-card__late" title="Passed away">
+            <span aria-hidden="true">🪔</span> Late
+          </div>
+        )}
         <div className="ft-person-card__name" title={person.displayName}>
           {person.displayName}
         </div>
 
-        {dateDisplay && (
-          <div className="ft-person-card__dates">
-            {dateDisplay}
-          </div>
-        )}
-
         {roleAndLocation && (
           <div className="ft-person-card__occupation" title={roleAndLocation}>
             {roleAndLocation}
+          </div>
+        )}
+
+        {dateDisplay && (
+          <div className="ft-person-card__dates">
+            {dateDisplay}
           </div>
         )}
       </div>
