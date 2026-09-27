@@ -353,6 +353,22 @@ export class SupabaseAdapter extends FamilyRepository {
    * response was lost, so the queue retried the create), update that row
    * instead of inserting a duplicate. Returns a { data, error } result.
    */
+  /**
+   * Everyone in the family. Private people come back with their details
+   * blanked for viewers and contributors (migration 013); owners and
+   * editors get full rows. Falls back to the plain table before 013 is
+   * applied.
+   */
+  async _loadVisibleMembers(fid) {
+    const res = await supabase.rpc('family_members_visible', { check_family_id: fid });
+    if (!res) return supabase.from('family_members').select('*').eq('family_id', fid);
+    const missing =
+      res.error &&
+      (res.error.code === 'PGRST202' || res.error.code === '42883' || /family_members_visible/.test(res.error.message || ''));
+    if (missing) return supabase.from('family_members').select('*').eq('family_id', fid);
+    return res;
+  }
+
   async _insertOnce(table, row) {
     if (row.local_id) {
       const existing = await supabase
@@ -412,7 +428,7 @@ export class SupabaseAdapter extends FamilyRepository {
       docsRes,
       siblingOrdersRes,
     ] = await Promise.all([
-      supabase.from('family_members').select('*').eq('family_id', fid),
+      this._loadVisibleMembers(fid),
       supabase.from('relationships').select('*').eq('family_id', fid),
       supabase.from('stories').select('*').eq('family_id', fid),
       supabase.from('story_persons').select('story_id, person_id'),
@@ -480,7 +496,7 @@ export class SupabaseAdapter extends FamilyRepository {
         .eq('family_id', fid)
         .order('changed_at', { ascending: false })
         .limit(limit),
-      supabase.from('family_members').select('id, local_id').eq('family_id', fid),
+      this._loadVisibleMembers(fid),
     ]);
     if (logRes.error) {
       console.warn('SupabaseAdapter: change log unavailable:', logRes.error.message);

@@ -20,6 +20,7 @@ export function getPersonInitialState(person) {
       photoUrl: '',
       biography: '',
       notes: '',
+      isPrivate: false,
     };
   }
 
@@ -51,6 +52,7 @@ export function getPersonInitialState(person) {
     photoUrl: person.photo || person.photoUrl || '',
     biography: person.biography || '',
     notes: person.notes || '',
+    isPrivate: person.privacy === 'private',
   };
 }
 
@@ -98,5 +100,14 @@ export function preparePersonUpdates(formData, existingPerson = {}) {
     photo: finalPhoto || null,
     biography: (formData.biography || '').trim(),
     notes: (formData.notes || '').trim(),
+    // Private: viewers see the name only (enforced by the database, 013).
+    privacy:
+      typeof formData.isPrivate === 'boolean'
+        ? formData.isPrivate
+          ? 'private'
+          : existingPerson.privacy && existingPerson.privacy !== 'private'
+            ? existingPerson.privacy
+            : 'family'
+        : existingPerson.privacy || 'family',
   };
 }

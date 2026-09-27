@@ -172,6 +172,12 @@ export default function PersonCard({
         )}
       </div>
 
+      {person.privacy === 'private' && (
+        <span className="ft-person-card__lock" title="Private: details visible to owners and editors" aria-label="Private">
+          🔒
+        </span>
+      )}
+
       {/* Subtle Gender Bar */}
       <div
         className={`ft-person-card__gender-bar ft-person-card__gender-bar--${person.gender}`}
