@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.anvaya.familytree",
+      "sha256_cert_fingerprints": [
+        "69:6E:1B:18:97:5C:ED:47:AE:38:8D:B8:AF:33:44:DD:77:B6:19:4B:7B:FF:CB:96:5D:75:76:96:9D:70:68:84"
+      ]
+    }
+  }
+]
