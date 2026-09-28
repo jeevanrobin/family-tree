@@ -390,6 +390,11 @@ class IndexedDBManager {
     return this.put(STORES.TOMBSTONES, record);
   }
 
+  // A record re-created with the same id (undo, restore) is no longer deleted.
+  async removeTombstone(id) {
+    return this.delete(STORES.TOMBSTONES, String(id));
+  }
+
   async isTombstoned(id) {
     const found = await this.get(STORES.TOMBSTONES, id);
     return Boolean(found);
