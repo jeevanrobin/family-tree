@@ -92,6 +92,23 @@ describe('SyncEngine pull reconciliation', () => {
     engine.destroy();
   });
 
+  it('shows a link again once it is re-created after a local delete (undo, restore)', async () => {
+    await indexedDBManager.putBatch(STORES.PEOPLE, [person('p1'), person('p2')]);
+    await indexedDBManager.addTombstone({ id: 'r1', familyId: FID, entityType: ENTITY_TYPES.RELATIONSHIP });
+    const rel = { id: 'r1', type: 'spouse', personAId: 'p1', personBId: 'p2' };
+    const engine = makeEngine({ people: [person('p1'), person('p2')], relationships: [rel] });
+
+    engine.isOnline = () => false; // queue only; the push is simulated below
+    await engine.enqueue(ENTITY_TYPES.RELATIONSHIP, 'r1', MUTATION_OP.CREATE, rel);
+    for (const item of await indexedDBManager.getPendingQueue(FID)) await indexedDBManager.dequeue(item.id);
+    engine.isOnline = () => true;
+
+    const result = await engine.pullRemoteChanges();
+
+    expect(result.relationships.map((r) => r.id)).toEqual(['r1']);
+    engine.destroy();
+  });
+
   it('takes the cloud version when there is no pending local edit', async () => {
     await indexedDBManager.putBatch(STORES.PEOPLE, [person('p1', { occupation: 'Old', updatedAt: '2030-01-01T00:00:00Z' })]);
     const engine = makeEngine({ people: [person('p1', { occupation: 'New' })] });

@@ -259,6 +259,8 @@ export class SyncEngine {
         await indexedDBManager.addTombstone({ id: entityId, familyId: fid, entityType });
       } else if (payload) {
         await indexedDBManager.put(targetStore, { ...payload, family_id: fid, familyId: fid });
+        // Re-created after a delete (undo, restore): stop hiding it on pulls.
+        await indexedDBManager.removeTombstone(entityId);
       }
     } else if (entityType === ENTITY_TYPES.SIBLING_ORDER) {
       try {
