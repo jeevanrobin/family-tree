@@ -9,6 +9,8 @@ import { NODE_WIDTH, NODE_HEIGHT } from './treeLayout.js';
 export const MIN_ZOOM = 0.35;
 export const MAX_ZOOM = 2.2;
 export const ZOOM_STEP = 0.16;
+// Opening zoom for a family too large to fit on screen.
+export const LARGE_TREE_ZOOM = 0.7;
 
 /**
  * Calculate new scale and origin-adjusted offset for zoom centered at a point
@@ -48,12 +50,23 @@ export function calculateFitToBounds(
   const scaleX = availableW / (bounds.width || 1);
   const scaleY = availableH / (bounds.height || 1);
   
-  // Choose scale so the tree fills the available viewport comfortably
-  const scale = clamp(Math.min(scaleX, scaleY), minScale, 1.25);
-
   const centerX = (bounds.minX + bounds.maxX) / 2;
   const centerY = (bounds.minY + bounds.maxY) / 2;
 
+  // Too big to show whole at a readable size: open at a comfortable zoom on
+  // the eldest generation (top centre) instead of shrinking the family to a
+  // thin, unreadable strip. The overview map shows the rest.
+  if (Math.min(scaleX, scaleY) < minScale) {
+    const scale = Math.max(minScale, LARGE_TREE_ZOOM);
+    return {
+      x: containerWidth / 2 - centerX * scale,
+      y: paddingY - bounds.minY * scale,
+      scale,
+    };
+  }
+
+  // Choose scale so the tree fills the available viewport comfortably
+  const scale = clamp(Math.min(scaleX, scaleY), minScale, 1.25);
   return {
     x: containerWidth / 2 - centerX * scale,
     y: containerHeight / 2 - centerY * scale,
