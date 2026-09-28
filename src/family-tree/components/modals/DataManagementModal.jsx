@@ -5,6 +5,8 @@
 
 import React, { useState, useRef } from 'react';
 import { exportGedcom, importGedcom } from '../../gedcom/gedcom.js';
+import familyStore from '../../store/FamilyStore.js';
+import { findMissingLinks } from '../../utils/restoreLinks.js';
 
 export default function DataManagementModal({
   isOpen,
@@ -22,6 +24,8 @@ export default function DataManagementModal({
   const [fullResetConfirmOpen, setFullResetConfirmOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null); // { type: 'success' | 'error', text: '' }
   const fileInputRef = useRef(null);
+  const restoreInputRef = useRef(null);
+  const [missingLinks, setMissingLinks] = useState(null); // links found in a backup, awaiting confirmation
 
   if (!isOpen) return null;
 
@@ -113,6 +117,50 @@ export default function DataManagementModal({
       }
     };
     reader.readAsText(file);
+  };
+
+  // Restore links: add back relationships a backup has and the tree lost,
+  // leaving everything else as it is.
+  const handleRestoreFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const backup = JSON.parse(String(event.target?.result || ''));
+        const snap = familyStore.getSnapshot();
+        const found = findMissingLinks(backup, snap.people, snap.relationships);
+        if (found.length === 0) {
+          setMissingLinks(null);
+          setStatusMessage({ type: 'success', text: 'Nothing to restore: every link in that backup is already in the tree.' });
+        } else {
+          setStatusMessage(null);
+          setMissingLinks(found);
+        }
+      } catch {
+        setStatusMessage({ type: 'error', text: 'That file is not a family backup (.json).' });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleRestoreLinks = () => {
+    let added = 0;
+    const skipped = [];
+    (missingLinks || []).forEach((link) => {
+      try {
+        familyStore.addRelationship(link.rel);
+        added += 1;
+      } catch (err) {
+        skipped.push(`${link.label} (${err.message})`);
+      }
+    });
+    setMissingLinks(null);
+    setStatusMessage({
+      type: skipped.length ? 'error' : 'success',
+      text: `Restored ${added} ${added === 1 ? 'link' : 'links'}.${skipped.length ? ` Skipped: ${skipped.join('; ')}` : ''}`,
+    });
   };
 
   const handleReset = () => {
@@ -272,6 +320,50 @@ export default function DataManagementModal({
               </svg>
               <span>Choose File</span>
             </button>
+          </div>
+
+          {/* Restore Missing Links Card */}
+          <div className="ft-data-action-card ft-restore-links">
+            <div className="ft-restore-links__head">
+              <div>
+                <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--ft-text-primary)' }}>
+                  Restore Missing Links
+                </div>
+                <p style={{ fontSize: '0.80rem', color: 'var(--ft-text-secondary)', marginTop: '2px' }}>
+                  Choose an older backup to add back parent, marriage and sibling links the tree has lost. Nothing else changes.
+                </p>
+              </div>
+              <input
+                ref={restoreInputRef}
+                type="file"
+                accept=".json,application/json"
+                style={{ display: 'none' }}
+                onChange={handleRestoreFile}
+              />
+              <button className="ft-form-btn ft-form-btn--secondary" onClick={() => restoreInputRef.current?.click()}>
+                <span>Choose Backup</span>
+              </button>
+            </div>
+            {missingLinks && (
+              <div className="ft-restore-links__found">
+                <p className="ft-restore-links__title">
+                  {missingLinks.length} {missingLinks.length === 1 ? 'link is' : 'links are'} in the backup but missing now:
+                </p>
+                <ul>
+                  {missingLinks.map((link) => (
+                    <li key={`${link.type}-${link.fromId}-${link.toId}`}>{link.label}</li>
+                  ))}
+                </ul>
+                <div className="ft-restore-links__actions">
+                  <button className="ft-form-btn ft-form-btn--secondary" onClick={() => setMissingLinks(null)}>
+                    Cancel
+                  </button>
+                  <button className="ft-form-btn ft-form-btn--primary" onClick={handleRestoreLinks}>
+                    Add {missingLinks.length} {missingLinks.length === 1 ? 'link' : 'links'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Clear All Data Card */}

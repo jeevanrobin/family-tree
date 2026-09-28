@@ -2974,6 +2974,47 @@ button {
   border-radius: 12px;
 }
 
+.ft-restore-links {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.ft-restore-links__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ft-restore-links__found {
+  border-top: 1px solid var(--ft-border);
+  padding-top: 12px;
+}
+
+.ft-restore-links__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ft-text-primary);
+  margin: 0 0 6px;
+}
+
+.ft-restore-links__found ul {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  color: var(--ft-text-secondary);
+  line-height: 1.6;
+}
+
+.ft-restore-links__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .ft-reset-modal-confirm {
   margin: 0 24px 16px;
   padding: 16px;
