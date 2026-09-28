@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT, SPOUSE_GAP, SIBLING_GAP, GENERATION_HEIGHT, STACK_STEP } from '../../../src/family-tree/engine/treeLayout.js';
+import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT, SPOUSE_GAP, SIBLING_GAP, GENERATION_HEIGHT } from '../../../src/family-tree/engine/treeLayout.js';
 
 describe('computeTreeLayout', () => {
   describe('empty input handling', () => {
@@ -143,7 +143,7 @@ describe('computeTreeLayout', () => {
   });
 
   describe('sibling ordering', () => {
-    it('stacks childless siblings in one column, eldest on top', () => {
+    it('positions siblings horizontally in same generation', () => {
       const persons = [
         { id: 'parent', name: 'Parent' },
         { id: 'child1', name: 'Child One' },
@@ -161,39 +161,22 @@ describe('computeTreeLayout', () => {
       const c2 = result.nodes.get('child2');
       const c3 = result.nodes.get('child3');
       
-      expect(c1.x).toBe(c2.x);
-      expect(c2.x).toBe(c3.x);
-
-      expect(c2.y - c1.y).toBe(STACK_STEP);
-      expect(c3.y - c2.y).toBe(STACK_STEP);
-    });
-
-    it('keeps siblings with families of their own side by side', () => {
-      const persons = ['parent', 'child1', 'child2', 'child3', 'g1', 'g2', 'g3'].map((id) => ({ id, name: id }));
-      const relationships = [
-        { id: 'r1', type: 'parent-child', parentId: 'parent', childId: 'child1' },
-        { id: 'r2', type: 'parent-child', parentId: 'parent', childId: 'child2' },
-        { id: 'r3', type: 'parent-child', parentId: 'parent', childId: 'child3' },
-        { id: 'r4', type: 'parent-child', parentId: 'child1', childId: 'g1' },
-        { id: 'r5', type: 'parent-child', parentId: 'child2', childId: 'g2' },
-        { id: 'r6', type: 'parent-child', parentId: 'child3', childId: 'g3' },
-      ];
-      const result = computeTreeLayout(persons, relationships);
-      const [c1, c2, c3] = ['child1', 'child2', 'child3'].map((id) => result.nodes.get(id));
-
       expect(c1.y).toBe(c2.y);
       expect(c2.y).toBe(c3.y);
+      
       expect(c2.x).toBeGreaterThan(c1.x);
       expect(c3.x).toBeGreaterThan(c2.x);
     });
 
     it('applies sibling gap between children', () => {
-      const persons = ['parent', 'child1', 'child2', 'g1', 'g2'].map((id) => ({ id, name: id }));
+      const persons = [
+        { id: 'parent', name: 'Parent' },
+        { id: 'child1', name: 'Child One' },
+        { id: 'child2', name: 'Child Two' },
+      ];
       const relationships = [
         { id: 'r1', type: 'parent-child', parentId: 'parent', childId: 'child1' },
         { id: 'r2', type: 'parent-child', parentId: 'parent', childId: 'child2' },
-        { id: 'r3', type: 'parent-child', parentId: 'child1', childId: 'g1' },
-        { id: 'r4', type: 'parent-child', parentId: 'child2', childId: 'g2' },
       ];
       const result = computeTreeLayout(persons, relationships);
       
@@ -607,9 +590,7 @@ describe('computeTreeLayout remarriages', () => {
     const center = (id) => layout.nodes.get(id).centerX;
 
     expect(center('c1')).toBeLessThan(center('c2'));
-    // c2 and c3 (no children of their own) share a column under a ═ s2.
-    expect(center('c2')).toBe(center('c3'));
-    expect(layout.nodes.get('c3').y).toBeGreaterThan(layout.nodes.get('c2').y);
+    expect(center('c2')).toBeLessThan(center('c3'));
     const stem = (childId) => layout.lines.find((l) => l.type === 'parent-child' && l.childId === childId).sourceX;
     expect(stem('c1')).toBeCloseTo((center('s1') + center('a')) / 2);
     expect(stem('c2')).toBeCloseTo((center('a') + center('s2')) / 2);
@@ -622,7 +603,7 @@ describe('computeTreeLayout remarriages', () => {
     expect(layout.nodes.get('c2')).toMatchObject({ cohortKey: 'a-s2-children', cohortSiblingIds: ['c2', 'c3'], canReorder: true });
 
     const reordered = computeTreeLayout(persons, relationships, { customSiblingOrders: { 'a-s2-children': ['c3', 'c2'] } });
-    expect(reordered.nodes.get('c3').y).toBeLessThan(reordered.nodes.get('c2').y);
+    expect(reordered.nodes.get('c3').x).toBeLessThan(reordered.nodes.get('c2').x);
   });
 
   it('draws a spouse line for each marriage', () => {
