@@ -13,7 +13,7 @@
  * 9. Centered bounding box composition
  */
 
-import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT, GENERATION_HEIGHT, STACK_STEP } from '../src/family-tree/engine/treeLayout.js';
+import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT, GENERATION_HEIGHT } from '../src/family-tree/engine/treeLayout.js';
 
 let passed = 0;
 let failed = 0;
@@ -108,15 +108,9 @@ const siblingIds = ['venakamma', 'nagamma', 'ramaiah', 'lakshmi', 'kausalya', 'a
 const allSiblingsInGen1 = siblingIds.every((id) => layout.nodes.get(id)?.gen === 1);
 assert(allSiblingsInGen1, 'All 8 siblings are placed in Generation 1 (single row cohort)');
 
-// Siblings with a family of their own share one row; childless siblings are
-// stacked in columns that start on that row.
-const rowY = layout.nodes.get('ramaiah').y;
-assert(layout.nodes.get('lakshmi').y === rowY, 'Siblings with children share one row');
-const stackedOk = siblingIds.every((id) => {
-  const dy = layout.nodes.get(id).y - rowY;
-  return dy >= 0 && dy % STACK_STEP === 0;
-});
-assert(stackedOk, 'Childless siblings sit on that row or in a column below it');
+const gen1YPositions = siblingIds.map((id) => layout.nodes.get(id).y);
+const allSameY = gen1YPositions.every((y) => y === gen1YPositions[0]);
+assert(allSameY, 'All 8 siblings share identical Y coordinate (no staggered pseudo-generations)');
 
 // ── Group 3: Branch Locality & Cross-Branch Marriage ──
 console.log('\n── Group 3: Branch Locality & Cross-Branch Marriage ──');

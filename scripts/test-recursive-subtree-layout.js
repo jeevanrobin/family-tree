@@ -14,7 +14,7 @@
  * 11. focused branch
  */
 
-import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT, GENERATION_HEIGHT, STACK_STEP, STACK_INDENT } from '../src/family-tree/engine/treeLayout.js';
+import { computeTreeLayout, NODE_WIDTH, NODE_HEIGHT, GENERATION_HEIGHT } from '../src/family-tree/engine/treeLayout.js';
 
 function assert(condition, message) {
   if (!condition) {
@@ -68,12 +68,9 @@ console.log('\n── Scenario 2: One Parent + Multiple Children ──');
   const c3 = layout.nodes.get('c3');
 
   assert(c1.gen === 1 && c2.gen === 1 && c3.gen === 1, 'All 3 children share Generation 1');
-  // Childless children are stacked in one column, eldest on top.
-  assert(c1.x === c2.x && c2.x === c3.x, 'Childless children share one column');
-  assert(c2.y - c1.y === STACK_STEP && c3.y - c2.y === STACK_STEP, 'Children stacked in order, one card apart');
-  assert(c1.y - pNode.y === GENERATION_HEIGHT, 'Column starts one generation below the parent');
-  const columnCenter = c1.x - STACK_INDENT + (STACK_INDENT + NODE_WIDTH) / 2;
-  assert(Math.abs(pNode.centerX - columnCenter) < 2, `Parent is centered over the column (diff: ${Math.abs(pNode.centerX - columnCenter)})`);
+  assert(c1.y === c2.y && c2.y === c3.y, 'All children share identical Y coordinate');
+  const childrenCenter = (c1.centerX + c3.centerX) / 2;
+  assert(Math.abs(pNode.centerX - childrenCenter) < 2, `Parent is centered over 3 children (diff: ${Math.abs(pNode.centerX - childrenCenter)})`);
 }
 
 // ── Scenario 3: Couple + multiple children ──
@@ -99,10 +96,8 @@ console.log('\n── Scenario 3: Couple + Multiple Children ──');
   const c2 = layout.nodes.get('c2');
 
   const coupleCenter = (fNode.centerX + mNode.centerX) / 2;
-  // Two childless children: one column centred under the couple.
-  assert(c1.x === c2.x && c2.y > c1.y, 'Childless children stacked in one column');
-  const columnCenter = c1.x - STACK_INDENT + (STACK_INDENT + NODE_WIDTH) / 2;
-  assert(Math.abs(coupleCenter - columnCenter) < 2, 'Couple center aligns with the children column');
+  const childrenCenter = (c1.centerX + c2.centerX) / 2;
+  assert(Math.abs(coupleCenter - childrenCenter) < 2, 'Couple center aligns with children cohort center');
 }
 
 // ── Scenario 4 & 5: Sibling with no descendants vs Sibling with deep descendants ──
@@ -158,18 +153,20 @@ console.log('\n── Scenario 6: 8 Siblings ──');
   const sibNodes = siblingIds.map((id) => layout.nodes.get(id));
 
   assert(sibNodes.every((n) => n.gen === 1), 'All 8 siblings placed in Generation 1');
-  assert(sibNodes.every((n) => n.x === sibNodes[0].x), 'All 8 childless siblings share one column');
-
-  // Verify vertical non-overlap: every sibling sits below the previous one
+  assert(sibNodes.every((n) => n.y === sibNodes[0].y), 'All 8 siblings share identical Y coordinate');
+  
+  // Verify horizontal non-overlap: every subsequent sibling sits to the right of previous
   let hasNoOverlap = true;
   for (let i = 1; i < sibNodes.length; i++) {
-    if (sibNodes[i].y < sibNodes[i - 1].y + NODE_HEIGHT) {
+    if (sibNodes[i].x < sibNodes[i - 1].x + NODE_WIDTH) {
       hasNoOverlap = false;
       break;
     }
   }
-  assert(hasNoOverlap, 'All 8 siblings stacked in order without overlapping');
-  assert(layout.bounds.width < 3 * NODE_WIDTH, `8 childless siblings stay narrow (width: ${layout.bounds.width})`);
+  assert(hasNoOverlap, 'All 8 siblings maintain strictly positive non-overlapping horizontal spacing');
+
+  const cohortCenter = (sibNodes[0].centerX + sibNodes[7].centerX) / 2;
+  assert(Math.abs(rootNode.centerX - cohortCenter) < 5, 'Root parent is centered over the entire 8-sibling cohort');
 }
 
 // ── Scenario 7: Multiple Descendant Branches ──
@@ -202,11 +199,10 @@ console.log('\n── Scenario 7: Multiple Descendant Branches ──');
   const b2_c2 = layout.nodes.get('b2_c2');
 
   assert(b1_c2.x + NODE_WIDTH <= b2_c1.x, 'Branch 1 descendants strictly to the left of Branch 2 descendants');
-  // Each branch's two childless children form a column centred under it.
-  const columnCenter = (n) => n.x - STACK_INDENT + (STACK_INDENT + NODE_WIDTH) / 2;
-  assert(b1_c1.x === b1_c2.x && b2_c1.x === b2_c2.x, 'Each branch stacks its childless children');
-  assert(Math.abs(b1Node.centerX - columnCenter(b1_c1)) < 2, 'Branch 1 parent centered over its children');
-  assert(Math.abs(b2Node.centerX - columnCenter(b2_c1)) < 2, 'Branch 2 parent centered over its children');
+  const b1Center = (b1_c1.centerX + b1_c2.centerX) / 2;
+  assert(Math.abs(b1Node.centerX - b1Center) < 2, 'Branch 1 parent centered over its children');
+  const b2Center = (b2_c1.centerX + b2_c2.centerX) / 2;
+  assert(Math.abs(b2Node.centerX - b2Center) < 2, 'Branch 2 parent centered over its children');
 }
 
 // ── Scenario 8 & 9: Spouse + Children and Dual-Parent Child ──
