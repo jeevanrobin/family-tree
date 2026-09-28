@@ -6,7 +6,7 @@
  */
 
 import assert from 'node:assert';
-import { computeTreeLayout } from '../src/family-tree/engine/treeLayout.js';
+import { computeTreeLayout, STACK_STEP, STACK_INDENT } from '../src/family-tree/engine/treeLayout.js';
 import { computeGenerations } from '../src/family-tree/data/familyDataService.js';
 import { samplePersons, sampleRelationships } from '../src/family-tree/data/sampleData.js';
 
@@ -66,14 +66,15 @@ runTest('Generic Graph: Grandparents -> Parent -> Siblings A, B, C -> Child D', 
   const nodeC = fullLayout.nodes.get('sibC');
   const nodeD = fullLayout.nodes.get('childD');
   
-  assert.strictEqual(nodeA.y, nodeB.y, 'Siblings A and B must share same Y');
-  assert.strictEqual(nodeB.y, nodeC.y, 'Siblings B and C must share same Y');
+  // A and B have no children, so they share a column (A above B); C, who has
+  // a family, stays in the row beside them.
+  assert.strictEqual(nodeA.y, nodeC.y, 'Sibling A starts the row with C');
+  assert.strictEqual(nodeB.x, nodeA.x, 'Childless siblings A and B share a column');
+  assert.strictEqual(nodeB.y, nodeA.y + STACK_STEP, 'Sibling B is stacked under A');
   assert(nodeD.y > nodeC.y, 'Child D must be below Sibling C');
+  assert(nodeA.x < nodeC.x, 'Sibling A/B column before C');
 
-  assert(nodeA.x < nodeB.x, 'Sibling A before B');
-  assert(nodeB.x < nodeC.x, 'Sibling B before C');
-
-  const cohortMidX = (nodeA.x + nodeC.x + fullLayout.nodeWidth) / 2;
+  const cohortMidX = (nodeA.x - STACK_INDENT + nodeC.x + fullLayout.nodeWidth) / 2;
   const parentNode = fullLayout.nodes.get('parent1');
   const parentMidX = parentNode.x + fullLayout.nodeWidth / 2;
   assert(Math.abs(parentMidX - cohortMidX) < 2.0, 'Parent must be centered over sibling cohort');

@@ -30,6 +30,15 @@ export const COMPONENT_GAP = 72;
 export const GENERATION_GAP = 72;
 export const GENERATION_HEIGHT = NODE_HEIGHT + GENERATION_GAP; // 176px
 
+/* Children who have no children of their own are stacked in a column under
+   their parents instead of spreading sideways, so a large family stays about
+   as wide as its widest branch. STACK_INDENT leaves room on the left for the
+   connector running down the column; STACK_GAP separates the stacked cards
+   (and the "Daughter of ..." tag under a card). */
+export const STACK_INDENT = 32;
+export const STACK_GAP = 40;
+export const STACK_STEP = NODE_HEIGHT + STACK_GAP;
+
 /* Roman numerals for generation marks — generations are genuinely ordinal,
    so the numbering carries real information. */
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
@@ -281,7 +290,9 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
   // The M5C.2 subtree geometry models one spouse per person and places a
   // couple under both families, so remarriages and marriages between two
   // families in the tree are measured with the recursive unit measure below.
-  const useSubtreeGeometry = !constrained && !hasMultiSpouse && !hasCrossFamily;
+  // Childless children are stacked (see childSegments), which the subtree
+  // geometry does not model, so it only measures when nobody is stacked.
+  const subtreeGeometryFits = !constrained && !hasMultiSpouse && !hasCrossFamily;
 
   const collectRelatives = (startId, edges) => {
     const found = new Set();
@@ -379,7 +390,7 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
   // Without collapse/focus this is the M5C.2 subtree geometry width.
   const measureCache = new Map();
   function measureUnit(unit) {
-    if (useSubtreeGeometry) {
+    if (subtreeGeometryFits && !hasStackedChildren()) {
       const subtree = subtreeMap.get(unit.primary.id);
       return subtree ? subtree.width : unit.width;
     }
@@ -389,17 +400,60 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     const children = isUnitCollapsed(unit) ? [] : getChildUnits(unit).children;
     let width = unit.width;
     if (children.length > 0) {
-      const childrenWidth = children.reduce((sum, c) => sum + measureUnit(c.unit), 0)
-        + SUBTREE_GAP * (children.length - 1);
-      width = Math.max(unit.width, childrenWidth);
+      width = Math.max(unit.width, rowWidth(childSegments(children)));
     }
     measureCache.set(unit.id, width);
     return width;
   }
 
+  // A child with no children of their own (none recorded, not just collapsed).
+  const isLeafUnit = (unit) => getChildUnits(unit).children.length === 0;
+
+  // Splits a sibling row into segments, left to right: a child with a family
+  // of their own keeps a place in the row; consecutive childless siblings
+  // (of the same marriage) share one column, top to bottom, so birth order still reads naturally.
+  function childSegments(children) {
+    const segments = [];
+    children.forEach((child) => {
+      const last = segments[segments.length - 1];
+      if (isLeafUnit(child.unit)) {
+        // Children of different marriages keep separate groups.
+        if (last?.stack && last.items[0].cohortKey === child.cohortKey) last.items.push(child);
+        else segments.push({ stack: true, items: [child] });
+      } else {
+        segments.push({ stack: false, items: [child] });
+      }
+    });
+    // A lone childless sibling stays in the row like any other.
+    segments.forEach((seg) => {
+      if (seg.stack && seg.items.length < 2) seg.stack = false;
+    });
+    return segments;
+  }
+
+  let stackedChildren = null;
+  function hasStackedChildren() {
+    if (stackedChildren === null) {
+      stackedChildren = [...layerUnits.values()].some((units) =>
+        units.some((unit) => childSegments(getChildUnits(unit).children).some((seg) => seg.stack))
+      );
+    }
+    return stackedChildren;
+  }
+
+  function segmentWidth(seg) {
+    if (!seg.stack) return measureUnit(seg.items[0].unit);
+    return STACK_INDENT + Math.max(...seg.items.map((c) => c.unit.width));
+  }
+
+  function rowWidth(segments) {
+    return segments.reduce((sum, seg) => sum + segmentWidth(seg), 0) + SUBTREE_GAP * (segments.length - 1);
+  }
+
   // M5C.3: Position using subtree widths
   const calculatedPositions = new Map();
   const cohortMeta = new Map(); // personId -> sibling cohort info for Arrange mode
+  const stackSpine = new Map(); // personId -> x of the connector down a stacked column
   const hiddenIds = new Set();
   // Keyed by unit: a couple reachable through both spouses' parents is placed
   // twice and the later placement wins, so its badge must follow the same rule.
@@ -472,8 +526,8 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     const childY = (childGen - minGen) * GENERATION_HEIGHT;
 
     // Calculate total width needed for all children
-    const totalChildWidth = children.reduce((sum, c) => sum + measureUnit(c.unit), 0)
-      + SUBTREE_GAP * (children.length - 1);
+    const segments = childSegments(children);
+    const totalChildWidth = rowWidth(segments);
 
     // Position children sequentially within the parent's reserved width.
     // For remarriages, pull the row toward the couples that actually have
@@ -492,12 +546,28 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     }
     let childX = rowCenterX - totalChildWidth / 2;
 
-    children.forEach(({ unit: child }, idx) => {
-      const childWidth = measureUnit(child);
+    segments.forEach((seg, idx) => {
+      if (seg.stack) {
+        const spineX = childX + STACK_INDENT / 2;
+        seg.items.forEach(({ unit: child, bloodChildId }, row) => {
+          // The connector enters from the left, so the family's own child
+          // takes the left card of a couple.
+          const members = child.memberIds.length === 2 && String(child.memberIds[1]) === String(bloodChildId)
+            ? [child.memberIds[1], child.memberIds[0]]
+            : child.memberIds;
+          members.forEach((memberId, index) => {
+            calculatedPositions.set(memberId, {
+              x: childX + STACK_INDENT + index * (NODE_WIDTH + SPOUSE_GAP),
+              y: childY + row * STACK_STEP,
+            });
+            stackSpine.set(String(memberId), spineX);
+          });
+        });
+      } else {
+        positionUnitAndDescendants(seg.items[0].unit, childX, childY);
+      }
 
-      positionUnitAndDescendants(child, childX, childY);
-
-      childX += childWidth + (idx < children.length - 1 ? SUBTREE_GAP : 0);
+      childX += segmentWidth(seg) + (idx < segments.length - 1 ? SUBTREE_GAP : 0);
     });
   }
 
@@ -542,6 +612,7 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
       y: pos.y,
     });
   });
+  stackSpine.forEach((x, id) => stackSpine.set(id, x - centerShift));
   const badges = [...branchBadges.values()];
   badges.forEach((badge) => {
     badge.x -= centerShift;
@@ -678,7 +749,9 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
     }
     const minChildY = Math.min(...children.map((c) => c.childNode.y));
     const parentBottomY = Math.max(p1.y, p2 ? p2.y : p1.y) + NODE_HEIGHT;
-    const xs = [sourceX, ...children.map((c) => c.childNode.centerX)];
+    const xs = [sourceX, ...children.map((c) =>
+      !group.crossFamily && stackSpine.has(String(c.childId)) ? stackSpine.get(String(c.childId)) : c.childNode.centerX
+    )];
     buses.push({
       ...group,
       sourceX,
@@ -734,6 +807,16 @@ export function computeTreeLayout(persons, relationships, layoutOptions = {}) {
         // bottom edge.
         busY = parentBottomY + 22;
         path = `M ${sourceX} ${sourceY} L ${sourceX} ${busY} L ${targetX} ${busY} L ${targetX} ${targetY + NODE_HEIGHT}`;
+      } else if (!crossFamily && stackSpine.has(String(childId))) {
+        // Stacked column: along the bus to the column's connector, down it,
+        // then into the left side of the child's card.
+        const spineX = stackSpine.get(String(childId));
+        const midY = targetY + PORTRAIT_BAND_Y;
+        const r = Math.min(8, Math.max(Math.abs(spineX - sourceX) * 0.5, 0.01));
+        const dir = spineX >= sourceX ? 1 : -1;
+        path = Math.abs(spineX - sourceX) < 2
+          ? `M ${sourceX} ${sourceY} L ${spineX} ${midY - 8} Q ${spineX} ${midY} ${spineX + 8} ${midY} L ${childNode.x} ${midY}`
+          : `M ${sourceX} ${sourceY} L ${sourceX} ${junctionY - r} Q ${sourceX} ${junctionY} ${sourceX + dir * r} ${junctionY} L ${spineX - dir * 8} ${junctionY} Q ${spineX} ${junctionY} ${spineX} ${junctionY + 8} L ${spineX} ${midY - 8} Q ${spineX} ${midY} ${spineX + 8} ${midY} L ${childNode.x} ${midY}`;
       } else if (Math.abs(sourceX - targetX) < 2) {
         // Direct vertical drop from marriage union/parent down to child
         path = `M ${sourceX} ${sourceY} L ${targetX} ${targetY}`;
