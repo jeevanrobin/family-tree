@@ -12310,3 +12310,137 @@ button {
   font-size: 0.82rem;
   color: var(--ft-text-secondary);
 }
+
+/* ── "This is me" & Family list view ───────────────────────── */
+.ft-details__me-btn {
+  margin-top: 8px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--ft-border);
+  background: transparent;
+  color: var(--ft-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.ft-details__me-btn--on {
+  border-color: var(--ft-orange-primary);
+  color: var(--ft-orange-primary);
+  font-weight: 600;
+}
+
+.ft-list-view {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto;
+  background: var(--ft-bg, var(--ft-surface-soft));
+  padding: 0 16px 120px;
+}
+
+.ft-list-view__bar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  background: inherit;
+  color: var(--ft-text-primary);
+  z-index: 1;
+}
+
+.ft-list-view__body {
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ft-list-view__heading {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ft-text-secondary);
+}
+
+.ft-list-view__heading span {
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.ft-list-view__chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.ft-list-view__chip,
+.ft-list-view__centre {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid var(--ft-border);
+  background: var(--ft-surface, #fff);
+  color: var(--ft-text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.ft-list-view__centre {
+  border: 2px solid var(--ft-orange-primary);
+  padding: 14px 16px;
+}
+
+.ft-list-view__avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: cover;
+  background: var(--ft-surface-soft);
+  color: var(--ft-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ft-list-view__avatar--big {
+  width: 52px;
+  height: 52px;
+  font-size: 1rem;
+}
+
+.ft-list-view__centre-name {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.ft-list-view__centre-hint,
+.ft-list-view__late {
+  font-size: 0.75rem;
+  color: var(--ft-text-secondary);
+}
+
+.ft-list-view__me {
+  color: var(--ft-orange-primary);
+  font-weight: 600;
+}
+
+.ft-list-view__empty {
+  text-align: center;
+  color: var(--ft-text-secondary);
+  margin-top: 40px;
+}

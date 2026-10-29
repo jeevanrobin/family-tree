@@ -14,6 +14,9 @@ export default function ZoomControls({
   onCollapseAll,
   hasSelection,
   scale = 1,
+  hasMe = false,
+  onJumpToMe,
+  onOpenList,
 }) {
   return (
     <div className="ft-controls" role="toolbar" aria-label="Tree view controls">
@@ -37,6 +40,34 @@ export default function ZoomControls({
         >
           Collapse
         </button>
+      </div>
+
+      <div className="ft-controls__divider" />
+
+      {/* Me & phone-friendly list */}
+      <div className="ft-controls__group">
+        {hasMe && (
+          <button
+            type="button"
+            className="ft-controls__btn ft-controls__btn--text"
+            onClick={onJumpToMe}
+            title="Show me and my line"
+            aria-label="Jump to me"
+          >
+            Me
+          </button>
+        )}
+        {onOpenList && (
+          <button
+            type="button"
+            className="ft-controls__btn ft-controls__btn--text"
+            onClick={onOpenList}
+            title="Simple list of close family (easier on phones)"
+            aria-label="Family list"
+          >
+            List
+          </button>
+        )}
       </div>
 
       <div className="ft-controls__divider" />
