@@ -38,6 +38,8 @@ import FamilyPlacesModal from './modals/FamilyPlacesModal.jsx';
 import CompleteTreeModal from './modals/CompleteTreeModal.jsx';
 import RelationshipConflictBanner from './RelationshipConflictBanner.jsx';
 import DataSafetyBanner from './DataSafetyBanner.jsx';
+import FamilyListView from './FamilyListView.jsx';
+import { getMyPersonId, setMyPersonId } from '../utils/myPerson.js';
 import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
@@ -334,6 +336,24 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
     familyStore.loadFromData([], [], [], [], [], []);
     clearAllData();
   }, [clearAllData]);
+
+  // "Me": the card the signed-in person marked as themselves (this device).
+  const meUserId = currentUser?.id || null;
+  const [meId, setMeId] = useState(() => getMyPersonId(meUserId, activeFamilyId));
+  useEffect(() => {
+    setMeId(getMyPersonId(meUserId, activeFamilyId));
+  }, [meUserId, activeFamilyId]);
+  const myPersonExists = Boolean(meId && persons.some((p) => String(p.id) === String(meId)));
+  const handleSetMe = useCallback(
+    (personId) => {
+      setMyPersonId(meUserId, activeFamilyId, personId);
+      setMeId(personId || null);
+    },
+    [meUserId, activeFamilyId]
+  );
+
+  // Phone-friendly family list (parents / spouse / siblings / children).
+  const [listViewOpen, setListViewOpen] = useState(false);
 
   // Handle person selection with smooth camera glide & auto-drawer
   const handleSelectPerson = useCallback(
@@ -915,14 +935,40 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                 onSetLabelLanguage={setLabelLanguage}
                 scale={canvasScale}
                 isReducedMotion={isReducedMotion}
+                hasMe={myPersonExists}
+                onJumpToMe={() => {
+                  if (!myPersonExists) return;
+                  setFocusMode('person');
+                  handleSelectPerson(meId);
+                }}
+                onOpenList={() => {
+                  setDetailsOpen(false);
+                  setListViewOpen(true);
+                }}
               />
             </div>
+
+            {listViewOpen && (
+              <FamilyListView
+                personId={selectedId || (myPersonExists ? meId : null)}
+                meId={myPersonExists ? meId : null}
+                relationships={relationships}
+                onPick={(id) => selectPerson(id)}
+                onOpenDetails={(id) => {
+                  setListViewOpen(false);
+                  handleSelectPerson(id);
+                }}
+                onClose={() => setListViewOpen(false)}
+              />
+            )}
 
             {/* Slide-in Profile Details Dossier */}
             {detailsOpen && selectedPerson && (
               <PersonDetails
                 person={selectedPerson}
                 onFindRelationship={(id) => setRelFinderFrom(id)}
+                isMe={String(selectedPerson.id) === String(meId)}
+                onSetMe={(id) => handleSetMe(id)}
                 relationships={relationships}
                 stories={selectedPersonStories}
                 lifeEvents={selectedPersonEvents}

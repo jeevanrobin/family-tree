@@ -108,6 +108,8 @@ export default function PersonDetails({
   onDeletePerson,
   onAddRelative,
   onFindRelationship,
+  isMe = false,
+  onSetMe,
   // M2B Reactive Collections (from hook, via props)
   stories: storiesProp,
   lifeEvents: lifeEventsProp,
@@ -430,6 +432,17 @@ export default function PersonDetails({
                   onClick={() => onFindRelationship(person.id)}
                 >
                   <span lang="te">బంధుత్వం</span> How are we related?
+                </button>
+              )}
+
+              {onSetMe && (
+                <button
+                  type="button"
+                  className={`ft-details__me-btn ${isMe ? 'ft-details__me-btn--on' : ''}`}
+                  onClick={() => onSetMe(isMe ? null : person.id)}
+                  title={isMe ? 'Stop using this card as me' : 'Mark this card as me, for the Me button'}
+                >
+                  {isMe ? '★ This is me' : '☆ This is me'}
                 </button>
               )}
             </div>
