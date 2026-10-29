@@ -7,6 +7,8 @@ import React, { useState, useRef } from 'react';
 import { exportGedcom, importGedcom } from '../../gedcom/gedcom.js';
 import familyStore from '../../store/FamilyStore.js';
 import { findMissingLinks } from '../../utils/restoreLinks.js';
+import { previewImport, importLosesData } from '../../utils/importPreview.js';
+import { markBackupTaken } from '../../utils/backupReminder.js';
 
 export default function DataManagementModal({
   isOpen,
@@ -26,6 +28,7 @@ export default function DataManagementModal({
   const fileInputRef = useRef(null);
   const restoreInputRef = useRef(null);
   const [missingLinks, setMissingLinks] = useState(null); // links found in a backup, awaiting confirmation
+  const [pendingImport, setPendingImport] = useState(null); // { payload, isGedcom, warnings, preview }
 
   if (!isOpen) return null;
 
@@ -42,6 +45,7 @@ export default function DataManagementModal({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      markBackupTaken();
 
       setStatusMessage({
         type: 'success',
@@ -81,33 +85,59 @@ export default function DataManagementModal({
     }
   };
 
+  const runImport = ({ payload, isGedcom, warnings }) => {
+    try {
+      onImportData(payload);
+      setPendingImport(null);
+      setStatusMessage({
+        type: 'success',
+        text: isGedcom
+          ? `GEDCOM imported: ${warnings.length ? `${warnings.length} link(s) skipped.` : 'all people and families loaded.'}`
+          : 'Family data successfully imported and verified!',
+      });
+      setTimeout(() => {
+        onClose();
+      }, 1200);
+    } catch (err) {
+      setPendingImport(null);
+      setStatusMessage({ type: 'error', text: err.message || 'Failed to import family data.' });
+    }
+  };
+
+  // Import replaces the whole tree, so first show what it would change and
+  // ask when anything would be lost.
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
         const text = event.target?.result;
-        if (typeof text === 'string') {
-          const isGedcom = /\.ged$/i.test(file.name) || /^\uFEFF?0 HEAD/.test(text);
-          let warnings = [];
-          if (isGedcom) {
-            const converted = importGedcom(text);
-            warnings = converted.warnings;
-            onImportData(JSON.stringify({ schemaVersion: '2.0.0', family: converted.family }));
-          } else {
-            onImportData(text);
+        if (typeof text !== 'string') return;
+        const isGedcom = /\.ged$/i.test(file.name) || /^\uFEFF?0 HEAD/.test(text);
+        let warnings = [];
+        let parsed;
+        if (isGedcom) {
+          const converted = importGedcom(text);
+          warnings = converted.warnings;
+          parsed = { schemaVersion: '2.0.0', family: converted.family };
+        } else {
+          try {
+            parsed = JSON.parse(text);
+          } catch {
+            throw new Error('Invalid JSON format.');
           }
-          setStatusMessage({
-            type: 'success',
-            text: isGedcom
-              ? `GEDCOM imported: ${warnings.length ? `${warnings.length} link(s) skipped.` : 'all people and families loaded.'}`
-              : 'Family data successfully imported and verified!',
-          });
-          setTimeout(() => {
-            onClose();
-          }, 1200);
+        }
+        const snap = familyStore.getSnapshot();
+        const preview = previewImport(parsed, snap.people, snap.relationships);
+        const next = { payload: isGedcom ? JSON.stringify(parsed) : text, isGedcom, warnings, preview };
+        if (snap.people.length === 0 || !importLosesData(preview)) {
+          runImport(next);
+        } else {
+          setStatusMessage(null);
+          setPendingImport(next);
         }
       } catch (err) {
         setStatusMessage({
@@ -321,6 +351,44 @@ export default function DataManagementModal({
               <span>Choose File</span>
             </button>
           </div>
+
+          {pendingImport && (
+            <div className="ft-data-action-card ft-restore-links ft-import-confirm" role="alertdialog" aria-label="Confirm import">
+              <p className="ft-restore-links__title">Importing this backup replaces the whole tree:</p>
+              <ul>
+                {pendingImport.preview.removed.length > 0 && (
+                  <li>
+                    <strong>{pendingImport.preview.removed.length} {pendingImport.preview.removed.length === 1 ? 'person' : 'people'} removed</strong>
+                    {': '}
+                    {pendingImport.preview.removed.slice(0, 8).join(', ')}
+                    {pendingImport.preview.removed.length > 8 ? '…' : ''}
+                  </li>
+                )}
+                {pendingImport.preview.changed.length > 0 && (
+                  <li>
+                    <strong>{pendingImport.preview.changed.length} {pendingImport.preview.changed.length === 1 ? 'person' : 'people'} with older or different details</strong>
+                    {': '}
+                    {pendingImport.preview.changed.slice(0, 8).join(', ')}
+                    {pendingImport.preview.changed.length > 8 ? '…' : ''}
+                  </li>
+                )}
+                {pendingImport.preview.linksRemoved > 0 && <li>{pendingImport.preview.linksRemoved} links removed</li>}
+                {pendingImport.preview.added.length > 0 && <li>{pendingImport.preview.added.length} people added</li>}
+                {pendingImport.preview.linksAdded > 0 && <li>{pendingImport.preview.linksAdded} links added</li>}
+              </ul>
+              <p className="ft-kin-hint">
+                Only want lost parent or marriage links back? Cancel and use <strong>Restore Missing Links</strong> below. It changes nothing else.
+              </p>
+              <div className="ft-restore-links__actions">
+                <button className="ft-form-btn ft-form-btn--secondary" onClick={() => setPendingImport(null)}>
+                  Cancel
+                </button>
+                <button className="ft-form-btn ft-form-btn--danger" onClick={() => runImport(pendingImport)}>
+                  Replace the tree
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Restore Missing Links Card */}
           <div className="ft-data-action-card ft-restore-links">

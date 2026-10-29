@@ -3015,6 +3015,19 @@ button {
   margin-top: 12px;
 }
 
+.ft-import-confirm {
+  border-left: 3px solid var(--ft-coral);
+}
+
+.ft-safety-banner__dot--error {
+  background: var(--ft-coral) !important;
+}
+
+.ft-safety-banner__later {
+  background: transparent !important;
+  color: var(--ft-text-secondary) !important;
+}
+
 .ft-reset-modal-confirm {
   margin: 0 24px 16px;
   padding: 16px;

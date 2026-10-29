@@ -37,6 +37,7 @@ import DuplicatesModal from './modals/DuplicatesModal.jsx';
 import FamilyPlacesModal from './modals/FamilyPlacesModal.jsx';
 import CompleteTreeModal from './modals/CompleteTreeModal.jsx';
 import RelationshipConflictBanner from './RelationshipConflictBanner.jsx';
+import DataSafetyBanner from './DataSafetyBanner.jsx';
 import { canEditPerson } from '../auth/roles.js';
 import familyStore from '../store/FamilyStore.js';
 import { useOptionalFamily } from '../auth/FamilyContext.jsx';
@@ -825,6 +826,14 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
                   Done
                 </button>
               </div>
+            )}
+
+            {!isArrangeMode && (
+              <DataSafetyBanner
+                syncStatus={isLocalMode ? 'synced' : familyContext?.syncStatus || 'synced'}
+                peopleCount={persons.length}
+                onOpenBackup={() => setDataModalOpen(true)}
+              />
             )}
 
             {!isArrangeMode && !conflictsDismissed && (
