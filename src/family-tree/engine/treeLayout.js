@@ -13,7 +13,7 @@
  */
 
 import { computeGenerations, coupleHostId, GENERATION_CONFIG } from '../data/familyDataService.js';
-import { computeSubtreeGeometry, FamilySubtree } from './subtreeGeometry.js';
+import { computeSubtreeGeometry } from './subtreeGeometry.js';
 // Wide cards: photo on the left, name and details on the right.
 export const NODE_WIDTH = 250;
 export const NODE_HEIGHT = 104;

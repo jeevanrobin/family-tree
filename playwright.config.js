@@ -21,7 +21,8 @@ function loadLocalEnv() {
 
 loadLocalEnv();
 
-const webServer = process.env.CI ? undefined : {
+// CI starts the dev server only for jobs that ask (the Local Mode browser tests).
+const webServer = process.env.CI && !process.env.PW_START_SERVER ? undefined : {
   command: 'npm run dev',
   port: 5173,
   reuseExistingServer: !process.env.CI,

@@ -5,7 +5,6 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GENERATION_CONFIG, getAllPersons } from '../data/familyDataService.js';
 import FadeContent from './react-bits/FadeContent.jsx';
 
 const TOUR_STEPS = [
