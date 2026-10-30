@@ -11,7 +11,6 @@
  * Never: silently converts uncertain dates to falsely precise dates
  */
 
-import { getDaysInMonth, MONTH_NAMES_FULL } from './dateHelpers.js';
 import { createClient } from '@supabase/supabase-js';
 
 const REVIEW_BELOW = 0.70;

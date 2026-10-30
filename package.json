@@ -11,6 +11,7 @@
     "test:vitest": "vitest run",
     "test:all": "npm test && npm run test:vitest",
     "test:browser": "playwright test",
+    "test:browser:local": "playwright test tests/browser/local-mode.test.js --project=chromium",
     "test:browser:ui": "playwright test --ui",
     "test:subtree": "node scripts/test-recursive-subtree-layout.js",
     "test:backup": "node scripts/test-backup-id-integrity.js",

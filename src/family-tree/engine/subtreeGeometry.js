@@ -20,11 +20,9 @@
 
 import {
   NODE_WIDTH,
-  NODE_HEIGHT,
   SPOUSE_GAP,
   SIBLING_GAP,
   SUBTREE_GAP,
-  DESCENDANT_GAP,
   GENERATION_HEIGHT,
 } from './treeLayout.js';
 

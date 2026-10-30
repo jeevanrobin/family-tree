@@ -12,7 +12,7 @@ import SearchOverlay from './SearchOverlay.jsx';
 import { GENERATION_CONFIG } from '../data/familyDataService.js';
 import { useFamily } from '../auth/FamilyContext.jsx';
 import familyStore from '../store/FamilyStore.js';
-import { ROLE_LABELS, canAddPerson } from '../auth/roles.js';
+import { canAddPerson } from '../auth/roles.js';
 import FamilySettingsModal from './modals/FamilySettingsModal.jsx';
 import UserProfileMenu from './UserProfileMenu.jsx';
 import NotificationBell from './rare-ui/NotificationBell.jsx';
