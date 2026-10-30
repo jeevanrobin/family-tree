@@ -4,10 +4,14 @@
  *   birthday            living people with a date of birth
  *   anniversary         couples (both living) with a marriage date
  *   death-anniversary   people with a date of death (vardhanti), Gregorian date
+ *   thithi              the same people by the Telugu lunar calendar (masam,
+ *                       paksham, thithi of the day they died), when asked for
  *
  * Dates are compared as local calendar days. A 29 February date is observed
  * on 28 February in non-leap years.
  */
+
+import { nextThithiDay, describePanchang } from './panchang.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -49,10 +53,14 @@ const ordinal = (n) => {
 
 /**
  * @param {{people: Array, relationships: Array}} family
- * @param {{ today?: Date, days?: number }} [options] window of days to look ahead (inclusive of today)
+ * @param {{ today?: Date, days?: number, thithi?: boolean }} [options] window of days to look ahead
+ *   (inclusive of today); `thithi` adds lunar-calendar death anniversaries
  * @returns {Array<{ id, type, date, daysAway, years, personIds, title }>} sorted by date
  */
-export function getUpcomingOccasions({ people = [], relationships = [] }, { today = new Date(), days = 30 } = {}) {
+export function getUpcomingOccasions(
+  { people = [], relationships = [] },
+  { today = new Date(), days = 30, thithi = false } = {}
+) {
   const base = startOfDay(today);
   const byId = new Map(people.map((p) => [String(p.id), p]));
   const occasions = [];
@@ -86,6 +94,24 @@ export function getUpcomingOccasions({ people = [], relationships = [] }, { toda
       add('death-anniversary', parseIso(p.dateOfDeath), [String(p.id)], (y) =>
         y > 0 ? `${ordinal(y)} death anniversary of ${name}` : `Death anniversary of ${name}`
       );
+      const died = parseIso(p.dateOfDeath);
+      const next = thithi && died ? nextThithiDay(p.dateOfDeath, base, undefined, days) : null;
+      if (next) {
+        const daysAway = Math.round((startOfDay(next.date) - base) / DAY_MS);
+        const years = next.date.getFullYear() - died.year;
+        if (years > 0) {
+          occasions.push({
+            id: `thithi:${p.id}`,
+            type: 'thithi',
+            date: toIso(next.date),
+            daysAway,
+            years,
+            personIds: [String(p.id)],
+            lunarDate: describePanchang(next.panchang),
+            title: `Thithi of ${name} · ${describePanchang(next.panchang)}`,
+          });
+        }
+      }
     }
   });
 
@@ -100,7 +126,7 @@ export function getUpcomingOccasions({ people = [], relationships = [] }, { toda
       );
     });
 
-  const order = { birthday: 0, anniversary: 1, 'death-anniversary': 2 };
+  const order = { birthday: 0, anniversary: 1, 'death-anniversary': 2, thithi: 3 };
   return occasions.sort((x, y) => x.daysAway - y.daysAway || order[x.type] - order[y.type] || x.title.localeCompare(y.title));
 }
 

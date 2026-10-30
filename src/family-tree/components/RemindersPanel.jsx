@@ -10,15 +10,15 @@ import { getUpcomingOccasions, describeWhen } from '../reminders/remindersEngine
 const LOOKAHEAD_DAYS = 30;
 const BADGE_DAYS = 7;
 
-const ICON = { birthday: '🎂', anniversary: '💍', 'death-anniversary': '🪔' };
-const LABEL = { birthday: 'Birthday', anniversary: 'Anniversary', 'death-anniversary': 'Vardhanti' };
+const ICON = { birthday: '🎂', anniversary: '💍', 'death-anniversary': '🪔', thithi: '🌙' };
+const LABEL = { birthday: 'Birthday', anniversary: 'Anniversary', 'death-anniversary': 'Vardhanti', thithi: 'Thithi' };
 
 /** Upcoming occasions for the current family, kept in sync with the store. */
 export function useUpcomingOccasions(days = LOOKAHEAD_DAYS) {
   const [snapshot, setSnapshot] = useState(() => familyStore.getSnapshot());
   useEffect(() => familyStore.subscribe(setSnapshot), []);
   return useMemo(
-    () => getUpcomingOccasions({ people: snapshot.people, relationships: snapshot.relationships }, { days }),
+    () => getUpcomingOccasions({ people: snapshot.people, relationships: snapshot.relationships }, { days, thithi: true }),
     [snapshot, days]
   );
 }

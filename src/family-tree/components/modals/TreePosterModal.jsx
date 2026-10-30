@@ -18,9 +18,48 @@ const download = (blob, filename) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+const nameOf = (p) => p.displayName || [p.firstName, p.lastName].filter(Boolean).join(' ');
+
+/** One person's branch: them, their descendants, and everyone's spouses. */
+export function branchOf(snapshot, rootId) {
+  if (!rootId) return snapshot;
+  const rels = snapshot.relationships || [];
+  const childrenOf = new Map();
+  const spousesOf = new Map();
+  const push = (map, k, v) => map.set(k, [...(map.get(k) || []), v]);
+  rels.forEach((r) => {
+    if (r.type === 'parent-child' || r.type === 'parent') {
+      push(childrenOf, String(r.parentId ?? r.personId1), String(r.childId ?? r.personId2));
+    } else if (r.type === 'spouse') {
+      const a = String(r.personAId ?? r.personId1);
+      const b = String(r.personBId ?? r.personId2);
+      push(spousesOf, a, b);
+      push(spousesOf, b, a);
+    }
+  });
+  const keep = new Set();
+  const stack = [String(rootId)];
+  while (stack.length) {
+    const id = stack.pop();
+    if (keep.has(id)) continue;
+    keep.add(id);
+    (spousesOf.get(id) || []).forEach((s) => keep.add(s));
+    (childrenOf.get(id) || []).forEach((c) => stack.push(c));
+  }
+  const inBranch = (id) => keep.has(String(id));
+  return {
+    ...snapshot,
+    people: (snapshot.people || []).filter((p) => inBranch(p.id)),
+    relationships: rels.filter((r) =>
+      inBranch(r.parentId ?? r.personAId ?? r.personId1) && inBranch(r.childId ?? r.personBId ?? r.personId2)
+    ),
+  };
+}
+
 const slug = (s) => (s || 'family-tree').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'family-tree';
 
-export default function TreePosterModal({ isOpen, onClose, familyName = '' }) {
+export default function TreePosterModal({ isOpen, onClose, familyName = '', defaultBranchId = null }) {
+  const [branchId, setBranchId] = useState('');
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [theme, setTheme] = useState('light');
@@ -33,8 +72,23 @@ export default function TreePosterModal({ isOpen, onClose, familyName = '' }) {
   useEffect(() => {
     if (!isOpen) return;
     setTitle(familyName ? `${familyName} Family Tree` : 'Our Family Tree');
+    setBranchId('');
     setError('');
   }, [isOpen, familyName]);
+
+  // People who head a branch (have children), for the branch picker.
+  const branchHeads = useMemo(() => {
+    if (!isOpen) return [];
+    const snap = familyStore.getSnapshot();
+    const parents = new Set(
+      snap.relationships
+        .filter((r) => r.type === 'parent-child')
+        .map((r) => String(r.parentId ?? r.personId1))
+    );
+    return snap.people
+      .filter((p) => parents.has(String(p.id)))
+      .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -45,8 +99,8 @@ export default function TreePosterModal({ isOpen, onClose, familyName = '' }) {
 
   const poster = useMemo(() => {
     if (!isOpen) return null;
-    return buildTreePosterSvg(familyStore.getSnapshot(), { title, subtitle, theme, showYears, showPlaces });
-  }, [isOpen, title, subtitle, theme, showYears, showPlaces]);
+    return buildTreePosterSvg(branchOf(familyStore.getSnapshot(), branchId), { title, subtitle, theme, showYears, showPlaces });
+  }, [isOpen, title, subtitle, theme, showYears, showPlaces, branchId]);
 
   const previewUrl = useMemo(
     () => (poster ? URL.createObjectURL(new Blob([poster.svg], { type: 'image/svg+xml;charset=utf-8' })) : ''),
@@ -120,6 +174,31 @@ export default function TreePosterModal({ isOpen, onClose, familyName = '' }) {
                 onChange={(e) => setSubtitle(e.target.value)}
                 maxLength={120}
               />
+            </div>
+            <div className="ft-form-field">
+              <label htmlFor="poster-branch">People</label>
+              <select
+                id="poster-branch"
+                value={branchId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setBranchId(id);
+                  const head = branchHeads.find((p) => String(p.id) === id);
+                  setTitle(head ? `${nameOf(head)}'s Family` : familyName ? `${familyName} Family Tree` : 'Our Family Tree');
+                }}
+              >
+                <option value="">Whole family</option>
+                {defaultBranchId && branchHeads.some((p) => String(p.id) === String(defaultBranchId)) && (
+                  <option value={String(defaultBranchId)}>
+                    Selected: {nameOf(branchHeads.find((p) => String(p.id) === String(defaultBranchId)))}'s branch
+                  </option>
+                )}
+                {branchHeads.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {nameOf(p)}'s branch
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="ft-poster-toggles">
               <label>

@@ -33,7 +33,8 @@ export default function FamilySettingsModal({
   // Invite Sub-Modal State
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState(ROLES.EDITOR);
+  // Most relatives only need to look; Viewer is the safe default.
+  const [inviteRole, setInviteRole] = useState(ROLES.VIEWER);
   const [inviteDuration, setInviteDuration] = useState(7);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [lastCreatedInvite, setLastCreatedInvite] = useState(null);
@@ -761,6 +762,17 @@ export default function FamilySettingsModal({
                       >
                         Copy
                       </button>
+                      <a
+                        className="ft-form-btn ft-form-btn--whatsapp"
+                        style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none' }}
+                        href={`https://wa.me/?text=${encodeURIComponent(
+                          `You're invited to our family tree${family?.name ? ` (${family.name})` : ''} on Anvaya. Open this link to join: ${lastCreatedInvite.inviteUrl}`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        WhatsApp
+                      </a>
                     </div>
                   </div>
 
