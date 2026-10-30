@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { panchangOf, describePanchang, nextThithiDay, APARAHNA_IST } from '../reminders/panchang.js';
 import {
   getParents,
   getChildren,
@@ -221,6 +222,20 @@ export default function PersonDetails({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Telugu lunar date of the death, and the next yearly thithi day.
+  const thithiInfo = useMemo(() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(person?.dateOfDeath || '');
+    if (!m) return null;
+    const lunar = describePanchang(panchangOf(Number(m[1]), Number(m[2]), Number(m[3]), APARAHNA_IST));
+    const next = nextThithiDay(person.dateOfDeath);
+    return {
+      lunar,
+      next: next
+        ? next.date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null,
+    };
+  }, [person?.dateOfDeath]);
+
   if (!person) return null;
 
   // Format date display
@@ -243,6 +258,7 @@ export default function PersonDetails({
     children.length > 0 ? `${children.length} ${children.length === 1 ? 'Child' : 'Children'}` : null,
     parents.length > 0 ? `${parents.length} ${parents.length === 1 ? 'Parent' : 'Parents'}` : null,
   ].filter(Boolean).join(' • ');
+
 
   return (
     <aside className="ft-details" aria-label={`Profile of ${person.displayName}`}>
@@ -466,10 +482,23 @@ export default function PersonDetails({
                 </div>
 
                 {person.dateOfDeath ? (
-                  <div className="ft-details__item">
-                    <span className="ft-details__label">Died</span>
-                    <span className="ft-details__val">{formatDate(person.dateOfDeath)}</span>
-                  </div>
+                  <>
+                    <div className="ft-details__item">
+                      <span className="ft-details__label">Died</span>
+                      <span className="ft-details__val">{formatDate(person.dateOfDeath)}</span>
+                    </div>
+                    {thithiInfo && (
+                      <div className="ft-details__item" title="Telugu lunar date of the day they died; the yearly thithi falls on this masam and thithi">
+                        <span className="ft-details__label">Thithi</span>
+                        <span className="ft-details__val">
+                          {thithiInfo.lunar}
+                          {thithiInfo.next && (
+                            <span className="ft-details__thithi-next">Next: {thithiInfo.next}</span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="ft-details__item">
                     <span className="ft-details__label">Status</span>

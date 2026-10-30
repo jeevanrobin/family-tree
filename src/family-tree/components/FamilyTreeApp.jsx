@@ -1039,6 +1039,7 @@ export default function FamilyTreeApp({ isLocalMode = false, initialView = 'tree
           isOpen={posterOpen}
           onClose={() => setPosterOpen(false)}
           familyName={activeFamily?.name || ''}
+          defaultBranchId={selectedId}
         />
 
         <RelationshipFinderModal
